@@ -17,7 +17,6 @@ collections:
     folder: src/content/ai-history
     create: true
     slug: "episode-{{episode_number}}"
-    path: "episode-*"
     fields:
       - { label: Title, name: title, widget: string }
       - { label: Series, name: series, widget: hidden, default: "ai-history" }
@@ -36,7 +35,7 @@ collections:
     folder: src/content/ai-history
     create: true
     slug: "profile-{{episode_number}}-{{title}}"
-    path: "profile-*"
+    filter: {field: type, value: profile}
     fields:
       - { label: Title, name: title, widget: string }
       - { label: Series, name: series, widget: hidden, default: "ai-history" }

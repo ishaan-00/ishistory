@@ -11,7 +11,7 @@
     /* ── FAB button ────────────────────────────────────────────── */
     #ih-fab {
       position: fixed;
-      right: -18px;
+      right: 6px;             /* sits at edge with small margin */
       top: 50%;
       transform: translateY(-50%);
       width: 48px;
@@ -319,7 +319,7 @@
     const BASE_MS = 60000;
     const MAX_MS  = 300000;
     const TIMEOUT = 5000;
-    const PEEK    = -18;
+    const PEEK    = 6;
 
     let isOpen     = false;
     let failCount  = 0;
@@ -346,7 +346,7 @@
       fab.style.top       = fabY + '%';
       fab.style.transform = 'none';
       if (onLeft) { fab.style.left = PEEK + 'px'; fab.style.right = 'auto'; }
-      else        { fab.style.right = PEEK + 'px'; fab.style.left = 'auto'; }
+      else        { fab.style.right = PEEK + 'px'; fab.style.left = 'auto';  }
       if (!animate) requestAnimationFrame(() => fab.style.transition = '');
     }
     applyFabPos(false);
@@ -366,10 +366,10 @@
     }
 
     fab.addEventListener('pointerdown', e => {
-      e.preventDefault();
-      dragging = false; hasDragged = false;
-      dragStartY = e.clientY;
-      fabStartY  = parseFloat(fab.style.top) || fabY;
+      dragging    = false;
+      hasDragged  = false;
+      dragStartY  = e.clientY;
+      fabStartY   = parseFloat(fab.style.top) || fabY;
       longPressTimer = setTimeout(() => { if (!hasDragged) switchSide(); }, 500);
       fab.setPointerCapture(e.pointerId);
     });
@@ -380,7 +380,7 @@
       const winH    = window.innerHeight;
       const newYpx  = (fabStartY / 100) * winH + dy;
       const newYpct = Math.max(8, Math.min(92, (newYpx / winH) * 100));
-      if (Math.abs(dy) > 6) { hasDragged = true; dragging = true; clearTimeout(longPressTimer); }
+      if (Math.abs(dy) > 14) { hasDragged = true; dragging = true; clearTimeout(longPressTimer); }
       if (dragging) { fab.style.top = newYpct + '%'; fabY = newYpct; }
     });
 
@@ -389,6 +389,13 @@
       fab.releasePointerCapture(e.pointerId);
       if (dragging)       { saveFabPos(); dragging = false; }
       else if (!hasDragged) { ihToggle(); }
+    });
+
+    // Belt-and-suspenders: click fires on Android even when pointerup misses
+    let lastToggleTime = 0;
+    fab.addEventListener('click', () => {
+      const now = Date.now();
+      if (now - lastToggleTime > 300 && !dragging) { lastToggleTime = now; ihToggle(); }
     });
 
     function ihOpen()   { isOpen = true;  document.getElementById('ih-panel').classList.add('open');    document.getElementById('ih-backdrop').classList.add('open'); }
@@ -499,7 +506,7 @@
         const tog=isC
           ?`<button class="ih-series-btn active-btn" onclick="toggleSeries('${name}','active',this)">↺ Mark Active</button>`
           :`<button class="ih-series-btn complete-btn" onclick="toggleSeries('${name}','complete',this)">✓ Mark Complete</button>`;
-        const ca=isC&&d.completed_at?`<span class="ih-completed-at">completed ${relTime(d.completed_at)}</span>`:""
+        const ca=isC&&d.completed_at?`<span class="ih-completed-at">completed ${relTime(d.completed_at)}</span>`:'';
         return `<div class="ih-series-card ${isC?'complete':''}">
           <div class="ih-series-card-top">
             <span class="ih-series-name">${name.replace(/-/g,' ')}</span>
@@ -571,10 +578,8 @@
         dot('p-worker-dot', workerOk?'green':'red');
         const wEl=document.getElementById('p-worker-val');
         wEl.textContent=workerOk?'Online':'Offline'; valCls(wEl, workerOk?'good':'bad');
-
         dot('p-github-dot', health.github_user?'green':'red');
         set('p-github-val', health.github_user||'Not connected');
-
         dot('p-d1-dot', health.d1==='connected'?'green':'red');
         set('p-d1-val', health.d1||'—');
 
