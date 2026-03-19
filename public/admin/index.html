@@ -6,587 +6,121 @@
   <meta name="robots" content="noindex" />
   <title>ishistory CMS</title>
   <style>
-    /* ===== CSS Custom Properties for Theming ===== */
-:root {
-  /* Base colors */
-  --ih-bg-base: #05090f;
-  --ih-bg-elevated: #080e1a;
-  --ih-bg-hover: #0f172a;
-  --ih-border: #1e293b;
-  --ih-border-strong: #334155;
-  
-  /* Text colors */
-  --ih-text-primary: #e2e8f0;
-  --ih-text-secondary: #94a3b8;
-  --ih-text-muted: #64748b;
-  --ih-text-dim: #334155;
-  --ih-text-faint: #1e293b;
-  
-  /* Status colors */
-  --ih-status-green: #22c55e;
-  --ih-status-yellow: #eab308;
-  --ih-status-red: #ef4444;
-  --ih-status-blue: #3b82f6;
-  --ih-status-grey: #334155;
-  
-  /* Accent colors */
-  --ih-accent-cyan: #7dd3fc;
-  --ih-accent-green: #4ade80;
-  --ih-accent-amber: #f59e0b;
-  --ih-accent-rose: #fca5a5;
-  
-  /* Dimensions */
-  --ih-bar-height: 26px;
-  --ih-dot-size: 7px;
-  --ih-border-radius-sm: 3px;
-  --ih-border-radius-md: 4px;
-  
-  /* Transitions */
-  --ih-transition-fast: 0.15s ease;
-  --ih-transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --ih-transition-slow: 0.4s ease;
-}
-
-/* ===== Base Status Bar Container ===== */
-#ih-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 99999;
-  font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
-  font-size: 11px;  line-height: 1.4;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* ===== Collapsible Strip (Main Bar) ===== */
-#ih-strip {
-  background: var(--ih-bg-elevated);
-  color: var(--ih-text-muted);
-  height: var(--ih-bar-height);
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  gap: 12px;
-  cursor: pointer;
-  user-select: none;
-  border-top: 1px solid var(--ih-border);
-  transition: background var(--ih-transition-fast), border-color var(--ih-transition-slow);
-}
-
-#ih-strip:hover {
-  background: var(--ih-bg-hover);
-}
-
-#ih-strip:focus-within {
-  outline: 2px solid var(--ih-status-blue);
-  outline-offset: -1px;
-}
-
-#ih-strip.offline {
-  border-top-color: #7f1d1d;
-  background: #0a0404;
-  box-shadow: inset 0 1px 0 rgba(239, 68, 68, 0.1);
-}
-
-/* ===== Status Indicator Dots ===== */
-.ih-dot {
-  width: var(--ih-dot-size);
-  height: var(--ih-dot-size);
-  border-radius: 50%;
-  display: inline-block;
-  flex-shrink: 0;
-  transition: background var(--ih-transition-slow), box-shadow var(--ih-transition-slow), transform var(--ih-transition-fast);
-  will-change: transform;
-}
-
-.ih-dot:hover {
-  transform: scale(1.15);
-}
-.ih-dot.green { 
-  background: var(--ih-status-green); 
-  box-shadow: 0 0 6px rgba(34, 197, 94, 0.33); 
-}
-.ih-dot.yellow { 
-  background: var(--ih-status-yellow); 
-  box-shadow: 0 0 6px rgba(234, 179, 8, 0.33); 
-}
-.ih-dot.red { 
-  background: var(--ih-status-red); 
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.33); 
-}
-.ih-dot.blue { 
-  background: var(--ih-status-blue); 
-  box-shadow: 0 0 6px rgba(59, 130, 246, 0.33); 
-}
-.ih-dot.grey { 
-  background: var(--ih-status-grey); 
-  box-shadow: none; 
-}
-
-.ih-dot.pulse { 
-  animation: ih-pulse 2s ease-in-out infinite; 
-}
-
-@keyframes ih-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.95); }
-}
-
-/* ===== Text Elements ===== */
-.ih-label { 
-  color: var(--ih-text-dim); 
-  margin-right: 2px;
-  font-weight: 500;
-}
-
-.ih-val { 
-  color: var(--ih-text-secondary); 
-  font-variant-numeric: tabular-nums;
-}
-
-.ih-badge { 
-  background: #0f2a4a; 
-  color: var(--ih-accent-cyan); 
-  padding: 0 6px; 
-  border-radius: var(--ih-border-radius-sm); 
-  font-size: 10px;
-  font-weight: 500;
-  border: 1px solid rgba(59, 130, 246, 0.2);}
-
-.ih-badge.warn { 
-  background: #3b0a0a; 
-  color: var(--ih-accent-rose); 
-  border-color: rgba(239, 68, 68, 0.2);
-}
-
-/* ===== Expandable Panel ===== */
-#ih-panel {
-  background: var(--ih-bg-base);
-  border-top: 1px solid var(--ih-border);
-  height: 0;
-  overflow: hidden;
-  transition: height var(--ih-transition-normal);
-  display: flex;
-  flex-direction: column;
-  will-change: height;
-}
-
-#ih-panel.open { 
-  height: calc(100vh - var(--ih-bar-height)); 
-}
-
-#ih-panel-inner {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--ih-border) transparent;
-}
-
-#ih-panel-inner::-webkit-scrollbar {
-  width: 6px;
-}
-#ih-panel-inner::-webkit-scrollbar-track {
-  background: transparent;
-}
-#ih-panel-inner::-webkit-scrollbar-thumb {
-  background: var(--ih-border);
-  border-radius: 3px;
-}
-#ih-panel-inner::-webkit-scrollbar-thumb:hover {
-  background: var(--ih-border-strong);
-}
-
-/* ===== Sections & Grid Layout ===== */
-.ih-section { 
-  padding: 10px 14px 6px; 
-  border-bottom: 1px solid #0a0f1a; }
-.ih-section:last-child { 
-  border-bottom: none; 
-}
-
-.ih-section-title {
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--ih-text-dim);
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-weight: 600;
-}
-
-.ih-section-title span { 
-  color: var(--ih-text-faint); 
-  font-size: 9px;
-}
-
-.ih-grid { 
-  display: grid; 
-  grid-template-columns: 1fr 1fr; 
-  gap: 4px 12px; 
-}
-
-/* ===== Data Rows ===== */
-.ih-row {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 4px 0;
-  border-bottom: 1px solid #0a0f1a;
-  transition: background var(--ih-transition-fast);
-}
-
-.ih-row:hover {
-  background: rgba(30, 41, 59, 0.3);
-  border-radius: var(--ih-border-radius-sm);
-}
-
-.ih-row-label {
-  color: var(--ih-text-dim);
-  width: 58px;
-  flex-shrink: 0;
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;  font-weight: 500;
-}
-
-.ih-row-val { 
-  color: var(--ih-text-secondary); 
-  flex: 1; 
-  font-size: 10.5px; 
-  white-space: nowrap; 
-  overflow: hidden; 
-  text-overflow: ellipsis;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ===== Action Buttons ===== */
-.ih-actions { 
-  display: flex; 
-  gap: 6px; 
-  flex-wrap: wrap; 
-  padding: 8px 0 4px; 
-}
-
-.ih-btn {
-  background: var(--ih-bg-hover);
-  color: var(--ih-text-muted);
-  border: 1px solid var(--ih-border);
-  padding: 3px 10px;
-  border-radius: var(--ih-border-radius-sm);
-  font-size: 10px;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all var(--ih-transition-fast);
-  white-space: nowrap;
-  font-weight: 500;
-}
-
-.ih-btn:hover:not(:disabled) { 
-  background: var(--ih-border); 
-  color: var(--ih-text-primary); 
-  border-color: var(--ih-border-strong);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.ih-btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.ih-btn:focus {
-  outline: 2px solid var(--ih-status-blue);
-  outline-offset: 2px;}
-
-.ih-btn:disabled { 
-  opacity: 0.35; 
-  cursor: not-allowed; 
-  transform: none !important;
-}
-
-.ih-btn.warn:hover:not(:disabled) { 
-  background: #3b0a0a; 
-  color: var(--ih-accent-rose); 
-  border-color: #7f1d1d; 
-}
-
-.ih-btn.ok { 
-  color: var(--ih-accent-green) !important; 
-  border-color: #166534 !important; 
-}
-.ih-btn.fail { 
-  color: var(--ih-accent-rose) !important; 
-  border-color: #7f1d1d !important; 
-}
-
-/* ===== Series Cards ===== */
-.ih-series-list { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 4px; 
-}
-
-.ih-series-card { 
-  padding: 8px 10px; 
-  border-radius: var(--ih-border-radius-md); 
-  border: 1px solid var(--ih-bg-hover); 
-  background: var(--ih-bg-elevated); 
-  transition: border-color var(--ih-transition-normal), transform var(--ih-transition-fast);
-}
-
-.ih-series-card:hover {
-  border-color: var(--ih-border);
-  transform: translateX(2px);
-}
-
-.ih-series-card.complete { 
-  border-color: #052e16; 
-  background: #030d07; 
-}
-
-.ih-series-card-top { 
-  display: flex;   align-items: center; 
-  justify-content: space-between; 
-  margin-bottom: 4px; 
-}
-
-.ih-series-name { 
-  font-size: 11px; 
-  color: var(--ih-accent-cyan); 
-  font-weight: 500;
-}
-
-.ih-series-card.complete .ih-series-name { 
-  color: var(--ih-accent-green); 
-}
-
-.ih-series-badge { 
-  font-size: 9px; 
-  padding: 1px 7px; 
-  border-radius: 10px; 
-  font-weight: 600; 
-  letter-spacing: 0.05em; 
-}
-
-.ih-series-badge.active { 
-  background: #0f2a4a; 
-  color: #38bdf8; 
-  border: 1px solid rgba(56, 189, 248, 0.2);
-}
-.ih-series-badge.complete { 
-  background: #052e16; 
-  color: var(--ih-accent-green); 
-  border: 1px solid rgba(74, 222, 128, 0.2);
-}
-
-.ih-series-stats { 
-  display: flex; 
-  align-items: center; 
-  gap: 10px; 
-  font-size: 10px; 
-  color: var(--ih-text-dim); 
-}
-
-.ih-series-next { color: var(--ih-status-green); font-weight: 500; }
-.ih-series-gap { color: var(--ih-accent-amber); font-weight: 500; }
-.ih-series-done { color: var(--ih-accent-green); font-weight: 500; }
-
-.ih-series-actions { 
-  margin-top: 6px; 
-  display: flex; 
-  gap: 5px; }
-
-.ih-series-btn { 
-  font-size: 9px; 
-  padding: 2px 8px; 
-  border-radius: var(--ih-border-radius-sm); 
-  border: 1px solid var(--ih-border); 
-  background: var(--ih-bg-hover); 
-  color: var(--ih-text-dim); 
-  cursor: pointer; 
-  font-family: inherit; 
-  transition: all var(--ih-transition-fast); 
-}
-
-.ih-series-btn:hover { 
-  background: var(--ih-border); 
-  color: var(--ih-text-secondary); 
-  border-color: var(--ih-border-strong); 
-}
-.ih-series-btn.complete-btn:hover { 
-  background: #052e16; 
-  color: var(--ih-accent-green); 
-  border-color: #166534; 
-}
-.ih-series-btn.active-btn:hover { 
-  background: #0f2a4a; 
-  color: #38bdf8; 
-  border-color: #1e40af; 
-}
-
-/* ===== Cron & Activity Lists ===== */
-.ih-cron-list,
-.ih-activity-list,
-.ih-staged-list { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 2px; 
-}
-
-.ih-cron-row,
-.ih-activity-row,
-.ih-staged-row { 
-  display: flex; 
-  align-items: center; 
-  gap: 8px; 
-  padding: 4px 8px; 
-  background: var(--ih-bg-elevated); 
-  border-radius: var(--ih-border-radius-sm);
-  transition: background var(--ih-transition-fast);
-}
-.ih-cron-row:hover,
-.ih-activity-row:hover {
-  background: var(--ih-bg-hover);
-}
-
-.ih-staged-row {
-  border: 1px solid #0f2a4a;
-}
-
-.ih-cron-time { 
-  color: var(--ih-text-dim); 
-  font-size: 10px; 
-  width: 60px; 
-  flex-shrink: 0; 
-  font-variant-numeric: tabular-nums;
-}
-
-.ih-cron-stats { 
-  display: flex; 
-  gap: 8px; 
-  flex: 1; 
-}
-
-.ih-cron-stat.pub { color: var(--ih-status-green); }
-.ih-cron-stat.del { color: var(--ih-accent-amber); }
-.ih-cron-stat.fail { color: var(--ih-status-red); }
-.ih-cron-stat.idle { color: var(--ih-text-faint); }
-.ih-cron-stat { font-size: 10px; font-weight: 500; }
-
-.ih-cron-files,
-.ih-activity-path,
-.ih-staged-path { 
-  font-size: 10px; 
-  color: var(--ih-text-dim); 
-  overflow: hidden; 
-  text-overflow: ellipsis; 
-  white-space: nowrap; 
-  flex: 1;
-}
-
-.ih-staged-path { 
-  color: var(--ih-accent-cyan); 
-}
-
-.ih-staged-size { 
-  color: var(--ih-text-dim); 
-  font-size: 9.5px; 
-  flex-shrink: 0; 
-  font-variant-numeric: tabular-nums;}
-
-.ih-activity-icon { 
-  width: 14px; 
-  text-align: center; 
-  font-size: 10px; 
-  flex-shrink: 0; 
-}
-
-.ih-activity-time { 
-  color: var(--ih-text-faint); 
-  font-size: 9.5px; 
-  flex-shrink: 0; 
-  font-variant-numeric: tabular-nums;
-}
-
-/* ===== UI Utilities ===== */
-#ih-chevron { 
-  margin-left: auto; 
-  color: var(--ih-text-faint); 
-  font-size: 8px; 
-  transition: transform 0.25s ease; 
-  will-change: transform;
-}
-
-#ih-chevron.up { 
-  transform: rotate(180deg); 
-}
-
-.ih-strip-indicator { 
-  display: none; 
-  align-items: center; 
-  gap: 4px; 
-}
-.ih-strip-indicator.visible { 
-  display: flex; 
-}
-
-.ih-strip-label { 
-  font-size: 9px; 
-  text-transform: uppercase; 
-  letter-spacing: 0.06em; 
-  color: var(--ih-text-dim);
-  font-weight: 600;
-}
-
-/* ===== Loading Spinner ===== */
-.ih-spin { 
-  width: 7px; 
-  height: 7px;   border: 1.5px solid var(--ih-border); 
-  border-top-color: var(--ih-status-blue); 
-  border-radius: 50%; 
-  animation: ih-spin 0.7s linear infinite; 
-  display: inline-block; 
-}
-
-@keyframes ih-spin { 
-  to { transform: rotate(360deg); } 
-}
-
-/* ===== Empty State ===== */
-.ih-empty { 
-  color: var(--ih-text-faint); 
-  font-size: 10px; 
-  padding: 4px 8px; 
-  font-style: italic;
-}
-
-/* ===== Reduced Motion Preference ===== */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* ===== High Contrast Mode Support ===== */
-@media (prefers-contrast: high) {
-  :root {
-    --ih-border: #475569;
-    --ih-text-muted: #94a3b8;
-    --ih-text-dim: #cbd5e1;
-  }
-  
-  .ih-btn {
-    border-width: 2px;
-  }
+    #ih-bar {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 99999;
+      font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
+      font-size: 11px; line-height: 1.4;
     }
+    #ih-strip {
+      background: #080e1a; color: #64748b; height: 26px;
+      display: flex; align-items: center; padding: 0 12px; gap: 12px;
+      cursor: pointer; user-select: none;
+      border-top: 1px solid #1e293b;
+      transition: background 0.15s, border-color 0.4s;
+    }
+    #ih-strip:hover { background: #0f172a; }
+    #ih-strip.offline { border-top-color: #7f1d1d; background: #0a0404; }
+    .ih-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      display: inline-block; flex-shrink: 0;
+      transition: background 0.4s, box-shadow 0.4s;
+    }
+    .ih-dot.green  { background: #22c55e; box-shadow: 0 0 6px #22c55e55; }
+    .ih-dot.yellow { background: #eab308; box-shadow: 0 0 6px #eab30855; }
+    .ih-dot.red    { background: #ef4444; box-shadow: 0 0 6px #ef444455; }
+    .ih-dot.blue   { background: #3b82f6; box-shadow: 0 0 6px #3b82f655; }
+    .ih-dot.grey   { background: #334155; box-shadow: none; }
+    .ih-dot.pulse  { animation: ih-pulse 2s ease-in-out infinite; }
+    @keyframes ih-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .ih-label { color: #334155; margin-right: 2px; }
+    .ih-val   { color: #cbd5e1; }
+    .ih-badge { background: #0f2a4a; color: #7dd3fc; padding: 0 6px; border-radius: 3px; font-size: 10px; }
+    .ih-badge.warn { background: #3b0a0a; color: #fca5a5; }
+    .ih-strip-indicator { display: none; align-items: center; gap: 4px; }
+    .ih-strip-indicator.visible { display: flex; }
+    .ih-strip-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: #334155; }
+    #ih-panel {
+      background: #05090f;
+      border-top: 1px solid #1e293b;
+      height: 0; overflow: hidden;
+      transition: height 0.3s cubic-bezier(0.4,0,0.2,1);
+      display: flex; flex-direction: column;
+    }
+    #ih-panel.open { height: calc(100vh - 26px); }
+    #ih-panel-inner {
+      flex: 1; overflow-y: auto; padding: 0 0 16px;
+      scrollbar-width: thin; scrollbar-color: #1e293b transparent;
+    }
+    .ih-section { padding: 10px 14px 6px; border-bottom: 1px solid #0a0f1a; }
+    .ih-section:last-child { border-bottom: none; }
+    .ih-section-title {
+      font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em;
+      color: #334155; margin-bottom: 8px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .ih-section-title span { color: #1e293b; font-size: 9px; }
+    .ih-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 0; }
+    .ih-row {
+      display: flex; align-items: center; gap: 7px;
+      padding: 4px 0; border-bottom: 1px solid #0a0f1a;
+    }
+    .ih-row-label {
+      color: #334155; width: 58px; flex-shrink: 0;
+      font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .ih-row-val { color: #94a3b8; flex: 1; font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ih-actions { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 0 4px; }
+    .ih-btn {
+      background: #0f172a; color: #64748b; border: 1px solid #1e293b;
+      padding: 3px 10px; border-radius: 3px; font-size: 10px;
+      font-family: inherit; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .ih-btn:hover:not(:disabled) { background: #1e293b; color: #e2e8f0; border-color: #334155; }
+    .ih-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .ih-btn.warn:hover:not(:disabled) { background: #3b0a0a; color: #fca5a5; border-color: #7f1d1d; }
+    .ih-btn.ok   { color: #86efac !important; border-color: #166534 !important; }
+    .ih-btn.fail { color: #fca5a5 !important; border-color: #7f1d1d !important; }
+    .ih-series-list { display: flex; flex-direction: column; gap: 4px; }
+    .ih-series-card { padding: 8px 10px; border-radius: 4px; border: 1px solid #0f172a; background: #080e1a; transition: border-color 0.3s; }
+    .ih-series-card.complete { border-color: #052e16; background: #030d07; }
+    .ih-series-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+    .ih-series-name { font-size: 11px; color: #7dd3fc; }
+    .ih-series-card.complete .ih-series-name { color: #4ade80; }
+    .ih-series-badge { font-size: 9px; padding: 1px 7px; border-radius: 10px; font-weight: 600; letter-spacing: 0.05em; }
+    .ih-series-badge.active   { background: #0f2a4a; color: #38bdf8; }
+    .ih-series-badge.complete { background: #052e16; color: #4ade80; }
+    .ih-series-stats { display: flex; align-items: center; gap: 10px; font-size: 10px; color: #475569; }
+    .ih-series-next { color: #22c55e; font-size: 10px; }
+    .ih-series-gap  { color: #f59e0b; font-size: 10px; }
+    .ih-series-done { color: #4ade80; font-size: 10px; }
+    .ih-series-actions { margin-top: 6px; display: flex; gap: 5px; }
+    .ih-series-btn { font-size: 9px; padding: 2px 8px; border-radius: 3px; border: 1px solid #1e293b; background: #0f172a; color: #475569; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+    .ih-series-btn:hover { background: #1e293b; color: #94a3b8; border-color: #334155; }
+    .ih-series-btn.complete-btn:hover { background: #052e16; color: #4ade80; border-color: #166534; }
+    .ih-series-btn.active-btn:hover   { background: #0f2a4a; color: #38bdf8; border-color: #1e40af; }
+    .ih-cron-list { display: flex; flex-direction: column; gap: 2px; }
+    .ih-cron-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: #080e1a; border-radius: 3px; }
+    .ih-cron-time  { color: #334155; font-size: 10px; width: 60px; flex-shrink: 0; }
+    .ih-cron-stats { display: flex; gap: 8px; flex: 1; }
+    .ih-cron-stat.pub  { color: #22c55e; font-size: 10px; }
+    .ih-cron-stat.del  { color: #f59e0b; font-size: 10px; }
+    .ih-cron-stat.fail { color: #ef4444; font-size: 10px; }
+    .ih-cron-stat.idle { color: #1e293b; font-size: 10px; }
+    .ih-cron-files { font-size: 9.5px; color: #334155; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ih-activity-list { display: flex; flex-direction: column; gap: 2px; }
+    .ih-activity-row { display: flex; align-items: center; gap: 8px; padding: 3px 8px; background: #080e1a; border-radius: 3px; }
+    .ih-activity-icon { width: 14px; text-align: center; font-size: 10px; flex-shrink: 0; }
+    .ih-activity-path { color: #475569; font-size: 10px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ih-activity-time { color: #1e293b; font-size: 9.5px; flex-shrink: 0; }
+    .ih-staged-list { display: flex; flex-direction: column; gap: 2px; }
+    .ih-staged-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: #080e1a; border-radius: 3px; border: 1px solid #0f2a4a; }
+    .ih-staged-path { color: #7dd3fc; font-size: 10px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ih-staged-size { color: #334155; font-size: 9.5px; flex-shrink: 0; }
+    #ih-chevron { margin-left: auto; color: #1e293b; font-size: 8px; transition: transform 0.25s; }
+    #ih-chevron.up { transform: rotate(180deg); }
+    .ih-spin { width: 7px; height: 7px; border: 1.5px solid #1e293b; border-top-color: #3b82f6; border-radius: 50%; animation: ih-spin 0.7s linear infinite; display: inline-block; }
+    @keyframes ih-spin { to { transform: rotate(360deg); } }
+    .ih-empty { color: #1e293b; font-size: 10px; padding: 4px 8px; }
   </style>
 </head>
 <body>
@@ -598,14 +132,14 @@
         <div class="ih-section">
           <div class="ih-section-title">System Status <span id="ih-refresh-time"></span></div>
           <div class="ih-grid">
-            <div class="ih-row"><span class="ih-row-label">Worker</span><span class="ih-dot grey" id="p-worker-dot"></span><span class="ih-row-val" id="p-worker-val">—</span></div>
-            <div class="ih-row"><span class="ih-row-label">GitHub</span><span class="ih-dot grey" id="p-github-dot"></span><span class="ih-row-val" id="p-github-val">—</span></div>
-            <div class="ih-row"><span class="ih-row-label">D1</span><span class="ih-dot grey" id="p-d1-dot"></span><span class="ih-row-val" id="p-d1-val">—</span></div>
-            <div class="ih-row"><span class="ih-row-label">Claude</span><span class="ih-dot grey" id="p-claude-dot"></span><span class="ih-row-val" id="p-claude-val">—</span></div>
-            <div class="ih-row"><span class="ih-row-label">Queue</span><span class="ih-dot grey" id="p-queue-dot"></span><span class="ih-row-val" id="p-queue-val">—</span></div>
-            <div class="ih-row"><span class="ih-row-label">Cron</span><span class="ih-dot grey" id="p-cron-dot"></span><span class="ih-row-val" id="p-cron-val">—</span></div>
-            <div class="ih-row"><span class="ih-row-label">Dead</span><span class="ih-dot grey" id="p-dead-dot"></span><span class="ih-row-val" id="p-dead-val">—</span></div>
-            <div class="ih-row"><span class="ih-row-label">Gaps</span><span class="ih-dot grey" id="p-gaps-dot"></span><span class="ih-row-val" id="p-gaps-val">—</span></div>
+            <div class="ih-row"><span class="ih-row-label">Worker</span><span class="ih-dot grey" id="p-worker-dot"></span><span class="ih-row-val" id="p-worker-val">&#8212;</span></div>
+            <div class="ih-row"><span class="ih-row-label">GitHub</span><span class="ih-dot grey" id="p-github-dot"></span><span class="ih-row-val" id="p-github-val">&#8212;</span></div>
+            <div class="ih-row"><span class="ih-row-label">D1</span><span class="ih-dot grey" id="p-d1-dot"></span><span class="ih-row-val" id="p-d1-val">&#8212;</span></div>
+            <div class="ih-row"><span class="ih-row-label">Claude</span><span class="ih-dot grey" id="p-claude-dot"></span><span class="ih-row-val" id="p-claude-val">&#8212;</span></div>
+            <div class="ih-row"><span class="ih-row-label">Queue</span><span class="ih-dot grey" id="p-queue-dot"></span><span class="ih-row-val" id="p-queue-val">&#8212;</span></div>
+            <div class="ih-row"><span class="ih-row-label">Cron</span><span class="ih-dot grey" id="p-cron-dot"></span><span class="ih-row-val" id="p-cron-val">&#8212;</span></div>
+            <div class="ih-row"><span class="ih-row-label">Dead</span><span class="ih-dot grey" id="p-dead-dot"></span><span class="ih-row-val" id="p-dead-val">&#8212;</span></div>
+            <div class="ih-row"><span class="ih-row-label">Gaps</span><span class="ih-dot grey" id="p-gaps-dot"></span><span class="ih-row-val" id="p-gaps-val">&#8212;</span></div>
           </div>
         </div>
         <div class="ih-section">
@@ -636,19 +170,15 @@
     </div>
     <div id="ih-strip" onclick="ihToggle()">
       <span id="ih-loading"><span class="ih-spin"></span></span>
-      <!-- Main status dot (always visible after load) -->
       <span class="ih-dot grey pulse" id="s-main" style="display:none"></span>
-      <!-- Worker indicator -->
       <span class="ih-strip-indicator" id="s-worker">
         <span class="ih-dot grey" id="s-worker-dot"></span>
         <span class="ih-strip-label">worker</span>
       </span>
-      <!-- Claude connection indicator -->
       <span class="ih-strip-indicator" id="s-claude">
         <span class="ih-dot grey" id="s-claude-dot"></span>
         <span class="ih-strip-label">claude</span>
       </span>
-      <!-- Staged badge -->
       <span id="s-staged" style="display:none"></span>
       <span id="s-dead"   style="display:none"></span>
       <span id="s-gaps"   style="display:none"></span>
@@ -664,9 +194,10 @@
     const MAX_MS  = 300000;
     const TIMEOUT = 5000;
 
-    let panelOpen = false;
-    let failCount = 0;
-    let pollTimer = null;
+    let panelOpen  = false;
+    let failCount  = 0;
+    let pollTimer  = null;
+    let d1Bookmark = null;
 
     function ihToggle() {
       panelOpen = !panelOpen;
@@ -674,20 +205,19 @@
       document.getElementById('ih-chevron').classList.toggle('up', panelOpen);
     }
 
-    function dot(id, color) { const el = document.getElementById(id); if (el) el.className = 'ih-dot ' + color; }
-    function set(id, text)  { const el = document.getElementById(id); if (el) el.textContent = text; }
-    function html(id, mk)   { const el = document.getElementById(id); if (el) el.innerHTML = mk; }
-    function show(id, mk)   { const el = document.getElementById(id); if (!el) return; el.style.display = 'inline'; if (mk !== undefined) el.innerHTML = mk; }
-    function showBlock(id)  { const el = document.getElementById(id); if (el) el.style.display = 'block'; }
-    function hide(id)       { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
-    function showFlex(id)   { const el = document.getElementById(id); if (el) el.classList.add('visible'); }
-    function hideFlex(id)   { const el = document.getElementById(id); if (el) el.classList.remove('visible'); }
-    function fileName(p)    { return p.split('/').pop(); }
+    function dot(id, color)  { const el = document.getElementById(id); if (el) el.className = 'ih-dot ' + color; }
+    function set(id, text)   { const el = document.getElementById(id); if (el) el.textContent = text; }
+    function html(id, mk)    { const el = document.getElementById(id); if (el) el.innerHTML = mk; }
+    function show(id, mk)    { const el = document.getElementById(id); if (!el) return; el.style.display = 'inline'; if (mk !== undefined) el.innerHTML = mk; }
+    function showBlock(id)   { const el = document.getElementById(id); if (el) el.style.display = 'block'; }
+    function hide(id)        { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
+    function showFlex(id)    { const el = document.getElementById(id); if (el) el.classList.add('visible'); }
+    function fileName(p)     { return p.split('/').pop(); }
 
     function relTime(isoStr) {
       if (!isoStr) return 'never';
       const ms = new Date(isoStr.replace(' ', 'T') + (isoStr.includes('T') ? '' : 'Z')).getTime();
-      if (isNaN(ms)) return '—';
+      if (isNaN(ms)) return '&#8212;';
       const diff = Math.floor((Date.now() - ms) / 1000);
       if (diff < 60)    return diff + 's ago';
       if (diff < 3600)  return Math.floor(diff / 60) + 'm ago';
@@ -697,9 +227,9 @@
 
     function connStatus(conn) {
       if (!conn || conn.status === 'never') return { color: 'grey',   text: 'never connected' };
-      if (conn.status === 'active')         return { color: 'green',  text: 'active · ' + relTime(conn.last_seen) };
-      if (conn.status === 'idle')           return { color: 'yellow', text: 'idle · ' + relTime(conn.last_seen) };
-      return                                       { color: 'red',    text: 'offline · ' + relTime(conn.last_seen) };
+      if (conn.status === 'active')         return { color: 'green',  text: 'active \u00b7 ' + relTime(conn.last_seen) };
+      if (conn.status === 'idle')           return { color: 'yellow', text: 'idle \u00b7 '   + relTime(conn.last_seen) };
+      return                                       { color: 'red',    text: 'offline \u00b7 ' + relTime(conn.last_seen) };
     }
 
     async function fetchWithTimeout(url, opts = {}) {
@@ -716,12 +246,15 @@
       const orig = btn.innerHTML;
       btn.textContent = '...';
       try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (d1Bookmark) headers['X-D1-Bookmark'] = d1Bookmark;
         const res = await fetchWithTimeout(`${WORKER}/claude/action`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers,
           body: JSON.stringify({ action: actionType }),
         });
         if (!res.ok) throw new Error('Failed');
+        const bm = res.headers.get('x-d1-bookmark');
+        if (bm) d1Bookmark = bm;
         btn.classList.add('ok'); btn.textContent = 'Done';
         setTimeout(() => ihRefresh(), 800);
       } catch (e) {
@@ -736,12 +269,15 @@
       const orig = btn.textContent;
       btn.textContent = '...';
       try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (d1Bookmark) headers['X-D1-Bookmark'] = d1Bookmark;
         const res = await fetchWithTimeout(`${WORKER}/claude/action`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers,
           body: JSON.stringify({ action: newStatus === 'complete' ? 'mark-complete' : 'mark-active', series: name }),
         });
         if (!res.ok) throw new Error('Failed');
+        const bm = res.headers.get('x-d1-bookmark');
+        if (bm) d1Bookmark = bm;
         setTimeout(() => ihRefresh(), 300);
       } catch (e) {
         btn.disabled = false;
@@ -758,12 +294,12 @@
       const cards = entries.map(([name, d]) => {
         const isComplete = d.status === 'complete';
         const label      = name.replace(/-/g, ' ');
-        const statsLine  = `<span>${d.episodes} ep</span>${d.profiles > 0 ? `<span>${d.profiles} profiles</span>` : ''}${isComplete ? '<span class="ih-series-done">✓ complete</span>' : d.episode_gaps && d.episode_gaps.length > 0 ? `<span class="ih-series-gap">⚠ gap ${d.episode_gaps.join(', ')}</span>` : `<span class="ih-series-next">next: ${d.next_episode}</span>`}`;
+        const statsLine  = `<span>${d.episodes} ep</span>${d.profiles > 0 ? `<span>${d.profiles} profiles</span>` : ''}${isComplete ? '<span class="ih-series-done">\u2713 complete</span>' : d.episode_gaps && d.episode_gaps.length > 0 ? `<span class="ih-series-gap">\u26a0 gap ${d.episode_gaps.join(', ')}</span>` : `<span class="ih-series-next">next: ${d.next_episode}</span>`}`;
         const toggleBtn  = isComplete
-          ? `<button class="ih-series-btn active-btn" onclick="toggleSeries('${name}','active',this)">↺ Mark Active</button>`
-          : `<button class="ih-series-btn complete-btn" onclick="toggleSeries('${name}','complete',this)">✓ Mark Complete</button>`;
+          ? `<button class="ih-series-btn active-btn" onclick="toggleSeries('${name}','active',this)">\u21ba Mark Active</button>`
+          : `<button class="ih-series-btn complete-btn" onclick="toggleSeries('${name}','complete',this)">\u2713 Mark Complete</button>`;
         const completedAt = isComplete && d.completed_at ? `<span style="font-size:9px;color:#1e293b">completed ${relTime(d.completed_at)}</span>` : '';
-        return `<div class="ih-series-card ${isComplete ? 'complete' : ''}"><div class="ih-series-card-top"><span class="ih-series-name">${label}</span><span class="ih-series-badge ${isComplete ? 'complete' : 'active'}">${isComplete ? '✓ COMPLETE' : 'ACTIVE'}</span></div><div class="ih-series-stats">${statsLine}</div><div class="ih-series-actions">${toggleBtn}${completedAt}</div></div>`;
+        return `<div class="ih-series-card ${isComplete ? 'complete' : ''}"><div class="ih-series-card-top"><span class="ih-series-name">${label}</span><span class="ih-series-badge ${isComplete ? 'complete' : 'active'}">${isComplete ? '\u2713 COMPLETE' : 'ACTIVE'}</span></div><div class="ih-series-stats">${statsLine}</div><div class="ih-series-actions">${toggleBtn}${completedAt}</div></div>`;
       });
       html('series-list', cards.join(''));
     }
@@ -772,8 +308,8 @@
       if (!cronLog || !cronLog.length) { html('cron-list', '<div class="ih-empty">No runs yet</div>'); return; }
       const rows = cronLog.map(r => {
         const pub   = `<span class="ih-cron-stat ${r.published > 0 ? 'pub' : 'idle'}">+${r.published}</span>`;
-        const del   = `<span class="ih-cron-stat ${r.deleted   > 0 ? 'del' : 'idle'}">${r.deleted > 0 ? '-' : '·'}${r.deleted}</span>`;
-        const fail  = r.failed > 0 ? `<span class="ih-cron-stat fail">✕${r.failed}</span>` : '';
+        const del   = `<span class="ih-cron-stat ${r.deleted   > 0 ? 'del' : 'idle'}">${r.deleted > 0 ? '-' : '\u00b7'}${r.deleted}</span>`;
+        const fail  = r.failed > 0 ? `<span class="ih-cron-stat fail">\u2715${r.failed}</span>` : '';
         const files = r.details && r.details.length > 0 ? r.details.filter(d => d.success).map(d => fileName(d.path)).join(', ') : '';
         return `<div class="ih-cron-row"><span class="ih-cron-time">${relTime(r.ran_at)}</span><div class="ih-cron-stats">${pub}${del}${fail}</div>${files ? `<span class="ih-cron-files" title="${files}">${files}</span>` : ''}</div>`;
       });
@@ -782,9 +318,9 @@
 
     function renderActivity(activity) {
       if (!activity || !activity.length) { html('activity-list', '<div class="ih-empty">No activity yet</div>'); return; }
-      const icons  = { publish: '↑', delete: '✕', rollback: '↩' };
-      const colors = { publish: '#22c55e', delete: '#ef4444', rollback: '#f59e0b' };
-      const rows = activity.map(r => `<div class="ih-activity-row"><span class="ih-activity-icon" style="color:${colors[r.action]||'#64748b'}">${icons[r.action]||'·'}</span><span class="ih-activity-path" title="${r.path}">${fileName(r.path)}</span><span class="ih-activity-time">${relTime(r.happened_at)}</span></div>`);
+      const icons  = { publish: '\u2191', delete: '\u2715', rollback: '\u21a9', webhook_sync: '\u21bb' };
+      const colors = { publish: '#22c55e', delete: '#ef4444', rollback: '#f59e0b', webhook_sync: '#3b82f6' };
+      const rows = activity.map(r => `<div class="ih-activity-row"><span class="ih-activity-icon" style="color:${colors[r.action]||'#64748b'}">${icons[r.action]||'\u00b7'}</span><span class="ih-activity-path" title="${r.path}">${fileName(r.path)}</span><span class="ih-activity-time">${relTime(r.happened_at)}</span></div>`);
       html('activity-list', rows.join(''));
     }
 
@@ -801,8 +337,12 @@
       show('ih-loading');
 
       try {
-        const res = await fetchWithTimeout(`${WORKER}/claude/heartbeat`);
+        const headers = {};
+        if (d1Bookmark) headers['X-D1-Bookmark'] = d1Bookmark;
+        const res = await fetchWithTimeout(`${WORKER}/claude/heartbeat`, { headers });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const bm = res.headers.get('x-d1-bookmark');
+        if (bm) d1Bookmark = bm;
         const { health, connections, stats, cron_log, staged, activity } = await res.json();
 
         failCount = 0;
@@ -811,26 +351,22 @@
         hide('ih-loading');
         set('ih-refresh-time', 'updated ' + relTime(new Date().toISOString()));
 
-        // Main dot
         const workerOk  = health.status === 'ok' || health.status === 'warning';
         const mainColor = !workerOk ? 'red' : health.status === 'warning' ? 'yellow' : 'green';
         const mainDot   = document.getElementById('s-main');
         mainDot.style.display = 'inline-block';
         mainDot.className = 'ih-dot ' + mainColor;
 
-        // Panel: worker, github, d1
         dot('p-worker-dot', workerOk ? 'green' : 'red');
         set('p-worker-val', workerOk ? 'Online' : 'Offline');
         dot('p-github-dot', health.github_user ? 'green' : 'red');
         set('p-github-val', health.github_user || 'Not connected');
         dot('p-d1-dot', health.d1 === 'connected' ? 'green' : 'red');
-        set('p-d1-val', health.d1 || '—');
+        set('p-d1-val', health.d1 || '\u2014');
 
-        // Strip: worker indicator
         showFlex('s-worker');
         dot('s-worker-dot', workerOk ? 'green' : 'red');
 
-        // Panel + Strip: claude connection
         const connMap = {};
         (connections || []).forEach(c => connMap[c.name] = c);
         const claudeS = connStatus(connMap['claude']);
@@ -839,14 +375,12 @@
         showFlex('s-claude');
         dot('s-claude-dot', claudeS.color);
 
-        // Panel: queue
         const totalDrafts = health.drafts || 0;
         const totalQueued = health.queue  || 0;
         dot('p-queue-dot', totalDrafts > 0 ? 'blue' : 'grey');
         set('p-queue-val', totalDrafts > 0 ? `${totalDrafts} draft${totalDrafts !== 1 ? 's' : ''}, ${totalQueued} queued` : 'Empty');
         document.getElementById('btn-staged-count').textContent = totalDrafts;
 
-        // Panel: cron
         if (health.last_cron) {
           dot('p-cron-dot', 'green');
           set('p-cron-val', relTime(health.last_cron.ran_at));
@@ -857,28 +391,25 @@
           hide('s-cron');
         }
 
-        // Panel: dead letter
         const deadN = health.dead_letter || 0;
         dot('p-dead-dot', deadN > 0 ? 'red' : 'grey');
         set('p-dead-val', deadN > 0 ? `${deadN} failed` : 'None');
-        deadN > 0 ? show('s-dead', `<span class="ih-badge warn">⚠ ${deadN} failed</span>`) : hide('s-dead');
+        deadN > 0 ? show('s-dead', `<span class="ih-badge warn">\u26a0 ${deadN} failed</span>`) : hide('s-dead');
 
-        // Panel: gaps
         const allGaps = [];
         if (stats) Object.entries(stats).forEach(([s, d]) => {
           if (d.episode_gaps && d.episode_gaps.length > 0) allGaps.push(`${s}: ${d.episode_gaps.join(', ')}`);
         });
         if (allGaps.length > 0) {
           dot('p-gaps-dot', 'yellow');
-          set('p-gaps-val', allGaps.join(' · '));
-          show('s-gaps', '<span style="color:#f59e0b">⚠ gap</span>');
+          set('p-gaps-val', allGaps.join(' \u00b7 '));
+          show('s-gaps', '<span style="color:#f59e0b">\u26a0 gap</span>');
         } else {
           dot('p-gaps-dot', 'green');
           set('p-gaps-val', 'None detected');
           hide('s-gaps');
         }
 
-        // Strip: staged badge
         totalDrafts > 0
           ? show('s-staged', `<span class="ih-badge">${totalDrafts} staged</span>`)
           : hide('s-staged');
@@ -895,7 +426,6 @@
         const d = document.getElementById('s-main');
         d.style.display = 'inline-block';
         d.className = 'ih-dot red pulse';
-        // Show worker as red in strip on failure
         showFlex('s-worker');
         dot('s-worker-dot', 'red');
         dot('p-worker-dot', 'red');
