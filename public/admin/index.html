@@ -121,7 +121,7 @@
   </style>
 </head>
 <body>
-  <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js" type="module" data-cfasync="false"></script>
+  <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js" type="module" data-cfasync="false"><\/script>
 
   <div id="ih-bar">
     <div id="ih-panel">
@@ -201,10 +201,8 @@
     function hide(id)       { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
     function fileName(p)    { return p.split('/').pop(); }
 
-    // FIX 2: Normalise D1 timestamps (no timezone) before parsing
     function normaliseTs(isoStr) {
       if (!isoStr) return null;
-      // D1 returns "2026-03-19 12:34:56" — convert to valid ISO-8601
       return isoStr.replace(' ', 'T') + (isoStr.includes('T') ? '' : 'Z');
     }
 
@@ -283,13 +281,12 @@
       const cards = entries.map(([name, d]) => {
         const isComplete = d.status === 'complete';
         const label      = name.replace(/-/g, ' ');
-        const statsLine  = `<span>${d.episodes} ep</span>${d.profiles > 0 ? `<span>${d.profiles} profiles</span>` : ''}${isComplete ? '<span class="ih-series-done">✓ complete</span>' : d.episode_gaps && d.episode_gaps.length > 0 ? `<span class="ih-series-gap">⚠ gap ${d.episode_gaps.join(', ')}</span>` : `<span class="ih-series-next">next: ${d.next_episode}</span>`}`;
+        const statsLine  = `<span>${d.episodes} ep</span>${d.profiles > 0 ? `<span>${d.profiles} profiles</span>` : ''}${isComplete ? '<span class="ih-series-done">\u2713 complete</span>' : d.episode_gaps && d.episode_gaps.length > 0 ? `<span class="ih-series-gap">\u26a0 gap ${d.episode_gaps.join(', ')}</span>` : `<span class="ih-series-next">next: ${d.next_episode}</span>`}`;
         const toggleBtn  = isComplete
-          ? `<button class="ih-series-btn active-btn" onclick="toggleSeries('${name}','active',this)">↺ Mark Active</button>`
-          : `<button class="ih-series-btn complete-btn" onclick="toggleSeries('${name}','complete',this)">✓ Mark Complete</button>`;
+          ? `<button class="ih-series-btn active-btn" onclick="toggleSeries('${name}','active',this)">\u21ba Mark Active</button>`
+          : `<button class="ih-series-btn complete-btn" onclick="toggleSeries('${name}','complete',this)">\u2713 Mark Complete</button>`;
         const completedAt = isComplete && d.completed_at ? `<span style="font-size:9px;color:#1e293b">completed ${relTime(d.completed_at)}</span>` : '';
-        // FIX 1: was `'complete' : '}` — missing closing quote and had stray }
-        return `<div class="ih-series-card ${isComplete ? 'complete' : ''}"><div class="ih-series-card-top"><span class="ih-series-name">${label}</span><span class="ih-series-badge ${isComplete ? 'complete' : 'active'}">${isComplete ? '✓ COMPLETE' : 'ACTIVE'}</span></div><div class="ih-series-stats">${statsLine}</div><div class="ih-series-actions">${toggleBtn}${completedAt}</div></div>`;
+        return `<div class="ih-series-card ${isComplete ? 'complete' : ''}"><div class="ih-series-card-top"><span class="ih-series-name">${label}</span><span class="ih-series-badge ${isComplete ? 'complete' : 'active'}">${isComplete ? '\u2713 COMPLETE' : 'ACTIVE'}</span></div><div class="ih-series-stats">${statsLine}</div><div class="ih-series-actions">${toggleBtn}${completedAt}</div></div>`;
       });
       html('series-list', cards.join(''));
     }
@@ -298,8 +295,8 @@
       if (!cronLog || !cronLog.length) { html('cron-list', '<div class="ih-empty">No runs yet</div>'); return; }
       const rows = cronLog.map(r => {
         const pub   = `<span class="ih-cron-stat ${r.published > 0 ? 'pub' : 'idle'}">+${r.published}</span>`;
-        const del   = `<span class="ih-cron-stat ${r.deleted   > 0 ? 'del' : 'idle'}">${r.deleted > 0 ? '-' : '·'}${r.deleted}</span>`;
-        const fail  = r.failed > 0 ? `<span class="ih-cron-stat fail">✕${r.failed}</span>` : '';
+        const del   = `<span class="ih-cron-stat ${r.deleted   > 0 ? 'del' : 'idle'}">${r.deleted > 0 ? '-' : '\u00b7'}${r.deleted}</span>`;
+        const fail  = r.failed > 0 ? `<span class="ih-cron-stat fail">\u2715${r.failed}</span>` : '';
         const files = r.details && r.details.length > 0 ? r.details.filter(d => d.success).map(d => fileName(d.path)).join(', ') : '';
         return `<div class="ih-cron-row"><span class="ih-cron-time">${relTime(r.ran_at)}</span><div class="ih-cron-stats">${pub}${del}${fail}</div>${files ? `<span class="ih-cron-files" title="${files}">${files}</span>` : ''}</div>`;
       });
@@ -308,9 +305,9 @@
 
     function renderActivity(activity) {
       if (!activity || !activity.length) { html('activity-list', '<div class="ih-empty">No activity yet</div>'); return; }
-      const icons  = { publish: '↑', delete: '✕', rollback: '↩' };
+      const icons  = { publish: '\u2191', delete: '\u2715', rollback: '\u21a9' };
       const colors = { publish: '#22c55e', delete: '#ef4444', rollback: '#f59e0b' };
-      const rows = activity.map(r => `<div class="ih-activity-row"><span class="ih-activity-icon" style="color:${colors[r.action]||'#64748b'}">${icons[r.action]||'·'}</span><span class="ih-activity-path" title="${r.path}">${fileName(r.path)}</span><span class="ih-activity-time">${relTime(r.happened_at)}</span></div>`);
+      const rows = activity.map(r => `<div class="ih-activity-row"><span class="ih-activity-icon" style="color:${colors[r.action]||'#64748b'}">${icons[r.action]||'\u00b7'}</span><span class="ih-activity-path" title="${r.path}">${fileName(r.path)}</span><span class="ih-activity-time">${relTime(r.happened_at)}</span></div>`);
       html('activity-list', rows.join(''));
     }
 
@@ -375,7 +372,7 @@
         const deadN = health.dead_letter || 0;
         dot('p-dead-dot', deadN > 0 ? 'red' : 'grey');
         set('p-dead-val', deadN > 0 ? `${deadN} failed` : 'None');
-        deadN > 0 ? show('s-dead', `<span class="ih-badge warn">⚠ ${deadN} failed</span>`) : hide('s-dead');
+        deadN > 0 ? show('s-dead', `<span class="ih-badge warn">\u26a0 ${deadN} failed</span>`) : hide('s-dead');
 
         const allGaps = [];
         if (stats) Object.entries(stats).forEach(([s, d]) => {
@@ -383,8 +380,8 @@
         });
         if (allGaps.length > 0) {
           dot('p-gaps-dot', 'yellow');
-          set('p-gaps-val', allGaps.join(' · '));
-          show('s-gaps', '<span style="color:#f59e0b">⚠ gap</span>');
+          set('p-gaps-val', allGaps.join(' \u00b7 '));
+          show('s-gaps', '<span style="color:#f59e0b">\u26a0 gap</span>');
         } else {
           dot('p-gaps-dot', 'green');
           set('p-gaps-val', 'None detected');
@@ -418,6 +415,6 @@
     }
 
     ihRefresh();
-  </script>
-</body>
-</html>
+  <\/script>
+<\/body>
+<\/html>
