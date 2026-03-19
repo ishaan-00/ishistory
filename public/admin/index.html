@@ -7,7 +7,7 @@
   <title>ishistory CMS</title>
   <style>
     #ih-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 99999; font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace; font-size: 11px; line-height: 1.4; }
-    #ih-strip { background: #080e1a; color: #64748b; height: 26px; display: flex; align-items: center; padding: 0 12px; gap: 12px; cursor: pointer; user-select: none; border-top: 1px solid #1e293b; transition: background 0.15s, border-color 0.4s; }
+    #ih-strip { background: #080e1a; color: #64748b; height: 26px; display: flex; align-items: center; padding: 0 12px; gap: 12px; cursor: pointer; user-select: none; border-top: 1px solid #1e293b; transition: background 0.15s, border-color 0.4s; width: 100%; border-left: none; border-right: none; border-bottom: none; }
     #ih-strip:hover { background: #0f172a; }
     #ih-strip.offline { border-top-color: #7f1d1d; background: #0a0404; }
     .ih-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; transition: background 0.4s, box-shadow 0.4s; }
@@ -78,13 +78,14 @@
     .ih-spin { width: 7px; height: 7px; border: 1.5px solid #1e293b; border-top-color: #3b82f6; border-radius: 50%; animation: ih-spin 0.7s linear infinite; display: inline-block; }
     @keyframes ih-spin { to { transform: rotate(360deg); } }
     .ih-empty { color: #1e293b; font-size: 10px; padding: 4px 8px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
   </style>
 </head>
 <body>
   <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js" type="module" data-cfasync="false"></script>
 
-  <div id="ih-bar">
-    <div id="ih-panel">
+  <div id="ih-bar" role="region" aria-label="CMS Status Bar">
+    <div id="ih-panel" role="region" aria-label="CMS Dashboard">
       <div id="ih-panel-inner">
         <div class="ih-section">
           <div class="ih-section-title">System Status <span id="ih-refresh-time"></span></div>
@@ -102,9 +103,9 @@
         <div class="ih-section">
           <div class="ih-section-title">Actions</div>
           <div class="ih-actions">
-            <button class="ih-btn" onclick="ihAction('trigger-cron',this)">▶ Run Cron</button>
-            <button class="ih-btn" onclick="ihAction('process-staged',this)">⬆ Publish Staged (<span id="btn-staged-count">0</span>)</button>
-            <button class="ih-btn warn" onclick="ihAction('clear-dead-letter',this)">✕ Clear Failed</button>
+            <button class="ih-btn" data-action="trigger-cron">▶ Run Cron</button>
+            <button class="ih-btn" data-action="process-staged">⬆ Publish Staged (<span id="btn-staged-count">0</span>)</button>
+            <button class="ih-btn warn" data-action="clear-dead-letter">✕ Clear Failed</button>
           </div>
         </div>
         <div class="ih-section" id="section-staged" style="display:none">
@@ -125,7 +126,8 @@
         </div>
       </div>
     </div>
-    <div id="ih-strip" onclick="ihToggle()">
+    <button id="ih-strip" aria-expanded="false" aria-controls="ih-panel" type="button">
+      <span class="sr-only">Toggle CMS status panel</span>
       <span id="ih-loading"><span class="ih-spin"></span></span>
       <span class="ih-dot grey pulse" id="s-main" style="display:none"></span>
       <span id="s-staged" style="display:none"></span>
@@ -133,31 +135,298 @@
       <span id="s-gaps"   style="display:none"></span>
       <span id="s-cron"   style="display:none"></span>
       <span id="s-retry"  style="display:none"></span>
-      <span id="ih-chevron">▲</span>
-    </div>
+      <span id="ih-chevron" aria-hidden="true">▲</span>
+    </button>
   </div>
 
   <script>
-    const WORKER='https://claude.ishaan00.workers.dev',BASE_MS=60000,MAX_MS=300000,TIMEOUT=5000;
-    let panelOpen=false,failCount=0,pollTimer=null;
-    function ihToggle(){panelOpen=!panelOpen;document.getElementById('ih-panel').classList.toggle('open',panelOpen);document.getElementById('ih-chevron').classList.toggle('up',panelOpen);}
-    function dot(id,c){const e=document.getElementById(id);if(e)e.className='ih-dot '+c;}
-    function set(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
-    function html(id,m){const e=document.getElementById(id);if(e)e.innerHTML=m;}
-    function show(id,m){const e=document.getElementById(id);if(!e)return;e.style.display='inline';if(m!==undefined)e.innerHTML=m;}
-    function showB(id){const e=document.getElementById(id);if(e)e.style.display='block';}
-    function hide(id){const e=document.getElementById(id);if(e)e.style.display='none';}
-    function fname(p){return p.split('/').pop();}
-    function relTime(iso){if(!iso)return'never';const d=Math.floor((Date.now()-new Date(iso).getTime())/1000);if(d<60)return d+'s ago';if(d<3600)return Math.floor(d/60)+'m ago';if(d<86400)return Math.floor(d/3600)+'h ago';return Math.floor(d/86400)+'d ago';}
-    function connStatus(c){if(!c||c.status==='never')return{color:'grey',text:'never connected'};if(c.status==='active')return{color:'green',text:'active · '+relTime(c.last_seen)};if(c.status==='idle')return{color:'yellow',text:'idle · '+relTime(c.last_seen)};return{color:'red',text:'offline · '+relTime(c.last_seen)};}
-    async function fetchT(url,opts={}){const ctrl=new AbortController();const id=setTimeout(()=>ctrl.abort(),TIMEOUT);try{const r=await fetch(url,{...opts,signal:ctrl.signal});clearTimeout(id);return r;}catch(e){clearTimeout(id);throw e;}}
-    async function ihAction(type,btn){btn.disabled=true;const orig=btn.innerHTML;btn.textContent='...';try{const r=await fetchT(`${WORKER}/claude/action`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:type})});if(!r.ok)throw new Error();btn.classList.add('ok');btn.textContent='Done';setTimeout(()=>ihRefresh(),800);}catch{btn.classList.add('fail');btn.textContent='Error';}finally{setTimeout(()=>{btn.disabled=false;btn.classList.remove('ok','fail');btn.innerHTML=orig;},2000);}}
-    async function toggleSeries(name,status,btn){btn.disabled=true;const orig=btn.textContent;btn.textContent='...';try{await fetchT(`${WORKER}/claude/action`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:status==='complete'?'mark-complete':'mark-active',series:name})});setTimeout(()=>ihRefresh(),300);}catch{btn.disabled=false;btn.textContent=orig;}}
-    function renderSeries(stats){if(!stats||!Object.keys(stats).length){html('series-list','<div class="ih-empty">No data</div>');return;}const entries=Object.entries(stats);const done=entries.filter(([,d])=>d.status==='complete').length;set('series-summary',`${done}/${entries.length} complete`);entries.sort(([,a],[,b])=>a.status===b.status?0:a.status==='active'?-1:1);html('series-list',entries.map(([name,d])=>{const isC=d.status==='complete';const label=name.replace(/-/g,' ');const stats=`<span>${d.episodes} ep</span>${d.profiles>0?`<span>${d.profiles} pr</span>`:''}`+(isC?`<span class="ih-series-done">✓ complete</span>`:d.episode_gaps?.length?`<span class="ih-series-gap">⚠ gap ${d.episode_gaps.join(',')}</span>`:`<span class="ih-series-next">next: ${d.next_episode}</span>`);const btn=isC?`<button class="ih-series-btn active-btn" onclick="toggleSeries('${name}','active',this)">↺ Mark Active</button>`:`<button class="ih-series-btn complete-btn" onclick="toggleSeries('${name}','complete',this)">✓ Mark Complete</button>`;return`<div class="ih-series-card ${isC?'complete':''}"><div class="ih-series-card-top"><span class="ih-series-name">${label}</span><span class="ih-series-badge ${isC?'complete':'active'}">${isC?'✓ COMPLETE':'ACTIVE'}</span></div><div class="ih-series-stats">${stats}</div><div class="ih-series-actions">${btn}</div></div>`;}).join('')); }
-    function renderCronLog(log){if(!log?.length){html('cron-list','<div class="ih-empty">No runs yet</div>');return;}html('cron-list',log.map(r=>{const pub=`<span class="ih-cron-stat ${r.published>0?'pub':'idle'}">${r.published>0?'++':'·'}${r.published}</span>`;const del=`<span class="ih-cron-stat ${r.deleted>0?'del':'idle'}">${r.deleted>0?'-':'·'}${r.deleted}</span>`;const fail=r.failed>0?`<span class="ih-cron-stat fail">✕${r.failed}</span>`:'';const files=r.details?.filter(d=>d.success).map(d=>fname(d.path)).join(', ')||'';return`<div class="ih-cron-row"><span class="ih-cron-time">${relTime(r.ran_at)}</span><div class="ih-cron-stats">${pub}${del}${fail}</div>${files?`<span class="ih-cron-files">${files}</span>`:''}</div>`;}).join(''));}
-    function renderActivity(activity){if(!activity?.length){html('activity-list','<div class="ih-empty">No activity yet</div>');return;}const icons={publish:'↑',delete:'✕',rollback:'↩'};const colors={publish:'#22c55e',delete:'#ef4444',rollback:'#f59e0b'};html('activity-list',activity.map(r=>`<div class="ih-activity-row"><span class="ih-activity-icon" style="color:${colors[r.action]||'#64748b'}">${icons[r.action]||'·'}</span><span class="ih-activity-path" title="${r.path}">${fname(r.path)}</span><span class="ih-activity-time">${relTime(r.happened_at)}</span></div>`).join(''));}
-    function renderStaged(staged){if(!staged?.length){hide('section-staged');return;}showB('section-staged');set('staged-count-label',staged.length);html('staged-list',staged.map(d=>`<div class="ih-staged-row"><span class="ih-staged-path">${fname(d.path)}</span><span class="ih-staged-size">${(d.size/1024).toFixed(1)}kb</span></div>`).join(''));}
-    async function ihRefresh(){clearTimeout(pollTimer);show('ih-loading');try{const r=await fetchT(`${WORKER}/claude/heartbeat`);if(!r.ok)throw new Error('HTTP '+r.status);const{health,connections,stats,cron_log,staged,activity}=await r.json();failCount=0;hide('s-retry');document.getElementById('ih-strip').classList.remove('offline');hide('ih-loading');set('ih-refresh-time','updated just now');const ok=health.status==='ok'||health.status==='warning';const mainCol=!ok?'red':health.status==='warning'?'yellow':'green';const mainDot=document.getElementById('s-main');mainDot.style.display='inline-block';mainDot.className='ih-dot '+mainCol;dot('p-worker-dot',ok?'green':'red');set('p-worker-val',ok?'Online':'Offline');dot('p-github-dot',health.github_user?'green':'red');set('p-github-val',health.github_user||'—');dot('p-d1-dot',health.d1==='connected'?'green':'red');set('p-d1-val',health.d1||'—');const cm={};(connections||[]).forEach(c=>cm[c.name]=c);const cs=connStatus(cm['claude']);dot('p-claude-dot',cs.color);set('p-claude-val',cs.text);const td=health.drafts||0,tq=health.queue||0;dot('p-queue-dot',td>0?'blue':'grey');set('p-queue-val',td>0?`${td} draft${td!==1?'s':''}, ${tq} queued`:'Empty');document.getElementById('btn-staged-count').textContent=td;if(health.last_cron){dot('p-cron-dot','green');set('p-cron-val',relTime(health.last_cron.ran_at));show('s-cron',`<span class="ih-label">cron</span><span class="ih-val">${relTime(health.last_cron.ran_at)}</span>`);}else{dot('p-cron-dot','grey');set('p-cron-val','Never run');hide('s-cron');}const dn=health.dead_letter||0;dot('p-dead-dot',dn>0?'red':'grey');set('p-dead-val',dn>0?`${dn} failed`:'None');dn>0?show('s-dead',`<span class="ih-badge warn">⚠ ${dn} failed</span>`):hide('s-dead');const gaps=[];if(stats)Object.entries(stats).forEach(([s,d])=>{if(d.episode_gaps?.length)gaps.push(`${s}: ${d.episode_gaps.join(',')}`);});if(gaps.length){dot('p-gaps-dot','yellow');set('p-gaps-val',gaps.join(' · '));show('s-gaps','<span style="color:#f59e0b">⚠ gap</span>');}else{dot('p-gaps-dot','green');set('p-gaps-val','None detected');hide('s-gaps');}td>0?show('s-staged',`<span class="ih-badge">${td} staged</span>`):hide('s-staged');renderStaged(staged);renderSeries(stats);renderCronLog(cron_log);renderActivity(activity);}catch(e){failCount++;hide('ih-loading');document.getElementById('ih-strip').classList.add('offline');const d=document.getElementById('s-main');d.style.display='inline-block';d.className='ih-dot red pulse';dot('p-worker-dot','red');set('p-worker-val','Unreachable');if(failCount>1)show('s-retry',`<span style="color:#f97316;font-size:9px;background:#1c0a00;padding:0 5px;border-radius:2px">retry ${failCount}</span>`);}finally{pollTimer=setTimeout(ihRefresh,Math.min(BASE_MS*Math.pow(1.5,failCount),MAX_MS));}}
+    // ── Config ────────────────────────────────────────────────────────────────
+    const WORKER   = 'https://claude.ishaan00.workers.dev';
+    const BASE_MS  = 60000;
+    const MAX_MS   = 300000;
+    const TIMEOUT  = 5000;
+    const API_KEY  = '__CMS_API_KEY__'; // replace with your CMS_API_KEY value
+
+    // ── State ─────────────────────────────────────────────────────────────────
+    let panelOpen    = false;
+    let failCount    = 0;
+    let pollTimer    = null;
+    let activeAbort  = null; // AbortController for in-flight heartbeat
+
+    // ── Security: HTML escaping ───────────────────────────────────────────────
+    function esc(str) {
+      const d = document.createElement('div');
+      d.textContent = String(str ?? '');
+      return d.innerHTML;
+    }
+
+    // ── Panel toggle (button-based, keyboard accessible) ──────────────────────
+    function ihToggle() {
+      panelOpen = !panelOpen;
+      const panel   = document.getElementById('ih-panel');
+      const strip   = document.getElementById('ih-strip');
+      const chevron = document.getElementById('ih-chevron');
+      panel.classList.toggle('open', panelOpen);
+      chevron.classList.toggle('up', panelOpen);
+      strip.setAttribute('aria-expanded', panelOpen ? 'true' : 'false');
+    }
+
+    document.getElementById('ih-strip').addEventListener('click', ihToggle);
+
+    // Escape key closes the panel
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && panelOpen) ihToggle();
+    });
+
+    // ── DOM helpers ───────────────────────────────────────────────────────────
+    function dot(id, c)  { const e = document.getElementById(id); if (e) e.className = 'ih-dot ' + c; }
+    function set(id, t)  { const e = document.getElementById(id); if (e) e.textContent = t; }
+    function html(id, m) { const e = document.getElementById(id); if (e) e.innerHTML = m; }
+    function show(id, m) { const e = document.getElementById(id); if (!e) return; e.style.display = 'inline'; if (m !== undefined) e.innerHTML = m; }
+    function showB(id)   { const e = document.getElementById(id); if (e) e.style.display = 'block'; }
+    function hide(id)    { const e = document.getElementById(id); if (e) e.style.display = 'none'; }
+    function fname(p)    { return esc(p.split('/').pop()); }
+
+    function relTime(iso) {
+      if (!iso) return 'never';
+      const d = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+      if (d < 60)    return d + 's ago';
+      if (d < 3600)  return Math.floor(d / 60) + 'm ago';
+      if (d < 86400) return Math.floor(d / 3600) + 'h ago';
+      return Math.floor(d / 86400) + 'd ago';
+    }
+
+    function connStatus(c) {
+      if (!c || c.status === 'never') return { color: 'grey',  text: 'never connected' };
+      if (c.status === 'active')      return { color: 'green', text: 'active · ' + relTime(c.last_seen) };
+      if (c.status === 'idle')        return { color: 'yellow',text: 'idle · ' + relTime(c.last_seen) };
+      return                                  { color: 'red',   text: 'offline · ' + relTime(c.last_seen) };
+    }
+
+    // ── Fetch with timeout + auth header + AbortController ───────────────────
+    async function fetchT(url, opts = {}) {
+      const ctrl = new AbortController();
+      const id   = setTimeout(() => ctrl.abort(), TIMEOUT);
+      opts.signal  = opts.signal ?? ctrl.signal;
+      opts.headers = { ...opts.headers, 'X-API-Key': API_KEY };
+      try {
+        const r = await fetch(url, opts);
+        clearTimeout(id);
+        return r;
+      } catch (e) {
+        clearTimeout(id);
+        throw e;
+      }
+    }
+
+    // ── Action buttons (event delegation — no inline onclick) ─────────────────
+    document.querySelector('.ih-actions').addEventListener('click', e => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn || btn.disabled) return;
+      ihAction(btn.dataset.action, btn);
+    });
+
+    document.getElementById('series-list').addEventListener('click', e => {
+      const btn = e.target.closest('.ih-series-btn');
+      if (!btn || btn.disabled) return;
+      const { seriesName, seriesAction } = btn.dataset;
+      if (seriesName && seriesAction) toggleSeries(seriesName, seriesAction, btn);
+    });
+
+    async function ihAction(type, btn) {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      const orig = btn.innerHTML;
+      btn.textContent = '...';
+      try {
+        const r = await fetchT(`${WORKER}/claude/action`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ action: type }),
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        btn.classList.add('ok'); btn.textContent = 'Done';
+        setTimeout(() => ihRefresh(), 800);
+      } catch {
+        btn.classList.add('fail'); btn.textContent = 'Error';
+      } finally {
+        setTimeout(() => { btn.disabled = false; btn.classList.remove('ok', 'fail'); btn.innerHTML = orig; }, 2000);
+      }
+    }
+
+    async function toggleSeries(name, status, btn) {
+      btn.disabled = true;
+      const orig = btn.textContent; btn.textContent = '...';
+      try {
+        await fetchT(`${WORKER}/claude/action`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ action: status === 'complete' ? 'mark-complete' : 'mark-active', series: name }),
+        });
+        setTimeout(() => ihRefresh(), 300);
+      } catch { btn.disabled = false; btn.textContent = orig; }
+    }
+
+    // ── Renderers ─────────────────────────────────────────────────────────────
+    function renderSeries(stats) {
+      if (!stats || !Object.keys(stats).length) { html('series-list', '<div class="ih-empty">No data</div>'); return; }
+      const entries = Object.entries(stats);
+      const done    = entries.filter(([, d]) => d.status === 'complete').length;
+      set('series-summary', `${done}/${entries.length} complete`);
+      entries.sort(([, a], [, b]) => a.status === b.status ? 0 : a.status === 'active' ? -1 : 1);
+      html('series-list', entries.map(([name, d]) => {
+        const isC  = d.status === 'complete';
+        const label = esc(name.replace(/-/g, ' '));
+        const gapHtml = d.episode_gaps?.length ? `<span class="ih-series-gap">⚠ gap ${esc(d.episode_gaps.join(','))}</span>` : '';
+        const stats = `<span>${esc(d.episodes)} ep</span>${d.profiles > 0 ? `<span>${esc(d.profiles)} pr</span>` : ''}`
+          + (isC ? `<span class="ih-series-done">✓ complete</span>` : gapHtml || `<span class="ih-series-next">next: ${esc(d.next_episode)}</span>`);
+        // Use data attributes instead of inline onclick
+        const btnHtml = isC
+          ? `<button class="ih-series-btn active-btn" data-series-name="${esc(name)}" data-series-action="active">↺ Mark Active</button>`
+          : `<button class="ih-series-btn complete-btn" data-series-name="${esc(name)}" data-series-action="complete">✓ Mark Complete</button>`;
+        return `<div class="ih-series-card${isC ? ' complete' : '}">
+          <div class="ih-series-card-top">
+            <span class="ih-series-name">${label}</span>
+            <span class="ih-series-badge ${isC ? 'complete' : 'active'}">${isC ? '✓ COMPLETE' : 'ACTIVE'}</span>
+          </div>
+          <div class="ih-series-stats">${stats}</div>
+          <div class="ih-series-actions">${btnHtml}</div>
+        </div>`;
+      }).join(''));
+    }
+
+    function renderCronLog(log) {
+      if (!log?.length) { html('cron-list', '<div class="ih-empty">No runs yet</div>'); return; }
+      html('cron-list', log.map(r => {
+        const pub  = `<span class="ih-cron-stat ${r.published > 0 ? 'pub' : 'idle'}">${r.published > 0 ? '++' : '·'}${esc(r.published)}</span>`;
+        const del  = `<span class="ih-cron-stat ${r.deleted > 0 ? 'del' : 'idle'}">${r.deleted > 0 ? '-' : '·'}${esc(r.deleted)}</span>`;
+        const fail = r.failed > 0 ? `<span class="ih-cron-stat fail">✕${esc(r.failed)}</span>` : '';
+        const files = r.details?.filter(d => d.success).map(d => fname(d.path)).join(', ') || '';
+        return `<div class="ih-cron-row">
+          <span class="ih-cron-time">${esc(relTime(r.ran_at))}</span>
+          <div class="ih-cron-stats">${pub}${del}${fail}</div>
+          ${files ? `<span class="ih-cron-files" title="${esc(files)}">${files}</span>` : ''}
+        </div>`;
+      }).join(''));
+    }
+
+    function renderActivity(activity) {
+      if (!activity?.length) { html('activity-list', '<div class="ih-empty">No activity yet</div>'); return; }
+      const icons  = { publish: '↑', delete: '✕', rollback: '↩' };
+      const colors = { publish: '#22c55e', delete: '#ef4444', rollback: '#f59e0b' };
+      html('activity-list', activity.map(r => `
+        <div class="ih-activity-row">
+          <span class="ih-activity-icon" style="color:${colors[r.action] || '#64748b'}">${icons[r.action] || '·'}</span>
+          <span class="ih-activity-path" title="${esc(r.path)}">${fname(r.path)}</span>
+          <span class="ih-activity-time">${esc(relTime(r.happened_at))}</span>
+        </div>`).join(''));
+    }
+
+    function renderStaged(staged) {
+      if (!staged?.length) { hide('section-staged'); return; }
+      showB('section-staged');
+      set('staged-count-label', staged.length);
+      html('staged-list', staged.map(d => `
+        <div class="ih-staged-row">
+          <span class="ih-staged-path" title="${esc(d.path)}">${fname(d.path)}</span>
+          <span class="ih-staged-size">${esc((d.size / 1024).toFixed(1))}kb</span>
+        </div>`).join(''));
+    }
+
+    // ── Heartbeat (with AbortController to cancel in-flight requests) ─────────
+    async function ihRefresh() {
+      clearTimeout(pollTimer);
+
+      // Cancel any in-flight request before starting a new one
+      if (activeAbort) { activeAbort.abort(); }
+      activeAbort = new AbortController();
+      const signal = activeAbort.signal;
+
+      show('ih-loading');
+      try {
+        const r = await fetchT(`${WORKER}/claude/heartbeat`, { signal });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const { health, connections, stats, cron_log, staged, activity } = await r.json();
+
+        failCount = 0;
+        hide('s-retry');
+        document.getElementById('ih-strip').classList.remove('offline');
+        hide('ih-loading');
+        set('ih-refresh-time', 'updated just now');
+
+        const ok      = health.status === 'ok' || health.status === 'warning';
+        const mainCol = !ok ? 'red' : health.status === 'warning' ? 'yellow' : 'green';
+        const mainDot = document.getElementById('s-main');
+        mainDot.style.display = 'inline-block';
+        mainDot.className     = 'ih-dot ' + mainCol;
+
+        dot('p-worker-dot', ok ? 'green' : 'red');
+        set('p-worker-val', ok ? 'Online' : 'Offline');
+        dot('p-github-dot', health.github_user ? 'green' : 'red');
+        set('p-github-val', health.github_user || '—');
+        dot('p-d1-dot', health.d1 === 'connected' ? 'green' : 'red');
+        set('p-d1-val', health.d1 || '—');
+
+        const cm = {};
+        (connections || []).forEach(c => cm[c.name] = c);
+        const cs = connStatus(cm['claude']);
+        dot('p-claude-dot', cs.color);
+        set('p-claude-val', cs.text);
+
+        const td = health.drafts || 0, tq = health.queue || 0;
+        dot('p-queue-dot', td > 0 ? 'blue' : 'grey');
+        set('p-queue-val', td > 0 ? `${td} draft${td !== 1 ? 's' : ''}, ${tq} queued` : 'Empty');
+        document.getElementById('btn-staged-count').textContent = td;
+
+        if (health.last_cron) {
+          dot('p-cron-dot', 'green');
+          set('p-cron-val', relTime(health.last_cron.ran_at));
+          show('s-cron', `<span class="ih-label">cron</span><span class="ih-val">${esc(relTime(health.last_cron.ran_at))}</span>`);
+        } else {
+          dot('p-cron-dot', 'grey');
+          set('p-cron-val', 'Never run');
+          hide('s-cron');
+        }
+
+        const dn = health.dead_letter || 0;
+        dot('p-dead-dot', dn > 0 ? 'red' : 'grey');
+        set('p-dead-val', dn > 0 ? `${dn} failed` : 'None');
+        dn > 0 ? show('s-dead', `<span class="ih-badge warn">⚠ ${esc(dn)} failed</span>`) : hide('s-dead');
+
+        const gaps = [];
+        if (stats) Object.entries(stats).forEach(([s, d]) => { if (d.episode_gaps?.length) gaps.push(`${s}: ${d.episode_gaps.join(',')}`); });
+        if (gaps.length) {
+          dot('p-gaps-dot', 'yellow');
+          set('p-gaps-val', gaps.join(' · '));
+          show('s-gaps', '<span style="color:#f59e0b">⚠ gap</span>');
+        } else {
+          dot('p-gaps-dot', 'green');
+          set('p-gaps-val', 'None detected');
+          hide('s-gaps');
+        }
+        td > 0 ? show('s-staged', `<span class="ih-badge">${esc(td)} staged</span>`) : hide('s-staged');
+
+        renderStaged(staged);
+        renderSeries(stats);
+        renderCronLog(cron_log);
+        renderActivity(activity);
+
+      } catch (e) {
+        if (e.name === 'AbortError') return; // cancelled — ignore silently
+        failCount++;
+        hide('ih-loading');
+        document.getElementById('ih-strip').classList.add('offline');
+        const d = document.getElementById('s-main');
+        d.style.display = 'inline-block';
+        d.className = 'ih-dot red pulse';
+        dot('p-worker-dot', 'red');
+        set('p-worker-val', 'Unreachable');
+        if (failCount > 1) show('s-retry', `<span style="color:#f97316;font-size:9px;background:#1c0a00;padding:0 5px;border-radius:2px">retry ${esc(failCount)}</span>`);
+      } finally {
+        pollTimer = setTimeout(ihRefresh, Math.min(BASE_MS * Math.pow(1.5, failCount), MAX_MS));
+      }
+    }
+
     ihRefresh();
   </script>
 </body>
