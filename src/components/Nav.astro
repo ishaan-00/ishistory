@@ -1,0 +1,72 @@
+---
+export interface Props {
+  backLink?: { href: string; label: string };
+}
+const { backLink } = Astro.props;
+---
+<nav id="nav">
+  <div class="nav-inner">
+    {backLink ? (
+      <a href={backLink.href} class="nav-back">
+        <span class="nav-back-arrow">←</span>
+        <span class="nav-back-label">{backLink.label}</span>
+      </a>
+    ) : (
+      <a href="/" class="nav-logo">ishistory</a>
+    )}
+    <div class="nav-links">
+      <a href="/ai-history/">AI</a>
+      <a href="/internet-history/">Internet</a>
+      <a href="/robotics/">Robotics</a>
+      <a href="/search/" class="nav-search" aria-label="Search">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.2"/>
+          <line x1="10.5" y1="10.5" x2="14" y2="14" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+      </a>
+    </div>
+  </div>
+</nav>
+<style>
+#nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: var(--nav-h);
+  background: rgba(10,13,18,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-dim);
+}
+.nav-inner {
+  max-width: var(--max-w); margin: 0 auto;
+  height: 100%; display: flex; align-items: center;
+  justify-content: space-between; padding: 0 2rem;
+}
+.nav-logo {
+  font-family: var(--font-serif); font-size: 1.1rem;
+  font-style: italic; color: var(--cream);
+  letter-spacing: 0.02em;
+  transition: color 0.2s;
+}
+.nav-logo:hover { color: var(--amber); }
+.nav-back {
+  display: flex; align-items: center; gap: 0.6rem;
+  font-family: var(--font-sans); font-size: 0.6rem;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--fog); transition: color 0.2s;
+}
+.nav-back:hover { color: var(--amber); }
+.nav-back-arrow { font-size: 0.8rem; }
+.nav-links {
+  display: flex; align-items: center; gap: 2rem;
+}
+.nav-links a {
+  font-family: var(--font-sans); font-size: 0.6rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--fog); transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--amber); }
+.nav-search { display: flex; align-items: center; }
+@media (max-width: 640px) {
+  .nav-inner { padding: 0 1.2rem; }
+  .nav-links a:not(.nav-search) { display: none; }
+}
+</style>
