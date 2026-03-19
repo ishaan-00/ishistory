@@ -36,6 +36,9 @@
     .ih-val   { color: #cbd5e1; }
     .ih-badge { background: #0f2a4a; color: #7dd3fc; padding: 0 6px; border-radius: 3px; font-size: 10px; }
     .ih-badge.warn { background: #3b0a0a; color: #fca5a5; }
+    .ih-strip-indicator { display: none; align-items: center; gap: 4px; }
+    .ih-strip-indicator.visible { display: flex; }
+    .ih-strip-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: #334155; }
     #ih-panel {
       background: #05090f;
       border-top: 1px solid #1e293b;
@@ -142,9 +145,9 @@
         <div class="ih-section">
           <div class="ih-section-title">Actions</div>
           <div class="ih-actions">
-            <button class="ih-btn" onclick="ihAction('trigger-cron', this)">▶ Run Cron</button>
-            <button class="ih-btn" onclick="ihAction('process-staged', this)">⬆ Publish Staged (<span id="btn-staged-count">0</span>)</button>
-            <button class="ih-btn warn" onclick="ihAction('clear-dead-letter', this)">✕ Clear Failed</button>
+            <button class="ih-btn" onclick="ihAction('trigger-cron', this)">&#9654; Run Cron</button>
+            <button class="ih-btn" onclick="ihAction('process-staged', this)">&#11014; Publish Staged (<span id="btn-staged-count">0</span>)</button>
+            <button class="ih-btn warn" onclick="ihAction('clear-dead-letter', this)">&#10005; Clear Failed</button>
           </div>
         </div>
         <div class="ih-section" id="section-staged" style="display:none">
@@ -167,13 +170,25 @@
     </div>
     <div id="ih-strip" onclick="ihToggle()">
       <span id="ih-loading"><span class="ih-spin"></span></span>
+      <!-- Main status dot (always visible after load) -->
       <span class="ih-dot grey pulse" id="s-main" style="display:none"></span>
+      <!-- Worker indicator -->
+      <span class="ih-strip-indicator" id="s-worker">
+        <span class="ih-dot grey" id="s-worker-dot"></span>
+        <span class="ih-strip-label">worker</span>
+      </span>
+      <!-- Claude connection indicator -->
+      <span class="ih-strip-indicator" id="s-claude">
+        <span class="ih-dot grey" id="s-claude-dot"></span>
+        <span class="ih-strip-label">claude</span>
+      </span>
+      <!-- Staged badge -->
       <span id="s-staged" style="display:none"></span>
       <span id="s-dead"   style="display:none"></span>
       <span id="s-gaps"   style="display:none"></span>
       <span id="s-cron"   style="display:none"></span>
       <span id="s-retry"  style="display:none"></span>
-      <span id="ih-chevron">▲</span>
+      <span id="ih-chevron">&#9650;</span>
     </div>
   </div>
 
@@ -199,17 +214,13 @@
     function show(id, mk)   { const el = document.getElementById(id); if (!el) return; el.style.display = 'inline'; if (mk !== undefined) el.innerHTML = mk; }
     function showBlock(id)  { const el = document.getElementById(id); if (el) el.style.display = 'block'; }
     function hide(id)       { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
+    function showFlex(id)   { const el = document.getElementById(id); if (el) el.classList.add('visible'); }
+    function hideFlex(id)   { const el = document.getElementById(id); if (el) el.classList.remove('visible'); }
     function fileName(p)    { return p.split('/').pop(); }
-
-    function normaliseTs(isoStr) {
-      if (!isoStr) return null;
-      return isoStr.replace(' ', 'T') + (isoStr.includes('T') ? '' : 'Z');
-    }
 
     function relTime(isoStr) {
       if (!isoStr) return 'never';
-      const normalised = normaliseTs(isoStr);
-      const ms = new Date(normalised).getTime();
+      const ms = new Date(isoStr.replace(' ', 'T') + (isoStr.includes('T') ? '' : 'Z')).getTime();
       if (isNaN(ms)) return '—';
       const diff = Math.floor((Date.now() - ms) / 1000);
       if (diff < 60)    return diff + 's ago';
@@ -334,12 +345,14 @@
         hide('ih-loading');
         set('ih-refresh-time', 'updated ' + relTime(new Date().toISOString()));
 
+        // Main dot
         const workerOk  = health.status === 'ok' || health.status === 'warning';
         const mainColor = !workerOk ? 'red' : health.status === 'warning' ? 'yellow' : 'green';
         const mainDot   = document.getElementById('s-main');
         mainDot.style.display = 'inline-block';
         mainDot.className = 'ih-dot ' + mainColor;
 
+        // Panel: worker, github, d1
         dot('p-worker-dot', workerOk ? 'green' : 'red');
         set('p-worker-val', workerOk ? 'Online' : 'Offline');
         dot('p-github-dot', health.github_user ? 'green' : 'red');
@@ -347,18 +360,27 @@
         dot('p-d1-dot', health.d1 === 'connected' ? 'green' : 'red');
         set('p-d1-val', health.d1 || '—');
 
+        // Strip: worker indicator
+        showFlex('s-worker');
+        dot('s-worker-dot', workerOk ? 'green' : 'red');
+
+        // Panel + Strip: claude connection
         const connMap = {};
         (connections || []).forEach(c => connMap[c.name] = c);
         const claudeS = connStatus(connMap['claude']);
         dot('p-claude-dot', claudeS.color);
         set('p-claude-val', claudeS.text);
+        showFlex('s-claude');
+        dot('s-claude-dot', claudeS.color);
 
+        // Panel: queue
         const totalDrafts = health.drafts || 0;
         const totalQueued = health.queue  || 0;
         dot('p-queue-dot', totalDrafts > 0 ? 'blue' : 'grey');
         set('p-queue-val', totalDrafts > 0 ? `${totalDrafts} draft${totalDrafts !== 1 ? 's' : ''}, ${totalQueued} queued` : 'Empty');
         document.getElementById('btn-staged-count').textContent = totalDrafts;
 
+        // Panel: cron
         if (health.last_cron) {
           dot('p-cron-dot', 'green');
           set('p-cron-val', relTime(health.last_cron.ran_at));
@@ -369,11 +391,13 @@
           hide('s-cron');
         }
 
+        // Panel: dead letter
         const deadN = health.dead_letter || 0;
         dot('p-dead-dot', deadN > 0 ? 'red' : 'grey');
         set('p-dead-val', deadN > 0 ? `${deadN} failed` : 'None');
         deadN > 0 ? show('s-dead', `<span class="ih-badge warn">⚠ ${deadN} failed</span>`) : hide('s-dead');
 
+        // Panel: gaps
         const allGaps = [];
         if (stats) Object.entries(stats).forEach(([s, d]) => {
           if (d.episode_gaps && d.episode_gaps.length > 0) allGaps.push(`${s}: ${d.episode_gaps.join(', ')}`);
@@ -388,6 +412,7 @@
           hide('s-gaps');
         }
 
+        // Strip: staged badge
         totalDrafts > 0
           ? show('s-staged', `<span class="ih-badge">${totalDrafts} staged</span>`)
           : hide('s-staged');
@@ -404,6 +429,9 @@
         const d = document.getElementById('s-main');
         d.style.display = 'inline-block';
         d.className = 'ih-dot red pulse';
+        // Show worker as red in strip on failure
+        showFlex('s-worker');
+        dot('s-worker-dot', 'red');
         dot('p-worker-dot', 'red');
         set('p-worker-val', 'Unreachable');
         if (failCount > 1)
