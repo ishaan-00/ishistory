@@ -1,0 +1,20 @@
+/*
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+
+/admin/*
+  X-Frame-Options: SAMEORIGIN
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Content-Security-Policy: default-src * blob: data:
+
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/feed.xml
+  Cache-Control: public, max-age=3600
+
+/search-index.json
+  Cache-Control: public, max-age=3600
