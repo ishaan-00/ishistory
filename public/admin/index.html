@@ -201,9 +201,19 @@
     function hide(id)       { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
     function fileName(p)    { return p.split('/').pop(); }
 
+    // FIX 2: Normalise D1 timestamps (no timezone) before parsing
+    function normaliseTs(isoStr) {
+      if (!isoStr) return null;
+      // D1 returns "2026-03-19 12:34:56" — convert to valid ISO-8601
+      return isoStr.replace(' ', 'T') + (isoStr.includes('T') ? '' : 'Z');
+    }
+
     function relTime(isoStr) {
       if (!isoStr) return 'never';
-      const diff = Math.floor((Date.now() - new Date(isoStr).getTime()) / 1000);
+      const normalised = normaliseTs(isoStr);
+      const ms = new Date(normalised).getTime();
+      if (isNaN(ms)) return '—';
+      const diff = Math.floor((Date.now() - ms) / 1000);
       if (diff < 60)    return diff + 's ago';
       if (diff < 3600)  return Math.floor(diff / 60) + 'm ago';
       if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
@@ -278,7 +288,8 @@
           ? `<button class="ih-series-btn active-btn" onclick="toggleSeries('${name}','active',this)">↺ Mark Active</button>`
           : `<button class="ih-series-btn complete-btn" onclick="toggleSeries('${name}','complete',this)">✓ Mark Complete</button>`;
         const completedAt = isComplete && d.completed_at ? `<span style="font-size:9px;color:#1e293b">completed ${relTime(d.completed_at)}</span>` : '';
-        return `<div class="ih-series-card ${isComplete ? 'complete' : '}"><div class="ih-series-card-top"><span class="ih-series-name">${label}</span><span class="ih-series-badge ${isComplete ? 'complete' : 'active'}">${isComplete ? '✓ COMPLETE' : 'ACTIVE'}</span></div><div class="ih-series-stats">${statsLine}</div><div class="ih-series-actions">${toggleBtn}${completedAt}</div></div>`;
+        // FIX 1: was `'complete' : '}` — missing closing quote and had stray }
+        return `<div class="ih-series-card ${isComplete ? 'complete' : ''}"><div class="ih-series-card-top"><span class="ih-series-name">${label}</span><span class="ih-series-badge ${isComplete ? 'complete' : 'active'}">${isComplete ? '✓ COMPLETE' : 'ACTIVE'}</span></div><div class="ih-series-stats">${statsLine}</div><div class="ih-series-actions">${toggleBtn}${completedAt}</div></div>`;
       });
       html('series-list', cards.join(''));
     }
