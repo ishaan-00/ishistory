@@ -1,43 +1,23 @@
 <canvas id="cosmos" aria-hidden="true"></canvas>
 <style>
-#cosmos {
-  position: fixed; inset: 0; z-index: 0;
-  pointer-events: none; opacity: 0.5;
-}
+#cosmos { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.5; }
 </style>
 <script>
 const canvas = document.getElementById('cosmos');
 const ctx = canvas.getContext('2d');
 let W, H, stars = [];
-
-function resize() {
-  W = canvas.width  = window.innerWidth;
-  H = canvas.height = window.innerHeight;
-}
-
-function init() {
-  stars = Array.from({ length: 120 }, () => ({
-    x: Math.random() * W,
-    y: Math.random() * H,
-    r: Math.random() * 1.2 + 0.2,
-    a: Math.random(),
-    s: (Math.random() - 0.5) * 0.003,
-  }));
-}
-
+function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+function init() { stars = Array.from({ length: 120 }, () => ({ x: Math.random()*W, y: Math.random()*H, r: Math.random()*1.2+0.2, a: Math.random(), s: (Math.random()-0.5)*0.003 })); }
 function draw() {
-  ctx.clearRect(0, 0, W, H);
+  ctx.clearRect(0,0,W,H);
   for (const s of stars) {
-    s.a = Math.max(0.05, Math.min(1, s.a + s.s));
-    if (s.a <= 0.05 || s.a >= 1) s.s *= -1;
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(200,151,58,${s.a * 0.4})`;
-    ctx.fill();
+    s.a = Math.max(0.05, Math.min(1, s.a+s.s));
+    if (s.a<=0.05||s.a>=1) s.s*=-1;
+    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fillStyle = `rgba(200,151,58,${s.a*0.4})`; ctx.fill();
   }
   requestAnimationFrame(draw);
 }
-
 resize(); init(); draw();
 window.addEventListener('resize', () => { resize(); init(); });
 </script>
