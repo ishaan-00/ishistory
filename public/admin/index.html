@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex" />
   <title>ishistory CMS</title>
   <style>
-    #ih-bar{position:fixed;bottom:0;left:0;right:0;z-index:99999;font-family:'SF Mono','Fira Code',ui-monospace,monospace;font-size:11px;line-height:1.4}
+    #ih-bar{position:fixed;bottom:0;left:0;right:0;z-index:99999;font-family:'SF Mono','Fira Code',ui-monospace,monospace;font-size:11px;line-height:1.4;display:none}
     #ih-strip{background:#080e1a;color:#64748b;height:26px;display:flex;align-items:center;padding:0 12px;gap:12px;cursor:pointer;user-select:none;border-top:1px solid #1e293b;transition:background .15s,border-color .4s;width:100%;border-left:none;border-right:none;border-bottom:none}
     #ih-strip:hover{background:#0f172a}
     #ih-strip.offline{border-top-color:#7f1d1d;background:#0a0404}
@@ -80,6 +80,7 @@
 </head>
 <body>
   <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js" type="module" data-cfasync="false"></script>
+
   <div id="ih-bar">
     <div id="ih-panel">
       <div id="ih-panel-inner">
@@ -134,166 +135,305 @@
       <span id="ih-chevron" aria-hidden="true">▲</span>
     </button>
   </div>
+
   <script>
     const WORKER  = 'https://claude.ishaan00.workers.dev';
     const BASE_MS = 90000;
     const MAX_MS  = 300000;
     const TIMEOUT = 30000;
-    const API_KEY = 'ishistory-cms-2026-xK9mPqR7-qeww233';
-    let panelOpen = false, failCount = 0, pollTimer = null, activeAbort = null;
 
-    function esc(s) { const d=document.createElement('div'); d.textContent=String(s??''); return d.innerHTML; }
+    let panelOpen   = false;
+    let failCount   = 0;
+    let pollTimer   = null;
+    let activeAbort = null;
+    let ghToken     = null; // GitHub token from Sveltia session
+    let barReady    = false;
 
-    function ihToggle() {
-      panelOpen=!panelOpen;
-      document.getElementById('ih-panel').classList.toggle('open',panelOpen);
-      document.getElementById('ih-chevron').classList.toggle('up',panelOpen);
-      document.getElementById('ih-strip').setAttribute('aria-expanded',panelOpen?'true':'false');
+    // ── HTML escaping ──────────────────────────────────────────────────────────
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = String(s ?? '');
+      return d.innerHTML;
     }
-    document.getElementById('ih-strip').addEventListener('click',ihToggle);
-    document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&panelOpen) ihToggle(); });
 
+    // ── Get GitHub token from Sveltia session ──────────────────────────────────
+    // Sveltia stores auth in localStorage. We scan for a GitHub token pattern.
+    function findGitHubToken() {
+      // Try all localStorage keys
+      for (const key of Object.keys(localStorage)) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) continue;
+          // Direct token string (ghp_, gho_, github_pat_, ghs_, ghr_)
+          if (/^gh[pousr]_[A-Za-z0-9_]{30,}$/.test(raw.trim())) return raw.trim();
+          // JSON object with token field
+          const obj = JSON.parse(raw);
+          if (obj && typeof obj === 'object') {
+            const t = obj.token || obj.access_token || obj.gh_token || obj.github_token;
+            if (t && typeof t === 'string' && t.length > 20) return t;
+          }
+        } catch {}
+      }
+      // Try sessionStorage too
+      for (const key of Object.keys(sessionStorage)) {
+        try {
+          const raw = sessionStorage.getItem(key);
+          if (!raw) continue;
+          if (/^gh[pousr]_[A-Za-z0-9_]{30,}$/.test(raw.trim())) return raw.trim();
+          const obj = JSON.parse(raw);
+          if (obj?.token && typeof obj.token === 'string' && obj.token.length > 20) return obj.token;
+        } catch {}
+      }
+      return null;
+    }
+
+    // ── Show the status bar (called once after login) ──────────────────────────
+    function initBar() {
+      if (barReady) return;
+      barReady = true;
+      ghToken  = findGitHubToken();
+      document.getElementById('ih-bar').style.display = 'block';
+      ihRefresh();
+    }
+
+    // ── Detect Sveltia login via multiple methods ──────────────────────────────
+
+    // Method 1: CMS global event (most reliable)
+    function listenCMSEvents() {
+      if (window.CMS && typeof window.CMS.on === 'function') {
+        window.CMS.on('login', (user) => {
+          ghToken = user?.token || findGitHubToken();
+          initBar();
+        });
+        // Also check if already logged in
+        if (window.CMS.state?.user) {
+          ghToken = window.CMS.state.user?.token || findGitHubToken();
+          initBar();
+        }
+      } else {
+        setTimeout(listenCMSEvents, 300);
+      }
+    }
+
+    // Method 2: Hash-based detection (fallback)
+    // Sveltia changes URL hash to #/collections when logged in
+    function checkHash() {
+      const h = location.hash;
+      if (h && h !== '#/' && !h.includes('login') && h.startsWith('#/')) {
+        initBar();
+      }
+    }
+
+    // Method 3: DOM mutation observer — detect when Sveltia renders content
+    function watchDOM() {
+      const observer = new MutationObserver(() => {
+        // Sveltia renders its main UI inside a shadow root or direct children
+        // When collections are visible, user is logged in
+        const app = document.querySelector('[data-testid="collections"]') ||
+                    document.querySelector('.collections') ||
+                    document.querySelector('sveltia-cms');
+        if (app) { observer.disconnect(); initBar(); }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+      // Disconnect after 30s regardless
+      setTimeout(() => observer.disconnect(), 30000);
+    }
+
+    // Start all detection methods
+    listenCMSEvents();
+    checkHash();
+    watchDOM();
+    window.addEventListener('hashchange', checkHash);
+
+    // ── Panel toggle ───────────────────────────────────────────────────────────
+    function ihToggle() {
+      panelOpen = !panelOpen;
+      document.getElementById('ih-panel').classList.toggle('open', panelOpen);
+      document.getElementById('ih-chevron').classList.toggle('up', panelOpen);
+      document.getElementById('ih-strip').setAttribute('aria-expanded', panelOpen ? 'true' : 'false');
+    }
+    document.getElementById('ih-strip').addEventListener('click', ihToggle);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && panelOpen) ihToggle(); });
+
+    // ── DOM helpers ───────────────────────────────────────────────────────────
     function dot(id,c){const e=document.getElementById(id);if(e)e.className='ih-dot '+c;}
     function set(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
     function html(id,m){const e=document.getElementById(id);if(e)e.innerHTML=m;}
     function show(id,m){const e=document.getElementById(id);if(!e)return;e.style.display='inline';if(m!==undefined)e.innerHTML=m;}
     function showB(id){const e=document.getElementById(id);if(e)e.style.display='block';}
     function hide(id){const e=document.getElementById(id);if(e)e.style.display='none';}
-    function fname(p){return esc(p.split('/').pop());}
+    function fname(p){return esc(String(p).split('/').pop());}
     function relTime(iso){if(!iso)return'never';const d=Math.floor((Date.now()-new Date(iso).getTime())/1000);if(d<60)return d+'s ago';if(d<3600)return Math.floor(d/60)+'m ago';if(d<86400)return Math.floor(d/3600)+'h ago';return Math.floor(d/86400)+'d ago';}
     function connStatus(c){if(!c||c.status==='never')return{color:'grey',text:'never'};if(c.status==='active')return{color:'green',text:'active · '+relTime(c.last_seen)};if(c.status==='idle')return{color:'yellow',text:'idle · '+relTime(c.last_seen)};return{color:'red',text:'offline · '+relTime(c.last_seen)};}
 
-    async function fetchT(url,opts={}) {
-      opts.headers={...opts.headers,'X-API-Key':API_KEY};
-      const ctrl=new AbortController();
-      const id=setTimeout(()=>ctrl.abort(),TIMEOUT);
-      opts.signal=opts.signal??ctrl.signal;
-      try{const r=await fetch(url,opts);clearTimeout(id);return r;}
-      catch(e){clearTimeout(id);throw e;}
+    // ── Fetch with timeout + GitHub token auth ────────────────────────────────
+    async function fetchT(url, opts = {}) {
+      const headers = { ...opts.headers };
+      if (ghToken) headers['Authorization'] = 'Bearer ' + ghToken;
+      const ctrl = new AbortController();
+      const id   = setTimeout(() => ctrl.abort(), TIMEOUT);
+      opts.signal  = opts.signal ?? ctrl.signal;
+      opts.headers = headers;
+      try { const r = await fetch(url, opts); clearTimeout(id); return r; }
+      catch (e) { clearTimeout(id); throw e; }
     }
 
-    document.querySelector('.ih-actions').addEventListener('click',e=>{
-      const btn=e.target.closest('[data-action]');
-      if(!btn||btn.disabled)return;
-      ihAction(btn.dataset.action,btn);
-    });
-    document.getElementById('series-list').addEventListener('click',e=>{
-      const btn=e.target.closest('.ih-series-btn');
-      if(!btn||btn.disabled)return;
-      const{seriesName,seriesAction}=btn.dataset;
-      if(seriesName&&seriesAction)toggleSeries(seriesName,seriesAction,btn);
+    // ── Event delegation for buttons ──────────────────────────────────────────
+    document.querySelector('.ih-actions').addEventListener('click', e => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn || btn.disabled) return;
+      ihAction(btn.dataset.action, btn);
     });
 
-    async function ihAction(type,btn){
-      if(btn.disabled)return;
-      btn.disabled=true;const orig=btn.innerHTML;btn.textContent='...';
-      try{
-        const r=await fetchT(`${WORKER}/claude/action`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:type})});
-        if(!r.ok)throw new Error('HTTP '+r.status);
-        btn.classList.add('ok');btn.textContent='Done';
-        setTimeout(()=>ihRefresh(),800);
-      }catch{btn.classList.add('fail');btn.textContent='Error';}
-      finally{setTimeout(()=>{btn.disabled=false;btn.classList.remove('ok','fail');btn.innerHTML=orig;},2000);}
+    document.getElementById('series-list').addEventListener('click', e => {
+      const btn = e.target.closest('.ih-series-btn');
+      if (!btn || btn.disabled) return;
+      const { seriesName, seriesAction } = btn.dataset;
+      if (seriesName && seriesAction) toggleSeries(seriesName, seriesAction, btn);
+    });
+
+    // ── Action handlers ───────────────────────────────────────────────────────
+    async function ihAction(type, btn) {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      const orig = btn.innerHTML;
+      btn.textContent = '...';
+      try {
+        const r = await fetchT(`${WORKER}/claude/action`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: type }),
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        btn.classList.add('ok'); btn.textContent = 'Done';
+        setTimeout(() => ihRefresh(), 800);
+      } catch { btn.classList.add('fail'); btn.textContent = 'Error'; }
+      finally { setTimeout(() => { btn.disabled = false; btn.classList.remove('ok', 'fail'); btn.innerHTML = orig; }, 2000); }
     }
 
-    async function toggleSeries(name,status,btn){
-      btn.disabled=true;const orig=btn.textContent;btn.textContent='...';
-      try{
-        await fetchT(`${WORKER}/claude/action`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:status==='complete'?'mark-complete':'mark-active',series:name})});
-        setTimeout(()=>ihRefresh(),300);
-      }catch{btn.disabled=false;btn.textContent=orig;}
+    async function toggleSeries(name, status, btn) {
+      btn.disabled = true;
+      const orig = btn.textContent; btn.textContent = '...';
+      try {
+        await fetchT(`${WORKER}/claude/action`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: status === 'complete' ? 'mark-complete' : 'mark-active', series: name }),
+        });
+        setTimeout(() => ihRefresh(), 300);
+      } catch { btn.disabled = false; btn.textContent = orig; }
     }
 
-    function renderSeries(stats){
-      if(!stats||!Object.keys(stats).length){html('series-list','<div class="ih-empty">No data</div>');return;}
-      const entries=Object.entries(stats);
-      const done=entries.filter(([,d])=>d.status==='complete').length;
-      set('series-summary',`${done}/${entries.length} complete`);
-      entries.sort(([,a],[,b])=>a.status===b.status?0:a.status==='active'?-1:1);
-      html('series-list',entries.map(([name,d])=>{
-        const isC=d.status==='complete';
-        const label=esc(name.replace(/-/g,' '));
-        const gapHtml=d.episode_gaps?.length?`<span class="ih-series-gap">⚠ gap ${esc(d.episode_gaps.join(','))}</span>`:''';
-        const statsHtml=`<span>${esc(d.episodes)} ep</span>${d.profiles>0?`<span>${esc(d.profiles)} pr</span>`:''}`+(isC?`<span class="ih-series-done">✓ complete</span>`:gapHtml||`<span class="ih-series-next">next: ${esc(d.next_episode)}</span>`);
-        const btnHtml=isC?`<button class="ih-series-btn active-btn" data-series-name="${esc(name)}" data-series-action="active">↺ Mark Active</button>`:`<button class="ih-series-btn complete-btn" data-series-name="${esc(name)}" data-series-action="complete">✓ Mark Complete</button>`;
-        return`<div class="ih-series-card${isC?' complete':''}"><div class="ih-series-card-top"><span class="ih-series-name">${label}</span><span class="ih-series-badge ${isC?'complete':'active'}">${isC?'✓ COMPLETE':'ACTIVE'}</span></div><div class="ih-series-stats">${statsHtml}</div><div class="ih-series-actions">${btnHtml}</div></div>`;
+    // ── Renderers ─────────────────────────────────────────────────────────────
+    function renderSeries(stats) {
+      if (!stats || !Object.keys(stats).length) { html('series-list', '<div class="ih-empty">No data</div>'); return; }
+      const entries = Object.entries(stats);
+      set('series-summary', `${entries.filter(([,d])=>d.status==='complete').length}/${entries.length} complete`);
+      entries.sort(([,a],[,b]) => a.status===b.status ? 0 : a.status==='active' ? -1 : 1);
+      html('series-list', entries.map(([name, d]) => {
+        const isC = d.status === 'complete';
+        const label = esc(name.replace(/-/g, ' '));
+        const gapHtml = d.episode_gaps?.length ? `<span class="ih-series-gap">⚠ gap ${esc(d.episode_gaps.join(','))}</span>` : '';
+        const statsHtml = `<span>${esc(d.episodes)} ep</span>${d.profiles > 0 ? `<span>${esc(d.profiles)} pr</span>` : ''}`
+          + (isC ? `<span class="ih-series-done">✓ complete</span>` : gapHtml || `<span class="ih-series-next">next: ${esc(d.next_episode)}</span>`);
+        const btnHtml = isC
+          ? `<button class="ih-series-btn active-btn" data-series-name="${esc(name)}" data-series-action="active">↺ Mark Active</button>`
+          : `<button class="ih-series-btn complete-btn" data-series-name="${esc(name)}" data-series-action="complete">✓ Mark Complete</button>`;
+        return `<div class="ih-series-card${isC ? ' complete' : '}">
+          <div class="ih-series-card-top"><span class="ih-series-name">${label}</span><span class="ih-series-badge ${isC ? 'complete' : 'active'}">${isC ? '✓ COMPLETE' : 'ACTIVE'}</span></div>
+          <div class="ih-series-stats">${statsHtml}</div>
+          <div class="ih-series-actions">${btnHtml}</div>
+        </div>`;
       }).join(''));
     }
 
-    function renderCronLog(log){
-      if(!log?.length){html('cron-list','<div class="ih-empty">No runs yet</div>');return;}
-      html('cron-list',log.map(r=>{
-        const pub=`<span class="ih-cron-stat ${r.published>0?'pub':'idle'}">${r.published>0?'++' :'·'}${esc(r.published)}</span>`;
-        const del=`<span class="ih-cron-stat ${r.deleted>0?'del':'idle'}">${r.deleted>0?'-':'·'}${esc(r.deleted)}</span>`;
-        const fail=r.failed>0?`<span class="ih-cron-stat fail">✕${esc(r.failed)}</span>`:''';
-        const files=r.details?.filter(d=>d.success).map(d=>fname(d.path)).join(', ')||''';
-        return`<div class="ih-cron-row"><span class="ih-cron-time">${esc(relTime(r.ran_at))}</span><div class="ih-cron-stats">${pub}${del}${fail}</div>${files?`<span class="ih-cron-files">${files}</span>`:''}</div>`;
+    function renderCronLog(log) {
+      if (!log?.length) { html('cron-list', '<div class="ih-empty">No runs yet</div>'); return; }
+      html('cron-list', log.map(r => {
+        const pub  = `<span class="ih-cron-stat ${r.published>0?'pub':'idle'}">${r.published>0?'++' :'·'}${esc(r.published)}</span>`;
+        const del  = `<span class="ih-cron-stat ${r.deleted>0?'del':'idle'}">${r.deleted>0?'-':'·'}${esc(r.deleted)}</span>`;
+        const fail = r.failed>0 ? `<span class="ih-cron-stat fail">✕${esc(r.failed)}</span>` : '';
+        const files = r.details?.filter(d=>d.success).map(d=>fname(d.path)).join(', ') || '';
+        return `<div class="ih-cron-row"><span class="ih-cron-time">${esc(relTime(r.ran_at))}</span><div class="ih-cron-stats">${pub}${del}${fail}</div>${files?`<span class="ih-cron-files">${files}</span>`:''}</div>`;
       }).join(''));
     }
 
-    function renderActivity(activity){
-      if(!activity?.length){html('activity-list','<div class="ih-empty">No activity yet</div>');return;}
-      const icons={publish:'↑',delete:'✕',rollback:'↩'};
-      const colors={publish:'#22c55e',delete:'#ef4444',rollback:'#f59e0b'};
-      html('activity-list',activity.map(r=>`<div class="ih-activity-row"><span class="ih-activity-icon" style="color:${colors[r.action]||'#64748b'}">${icons[r.action]||'·'}</span><span class="ih-activity-path" title="${esc(r.path)}">${fname(r.path)}</span><span class="ih-activity-time">${esc(relTime(r.happened_at))}</span></div>`).join(''));
+    function renderActivity(activity) {
+      if (!activity?.length) { html('activity-list', '<div class="ih-empty">No activity yet</div>'); return; }
+      const icons={publish:'↑',delete:'✕',rollback:'↩'}, colors={publish:'#22c55e',delete:'#ef4444',rollback:'#f59e0b'};
+      html('activity-list', activity.map(r => `<div class="ih-activity-row"><span class="ih-activity-icon" style="color:${colors[r.action]||'#64748b'}">${icons[r.action]||'·'}</span><span class="ih-activity-path" title="${esc(r.path)}">${fname(r.path)}</span><span class="ih-activity-time">${esc(relTime(r.happened_at))}</span></div>`).join(''));
     }
 
-    function renderStaged(staged){
-      if(!staged?.length){hide('section-staged');return;}
-      showB('section-staged');set('staged-count-label',staged.length);
-      html('staged-list',staged.map(d=>`<div class="ih-staged-row"><span class="ih-staged-path" title="${esc(d.path)}">${fname(d.path)}</span><span class="ih-staged-size">${esc((d.size/1024).toFixed(1))}kb</span></div>`).join(''));
+    function renderStaged(staged) {
+      if (!staged?.length) { hide('section-staged'); return; }
+      showB('section-staged'); set('staged-count-label', staged.length);
+      html('staged-list', staged.map(d => `<div class="ih-staged-row"><span class="ih-staged-path" title="${esc(d.path)}">${fname(d.path)}</span><span class="ih-staged-size">${esc((d.size/1024).toFixed(1))}kb</span></div>`).join(''));
     }
 
-    async function ihRefresh(){
+    // ── Heartbeat ─────────────────────────────────────────────────────────────
+    async function ihRefresh() {
       clearTimeout(pollTimer);
-      if(activeAbort)activeAbort.abort();
-      activeAbort=new AbortController();
-      const signal=activeAbort.signal;
+      if (activeAbort) activeAbort.abort();
+      activeAbort = new AbortController();
+
       show('ih-loading');
-      try{
-        const r=await fetchT(`${WORKER}/claude/heartbeat`,{signal});
-        if(!r.ok)throw new Error('HTTP '+r.status);
-        const{health,connections,stats,cron_log,staged,activity}=await r.json();
-        failCount=0;hide('s-retry');
+      try {
+        const r = await fetchT(`${WORKER}/claude/heartbeat`, { signal: activeAbort.signal });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const { health, connections, stats, cron_log, staged, activity } = await r.json();
+
+        failCount = 0; hide('s-retry');
         document.getElementById('ih-strip').classList.remove('offline');
-        hide('ih-loading');set('ih-refresh-time','updated just now');
-        const ok=health.status==='ok'||health.status==='warning';
-        const col=!ok?'red':health.status==='warning'?'yellow':'green';
-        const md=document.getElementById('s-main');
-        md.style.display='inline-block';md.className='ih-dot '+col;
-        dot('p-worker-dot',ok?'green':'red');set('p-worker-val',ok?'Online':'Offline');
-        dot('p-github-dot',health.github_user?'green':'red');set('p-github-val',health.github_user||'—');
-        dot('p-d1-dot',health.d1==='connected'?'green':'red');set('p-d1-val',health.d1||'—');
-        const cm={};(connections||[]).forEach(c=>cm[c.name]=c);
-        const cs=connStatus(cm['claude']);dot('p-claude-dot',cs.color);set('p-claude-val',cs.text);
-        const td=health.drafts||0,tq=health.queue||0;
-        dot('p-queue-dot',td>0?'blue':'grey');
-        set('p-queue-val',td>0?`${td} draft${td!==1?'s':''}, ${tq} queued`:'Empty');
-        document.getElementById('btn-staged-count').textContent=td;
-        if(health.last_cron){dot('p-cron-dot','green');set('p-cron-val',relTime(health.last_cron.ran_at));show('s-cron',`<span style="color:#334155">cron</span> <span style="color:#cbd5e1">${esc(relTime(health.last_cron.ran_at))}</span>`);}
-        else{dot('p-cron-dot','grey');set('p-cron-val','Never run');hide('s-cron');}
-        const dn=health.dead_letter||0;
-        dot('p-dead-dot',dn>0?'red':'grey');set('p-dead-val',dn>0?`${dn} failed`:'None');
-        dn>0?show('s-dead',`<span class="ih-badge warn">⚠ ${esc(dn)} failed</span>`):hide('s-dead');
-        const gaps=[];
-        if(stats)Object.entries(stats).forEach(([s,d])=>{if(d.episode_gaps?.length)gaps.push(`${s}:${d.episode_gaps.join(',')}`);});
-        if(gaps.length){dot('p-gaps-dot','yellow');set('p-gaps-val',gaps.join(' · '));show('s-gaps','<span style="color:#f59e0b">⚠ gap</span>');}
-        else{dot('p-gaps-dot','green');set('p-gaps-val','None');hide('s-gaps');}
-        td>0?show('s-staged',`<span class="ih-badge">${esc(td)} staged</span>`):hide('s-staged');
-        renderStaged(staged);renderSeries(stats);renderCronLog(cron_log);renderActivity(activity);
-      }catch(e){
-        if(e.name==='AbortError')return;
-        failCount++;hide('ih-loading');
+        hide('ih-loading'); set('ih-refresh-time', 'updated just now');
+
+        const ok  = health.status === 'ok' || health.status === 'warning';
+        const col = !ok ? 'red' : health.status === 'warning' ? 'yellow' : 'green';
+        const md  = document.getElementById('s-main');
+        md.style.display = 'inline-block'; md.className = 'ih-dot ' + col;
+
+        dot('p-worker-dot', ok?'green':'red');  set('p-worker-val', ok?'Online':'Offline');
+        dot('p-github-dot', health.github_user?'green':'red'); set('p-github-val', health.github_user||'—');
+        dot('p-d1-dot', health.d1==='connected'?'green':'red'); set('p-d1-val', health.d1||'—');
+
+        const cm = {}; (connections||[]).forEach(c => cm[c.name]=c);
+        const cs = connStatus(cm['claude']); dot('p-claude-dot', cs.color); set('p-claude-val', cs.text);
+
+        const td = health.drafts||0, tq = health.queue||0;
+        dot('p-queue-dot', td>0?'blue':'grey');
+        set('p-queue-val', td>0 ? `${td} draft${td!==1?'s':''}, ${tq} queued` : 'Empty');
+        document.getElementById('btn-staged-count').textContent = td;
+
+        if (health.last_cron) {
+          dot('p-cron-dot', 'green'); set('p-cron-val', relTime(health.last_cron.ran_at));
+          show('s-cron', `<span style="color:#334155">cron</span> <span style="color:#cbd5e1">${esc(relTime(health.last_cron.ran_at))}</span>`);
+        } else { dot('p-cron-dot', 'grey'); set('p-cron-val', 'Never run'); hide('s-cron'); }
+
+        const dn = health.dead_letter||0;
+        dot('p-dead-dot', dn>0?'red':'grey'); set('p-dead-val', dn>0?`${dn} failed`:'None');
+        dn>0 ? show('s-dead', `<span class="ih-badge warn">⚠ ${esc(dn)} failed</span>`) : hide('s-dead');
+
+        const gaps = [];
+        if (stats) Object.entries(stats).forEach(([s,d]) => { if (d.episode_gaps?.length) gaps.push(`${s}:${d.episode_gaps.join(',')}`); });
+        if (gaps.length) { dot('p-gaps-dot','yellow'); set('p-gaps-val',gaps.join(' · ')); show('s-gaps','<span style="color:#f59e0b">⚠ gap</span>'); }
+        else             { dot('p-gaps-dot','green');  set('p-gaps-val','None'); hide('s-gaps'); }
+
+        td>0 ? show('s-staged', `<span class="ih-badge">${esc(td)} staged</span>`) : hide('s-staged');
+
+        renderStaged(staged); renderSeries(stats); renderCronLog(cron_log); renderActivity(activity);
+
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+        failCount++; hide('ih-loading');
         document.getElementById('ih-strip').classList.add('offline');
-        const d=document.getElementById('s-main');d.style.display='inline-block';d.className='ih-dot red pulse';
-        dot('p-worker-dot','red');set('p-worker-val','Unreachable');
-        console.error('[status-bar] heartbeat failed:',e.message);
-        if(failCount>1)show('s-retry',`<span style="color:#f97316;font-size:9px;background:#1c0a00;padding:0 5px;border-radius:2px">retry ${esc(failCount)}</span>`);
-      }finally{
-        pollTimer=setTimeout(ihRefresh,Math.min(BASE_MS*Math.pow(1.5,failCount),MAX_MS));
+        const d = document.getElementById('s-main');
+        d.style.display = 'inline-block'; d.className = 'ih-dot red pulse';
+        dot('p-worker-dot','red'); set('p-worker-val','Unreachable');
+        console.error('[status-bar] heartbeat failed:', e.message);
+        if (failCount>1) show('s-retry', `<span style="color:#f97316;font-size:9px;background:#1c0a00;padding:0 5px;border-radius:2px">retry ${esc(failCount)}</span>`);
+      } finally {
+        pollTimer = setTimeout(ihRefresh, Math.min(BASE_MS * Math.pow(1.5, failCount), MAX_MS));
       }
     }
-    ihRefresh();
   </script>
 </body>
 </html>
