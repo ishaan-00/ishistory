@@ -1,0 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Josefin+Sans:wght@300;400;600&family=DM+Mono:wght@300;400&display=swap');
+
+/* ─── Tokens ─────────────────────────────────────────────── */
+:root {
+  --font-serif:   'Cormorant Garamond', Georgia, serif;
+  --font-body:    'Crimson Pro', Georgia, serif;
+  --font-sans:    'Josefin Sans', system-ui, sans-serif;
+  --font-mono:    'DM Mono', monospace;
+
+  --ink:        #0a0d12;
+  --deep:       #0d1117;
+  --surface:    #111620;
+  --panel:      #161c26;
+  --border:     rgba(200,151,58,0.1);
+  --border-dim: rgba(200,151,58,0.06);
+
+  --cream:  #f0e8d8;
+  --linen:  #d8cdb8;
+  --fog:    #a09080;
+  --dust:   #6b5e4e;
+  --muted:  #3a3028;
+
+  --amber:    #c8973a;
+  --ember:    #c4622a;
+  --ember-hi: #d97a42;
+  --clay:     #8b5e2a;
+  --gold:     #e8b84b;
+
+  --nav-h: 64px;
+  --max-w: 1200px;
+  --read-w: 720px;
+}
+
+/* ─── Reset ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+body {
+  background: var(--ink);
+  color: var(--linen);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.7;
+  min-height: 100vh;
+}
+img { max-width: 100%; display: block; }
+a { color: inherit; text-decoration: none; }
+
+/* ─── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--ink); }
+::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--dust); }
+
+/* ─── Animations ─────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes expandLine {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* ─── Shared buttons ─────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  font-family: var(--font-sans); font-size: 0.65rem;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  padding: 0.75rem 1.6rem;
+  border-radius: 2px;
+  transition: all 0.2s; cursor: pointer;
+  text-decoration: none;
+}
+.btn-primary {
+  background: var(--amber); color: var(--ink);
+  border: 1px solid var(--amber);
+}
+.btn-primary:hover { background: var(--gold); border-color: var(--gold); }
+.btn-secondary {
+  background: transparent; color: var(--fog);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { border-color: var(--amber); color: var(--amber); }
+
+/* ─── Divider ────────────────────────────────────────────── */
+.divider {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0 3rem; margin: 2rem 0;
+}
+.divider-line { flex: 1; height: 1px; background: var(--border-dim); }
+.divider-sym  { color: var(--clay); font-size: 0.8rem; flex-shrink: 0; }
+
+/* ─── Selection ──────────────────────────────────────────── */
+::selection { background: rgba(200,151,58,0.2); color: var(--cream); }
