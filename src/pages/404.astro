@@ -4,9 +4,8 @@ import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import Cosmos from '../components/Cosmos.astro';
 ---
-<Base title="404 — Page Not Found · ishistory" description="This page does not exist.">
-<Cosmos />
-<Nav />
+<Base title="404 — Page Not Found · ishistory">
+<Cosmos /><Nav />
 <section class="four04">
   <div class="four04-num">404</div>
   <h1 class="four04-title">Page not found</h1>
@@ -16,23 +15,8 @@ import Cosmos from '../components/Cosmos.astro';
 <Footer />
 </Base>
 <style>
-.four04 {
-  min-height: 80vh; display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding: 8rem 2rem; text-align: center; position: relative; z-index: 1;
-}
-.four04-num {
-  font-family: var(--font-serif); font-size: clamp(6rem,18vw,14rem);
-  font-weight: 700; font-style: italic;
-  color: transparent; -webkit-text-stroke: 1px rgba(200,151,58,0.15);
-  line-height: 1; margin-bottom: 1rem;
-}
-.four04-title {
-  font-family: var(--font-serif); font-size: 2rem;
-  font-weight: 300; color: var(--cream); margin-bottom: 1rem;
-}
-.four04-desc {
-  font-family: var(--font-body); font-size: 1.1rem;
-  color: var(--fog); font-style: italic; margin-bottom: 2rem; max-width: 400px;
-}
+.four04 { min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8rem 2rem; text-align: center; position: relative; z-index: 1; }
+.four04-num { font-family: var(--font-serif); font-size: clamp(6rem,18vw,14rem); font-weight: 700; font-style: italic; color: transparent; -webkit-text-stroke: 1px rgba(200,151,58,0.15); line-height: 1; margin-bottom: 1rem; }
+.four04-title { font-family: var(--font-serif); font-size: 2rem; font-weight: 300; color: var(--cream); margin-bottom: 1rem; }
+.four04-desc { font-family: var(--font-body); font-size: 1.1rem; color: var(--fog); font-style: italic; margin-bottom: 2rem; max-width: 400px; }
 </style>
