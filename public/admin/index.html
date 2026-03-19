@@ -5,8 +5,160 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex" />
   <title>ishistory CMS</title>
+  <style>
+    #ih-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 99999; font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace; font-size: 11px; line-height: 1.4; }
+    #ih-strip { background: #080e1a; color: #64748b; height: 26px; display: flex; align-items: center; padding: 0 12px; gap: 12px; cursor: pointer; user-select: none; border-top: 1px solid #1e293b; transition: background 0.15s, border-color 0.4s; }
+    #ih-strip:hover { background: #0f172a; }
+    #ih-strip.offline { border-top-color: #7f1d1d; background: #0a0404; }
+    .ih-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; transition: background 0.4s, box-shadow 0.4s; }
+    .ih-dot.green  { background: #22c55e; box-shadow: 0 0 6px #22c55e55; }
+    .ih-dot.yellow { background: #eab308; box-shadow: 0 0 6px #eab30855; }
+    .ih-dot.red    { background: #ef4444; box-shadow: 0 0 6px #ef444455; }
+    .ih-dot.blue   { background: #3b82f6; box-shadow: 0 0 6px #3b82f655; }
+    .ih-dot.grey   { background: #334155; box-shadow: none; }
+    .ih-dot.pulse  { animation: ih-pulse 2s ease-in-out infinite; }
+    @keyframes ih-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .ih-label { color: #334155; margin-right: 2px; }
+    .ih-val   { color: #cbd5e1; }
+    .ih-badge { background: #0f2a4a; color: #7dd3fc; padding: 0 6px; border-radius: 3px; font-size: 10px; }
+    .ih-badge.warn { background: #3b0a0a; color: #fca5a5; }
+    .ih-badge.ok   { background: #052e16; color: #86efac; }
+    #ih-panel { background: #05090f; border-top: 1px solid #1e293b; height: 0; overflow: hidden; transition: height 0.3s cubic-bezier(0.4,0,0.2,1); display: flex; flex-direction: column; }
+    #ih-panel.open { height: calc(100vh - 26px); }
+    #ih-panel-inner { flex: 1; overflow-y: auto; padding: 0 0 16px; scrollbar-width: thin; scrollbar-color: #1e293b transparent; }
+    .ih-section { padding: 10px 14px 6px; border-bottom: 1px solid #0a0f1a; }
+    .ih-section:last-child { border-bottom: none; }
+    .ih-section-title { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: #334155; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+    .ih-section-title span { color: #1e293b; font-size: 9px; }
+    .ih-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 0; }
+    .ih-row { display: flex; align-items: center; gap: 7px; padding: 4px 0; border-bottom: 1px solid #0a0f1a; }
+    .ih-row-label { color: #334155; width: 58px; flex-shrink: 0; font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .ih-row-val { color: #94a3b8; flex: 1; font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ih-actions { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 0 4px; }
+    .ih-btn { background: #0f172a; color: #64748b; border: 1px solid #1e293b; padding: 3px 10px; border-radius: 3px; font-size: 10px; font-family: inherit; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .ih-btn:hover:not(:disabled) { background: #1e293b; color: #e2e8f0; border-color: #334155; }
+    .ih-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .ih-btn.warn:hover:not(:disabled) { background: #3b0a0a; color: #fca5a5; border-color: #7f1d1d; }
+    .ih-btn.ok   { color: #86efac !important; border-color: #166534 !important; }
+    .ih-btn.fail { color: #fca5a5 !important; border-color: #7f1d1d !important; }
+    .ih-series-list { display: flex; flex-direction: column; gap: 4px; }
+    .ih-series-card { padding: 8px 10px; border-radius: 4px; border: 1px solid #0f172a; background: #080e1a; }
+    .ih-series-card.complete { border-color: #052e16; background: #030d07; }
+    .ih-series-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+    .ih-series-name { font-size: 11px; color: #7dd3fc; }
+    .ih-series-card.complete .ih-series-name { color: #4ade80; }
+    .ih-series-badge { font-size: 9px; padding: 1px 7px; border-radius: 10px; font-weight: 600; letter-spacing: 0.05em; }
+    .ih-series-badge.active   { background: #0f2a4a; color: #38bdf8; }
+    .ih-series-badge.complete { background: #052e16; color: #4ade80; }
+    .ih-series-stats { display: flex; align-items: center; gap: 10px; font-size: 10px; color: #475569; }
+    .ih-series-next { color: #22c55e; font-size: 10px; }
+    .ih-series-gap  { color: #f59e0b; font-size: 10px; }
+    .ih-series-done { color: #4ade80; font-size: 10px; }
+    .ih-series-actions { margin-top: 6px; display: flex; gap: 5px; }
+    .ih-series-btn { font-size: 9px; padding: 2px 8px; border-radius: 3px; border: 1px solid #1e293b; background: #0f172a; color: #475569; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+    .ih-series-btn.complete-btn:hover { background: #052e16; color: #4ade80; border-color: #166534; }
+    .ih-series-btn.active-btn:hover   { background: #0f2a4a; color: #38bdf8; border-color: #1e40af; }
+    .ih-cron-list, .ih-activity-list, .ih-staged-list { display: flex; flex-direction: column; gap: 2px; }
+    .ih-cron-row, .ih-activity-row, .ih-staged-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: #080e1a; border-radius: 3px; }
+    .ih-staged-row { border: 1px solid #0f2a4a; }
+    .ih-cron-time { color: #334155; font-size: 10px; width: 60px; flex-shrink: 0; }
+    .ih-cron-stats { display: flex; gap: 8px; flex: 1; }
+    .ih-cron-stat.pub  { color: #22c55e; font-size: 10px; }
+    .ih-cron-stat.del  { color: #f59e0b; font-size: 10px; }
+    .ih-cron-stat.fail { color: #ef4444; font-size: 10px; }
+    .ih-cron-stat.idle { color: #1e293b; font-size: 10px; }
+    .ih-cron-files { font-size: 9.5px; color: #334155; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ih-activity-icon { width: 14px; text-align: center; font-size: 10px; flex-shrink: 0; }
+    .ih-activity-path { color: #475569; font-size: 10px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ih-activity-time { color: #1e293b; font-size: 9.5px; flex-shrink: 0; }
+    .ih-staged-path { color: #7dd3fc; font-size: 10px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ih-staged-size { color: #334155; font-size: 9.5px; flex-shrink: 0; }
+    #ih-chevron { margin-left: auto; color: #1e293b; font-size: 8px; transition: transform 0.25s; }
+    #ih-chevron.up { transform: rotate(180deg); }
+    .ih-spin { width: 7px; height: 7px; border: 1.5px solid #1e293b; border-top-color: #3b82f6; border-radius: 50%; animation: ih-spin 0.7s linear infinite; display: inline-block; }
+    @keyframes ih-spin { to { transform: rotate(360deg); } }
+    .ih-empty { color: #1e293b; font-size: 10px; padding: 4px 8px; }
+  </style>
 </head>
 <body>
   <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js" type="module" data-cfasync="false"></script>
+
+  <div id="ih-bar">
+    <div id="ih-panel">
+      <div id="ih-panel-inner">
+        <div class="ih-section">
+          <div class="ih-section-title">System Status <span id="ih-refresh-time"></span></div>
+          <div class="ih-grid">
+            <div class="ih-row"><span class="ih-row-label">Worker</span><span class="ih-dot grey" id="p-worker-dot"></span><span class="ih-row-val" id="p-worker-val">—</span></div>
+            <div class="ih-row"><span class="ih-row-label">GitHub</span><span class="ih-dot grey" id="p-github-dot"></span><span class="ih-row-val" id="p-github-val">—</span></div>
+            <div class="ih-row"><span class="ih-row-label">D1</span><span class="ih-dot grey" id="p-d1-dot"></span><span class="ih-row-val" id="p-d1-val">—</span></div>
+            <div class="ih-row"><span class="ih-row-label">Claude</span><span class="ih-dot grey" id="p-claude-dot"></span><span class="ih-row-val" id="p-claude-val">—</span></div>
+            <div class="ih-row"><span class="ih-row-label">Queue</span><span class="ih-dot grey" id="p-queue-dot"></span><span class="ih-row-val" id="p-queue-val">—</span></div>
+            <div class="ih-row"><span class="ih-row-label">Cron</span><span class="ih-dot grey" id="p-cron-dot"></span><span class="ih-row-val" id="p-cron-val">—</span></div>
+            <div class="ih-row"><span class="ih-row-label">Dead</span><span class="ih-dot grey" id="p-dead-dot"></span><span class="ih-row-val" id="p-dead-val">—</span></div>
+            <div class="ih-row"><span class="ih-row-label">Gaps</span><span class="ih-dot grey" id="p-gaps-dot"></span><span class="ih-row-val" id="p-gaps-val">—</span></div>
+          </div>
+        </div>
+        <div class="ih-section">
+          <div class="ih-section-title">Actions</div>
+          <div class="ih-actions">
+            <button class="ih-btn" onclick="ihAction('trigger-cron',this)">▶ Run Cron</button>
+            <button class="ih-btn" onclick="ihAction('process-staged',this)">⬆ Publish Staged (<span id="btn-staged-count">0</span>)</button>
+            <button class="ih-btn warn" onclick="ihAction('clear-dead-letter',this)">✕ Clear Failed</button>
+          </div>
+        </div>
+        <div class="ih-section" id="section-staged" style="display:none">
+          <div class="ih-section-title">Staged Drafts <span id="staged-count-label"></span></div>
+          <div class="ih-staged-list" id="staged-list"></div>
+        </div>
+        <div class="ih-section">
+          <div class="ih-section-title">Series <span id="series-summary"></span></div>
+          <div class="ih-series-list" id="series-list"><div class="ih-empty">Loading...</div></div>
+        </div>
+        <div class="ih-section">
+          <div class="ih-section-title">Cron Log <span>last 5 runs</span></div>
+          <div class="ih-cron-list" id="cron-list"><div class="ih-empty">No runs yet</div></div>
+        </div>
+        <div class="ih-section">
+          <div class="ih-section-title">Activity <span>last 10 events</span></div>
+          <div class="ih-activity-list" id="activity-list"><div class="ih-empty">No activity yet</div></div>
+        </div>
+      </div>
+    </div>
+    <div id="ih-strip" onclick="ihToggle()">
+      <span id="ih-loading"><span class="ih-spin"></span></span>
+      <span class="ih-dot grey pulse" id="s-main" style="display:none"></span>
+      <span id="s-staged" style="display:none"></span>
+      <span id="s-dead"   style="display:none"></span>
+      <span id="s-gaps"   style="display:none"></span>
+      <span id="s-cron"   style="display:none"></span>
+      <span id="s-retry"  style="display:none"></span>
+      <span id="ih-chevron">▲</span>
+    </div>
+  </div>
+
+  <script>
+    const WORKER='https://claude.ishaan00.workers.dev',BASE_MS=60000,MAX_MS=300000,TIMEOUT=5000;
+    let panelOpen=false,failCount=0,pollTimer=null;
+    function ihToggle(){panelOpen=!panelOpen;document.getElementById('ih-panel').classList.toggle('open',panelOpen);document.getElementById('ih-chevron').classList.toggle('up',panelOpen);}
+    function dot(id,c){const e=document.getElementById(id);if(e)e.className='ih-dot '+c;}
+    function set(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
+    function html(id,m){const e=document.getElementById(id);if(e)e.innerHTML=m;}
+    function show(id,m){const e=document.getElementById(id);if(!e)return;e.style.display='inline';if(m!==undefined)e.innerHTML=m;}
+    function showB(id){const e=document.getElementById(id);if(e)e.style.display='block';}
+    function hide(id){const e=document.getElementById(id);if(e)e.style.display='none';}
+    function fname(p){return p.split('/').pop();}
+    function relTime(iso){if(!iso)return'never';const d=Math.floor((Date.now()-new Date(iso).getTime())/1000);if(d<60)return d+'s ago';if(d<3600)return Math.floor(d/60)+'m ago';if(d<86400)return Math.floor(d/3600)+'h ago';return Math.floor(d/86400)+'d ago';}
+    function connStatus(c){if(!c||c.status==='never')return{color:'grey',text:'never connected'};if(c.status==='active')return{color:'green',text:'active · '+relTime(c.last_seen)};if(c.status==='idle')return{color:'yellow',text:'idle · '+relTime(c.last_seen)};return{color:'red',text:'offline · '+relTime(c.last_seen)};}
+    async function fetchT(url,opts={}){const ctrl=new AbortController();const id=setTimeout(()=>ctrl.abort(),TIMEOUT);try{const r=await fetch(url,{...opts,signal:ctrl.signal});clearTimeout(id);return r;}catch(e){clearTimeout(id);throw e;}}
+    async function ihAction(type,btn){btn.disabled=true;const orig=btn.innerHTML;btn.textContent='...';try{const r=await fetchT(`${WORKER}/claude/action`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:type})});if(!r.ok)throw new Error();btn.classList.add('ok');btn.textContent='Done';setTimeout(()=>ihRefresh(),800);}catch{btn.classList.add('fail');btn.textContent='Error';}finally{setTimeout(()=>{btn.disabled=false;btn.classList.remove('ok','fail');btn.innerHTML=orig;},2000);}}
+    async function toggleSeries(name,status,btn){btn.disabled=true;const orig=btn.textContent;btn.textContent='...';try{await fetchT(`${WORKER}/claude/action`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:status==='complete'?'mark-complete':'mark-active',series:name})});setTimeout(()=>ihRefresh(),300);}catch{btn.disabled=false;btn.textContent=orig;}}
+    function renderSeries(stats){if(!stats||!Object.keys(stats).length){html('series-list','<div class="ih-empty">No data</div>');return;}const entries=Object.entries(stats);const done=entries.filter(([,d])=>d.status==='complete').length;set('series-summary',`${done}/${entries.length} complete`);entries.sort(([,a],[,b])=>a.status===b.status?0:a.status==='active'?-1:1);html('series-list',entries.map(([name,d])=>{const isC=d.status==='complete';const label=name.replace(/-/g,' ');const stats=`<span>${d.episodes} ep</span>${d.profiles>0?`<span>${d.profiles} pr</span>`:''}`+(isC?`<span class="ih-series-done">✓ complete</span>`:d.episode_gaps?.length?`<span class="ih-series-gap">⚠ gap ${d.episode_gaps.join(',')}</span>`:`<span class="ih-series-next">next: ${d.next_episode}</span>`);const btn=isC?`<button class="ih-series-btn active-btn" onclick="toggleSeries('${name}','active',this)">↺ Mark Active</button>`:`<button class="ih-series-btn complete-btn" onclick="toggleSeries('${name}','complete',this)">✓ Mark Complete</button>`;return`<div class="ih-series-card ${isC?'complete':''}"><div class="ih-series-card-top"><span class="ih-series-name">${label}</span><span class="ih-series-badge ${isC?'complete':'active'}">${isC?'✓ COMPLETE':'ACTIVE'}</span></div><div class="ih-series-stats">${stats}</div><div class="ih-series-actions">${btn}</div></div>`;}).join('')); }
+    function renderCronLog(log){if(!log?.length){html('cron-list','<div class="ih-empty">No runs yet</div>');return;}html('cron-list',log.map(r=>{const pub=`<span class="ih-cron-stat ${r.published>0?'pub':'idle'}">${r.published>0?'++':'·'}${r.published}</span>`;const del=`<span class="ih-cron-stat ${r.deleted>0?'del':'idle'}">${r.deleted>0?'-':'·'}${r.deleted}</span>`;const fail=r.failed>0?`<span class="ih-cron-stat fail">✕${r.failed}</span>`:'';const files=r.details?.filter(d=>d.success).map(d=>fname(d.path)).join(', ')||'';return`<div class="ih-cron-row"><span class="ih-cron-time">${relTime(r.ran_at)}</span><div class="ih-cron-stats">${pub}${del}${fail}</div>${files?`<span class="ih-cron-files">${files}</span>`:''}</div>`;}).join(''));}
+    function renderActivity(activity){if(!activity?.length){html('activity-list','<div class="ih-empty">No activity yet</div>');return;}const icons={publish:'↑',delete:'✕',rollback:'↩'};const colors={publish:'#22c55e',delete:'#ef4444',rollback:'#f59e0b'};html('activity-list',activity.map(r=>`<div class="ih-activity-row"><span class="ih-activity-icon" style="color:${colors[r.action]||'#64748b'}">${icons[r.action]||'·'}</span><span class="ih-activity-path" title="${r.path}">${fname(r.path)}</span><span class="ih-activity-time">${relTime(r.happened_at)}</span></div>`).join(''));}
+    function renderStaged(staged){if(!staged?.length){hide('section-staged');return;}showB('section-staged');set('staged-count-label',staged.length);html('staged-list',staged.map(d=>`<div class="ih-staged-row"><span class="ih-staged-path">${fname(d.path)}</span><span class="ih-staged-size">${(d.size/1024).toFixed(1)}kb</span></div>`).join(''));}
+    async function ihRefresh(){clearTimeout(pollTimer);show('ih-loading');try{const r=await fetchT(`${WORKER}/claude/heartbeat`);if(!r.ok)throw new Error('HTTP '+r.status);const{health,connections,stats,cron_log,staged,activity}=await r.json();failCount=0;hide('s-retry');document.getElementById('ih-strip').classList.remove('offline');hide('ih-loading');set('ih-refresh-time','updated just now');const ok=health.status==='ok'||health.status==='warning';const mainCol=!ok?'red':health.status==='warning'?'yellow':'green';const mainDot=document.getElementById('s-main');mainDot.style.display='inline-block';mainDot.className='ih-dot '+mainCol;dot('p-worker-dot',ok?'green':'red');set('p-worker-val',ok?'Online':'Offline');dot('p-github-dot',health.github_user?'green':'red');set('p-github-val',health.github_user||'—');dot('p-d1-dot',health.d1==='connected'?'green':'red');set('p-d1-val',health.d1||'—');const cm={};(connections||[]).forEach(c=>cm[c.name]=c);const cs=connStatus(cm['claude']);dot('p-claude-dot',cs.color);set('p-claude-val',cs.text);const td=health.drafts||0,tq=health.queue||0;dot('p-queue-dot',td>0?'blue':'grey');set('p-queue-val',td>0?`${td} draft${td!==1?'s':''}, ${tq} queued`:'Empty');document.getElementById('btn-staged-count').textContent=td;if(health.last_cron){dot('p-cron-dot','green');set('p-cron-val',relTime(health.last_cron.ran_at));show('s-cron',`<span class="ih-label">cron</span><span class="ih-val">${relTime(health.last_cron.ran_at)}</span>`);}else{dot('p-cron-dot','grey');set('p-cron-val','Never run');hide('s-cron');}const dn=health.dead_letter||0;dot('p-dead-dot',dn>0?'red':'grey');set('p-dead-val',dn>0?`${dn} failed`:'None');dn>0?show('s-dead',`<span class="ih-badge warn">⚠ ${dn} failed</span>`):hide('s-dead');const gaps=[];if(stats)Object.entries(stats).forEach(([s,d])=>{if(d.episode_gaps?.length)gaps.push(`${s}: ${d.episode_gaps.join(',')}`);});if(gaps.length){dot('p-gaps-dot','yellow');set('p-gaps-val',gaps.join(' · '));show('s-gaps','<span style="color:#f59e0b">⚠ gap</span>');}else{dot('p-gaps-dot','green');set('p-gaps-val','None detected');hide('s-gaps');}td>0?show('s-staged',`<span class="ih-badge">${td} staged</span>`):hide('s-staged');renderStaged(staged);renderSeries(stats);renderCronLog(cron_log);renderActivity(activity);}catch(e){failCount++;hide('ih-loading');document.getElementById('ih-strip').classList.add('offline');const d=document.getElementById('s-main');d.style.display='inline-block';d.className='ih-dot red pulse';dot('p-worker-dot','red');set('p-worker-val','Unreachable');if(failCount>1)show('s-retry',`<span style="color:#f97316;font-size:9px;background:#1c0a00;padding:0 5px;border-radius:2px">retry ${failCount}</span>`);}finally{pollTimer=setTimeout(ihRefresh,Math.min(BASE_MS*Math.pow(1.5,failCount),MAX_MS));}}
+    ihRefresh();
+  </script>
 </body>
 </html>
