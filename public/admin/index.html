@@ -8,23 +8,155 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; }
 
-    #ih-bar {
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 99999;
+    /* ── FAB button ────────────────────────────────────────────── */
+    #ih-fab {
+      position: fixed;
+      right: -18px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #080e1a;
+      border: 1.5px solid #1e293b;
+      cursor: pointer;
+      z-index: 99998;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+      user-select: none;
+      transition: right 0.2s ease, left 0.2s ease, border-color 0.4s, background 0.2s;
+      box-shadow: 0 2px 12px #00000066;
+    }
+    #ih-fab:active { background: #0f172a; }
+    #ih-fab.left-side {
+      right: auto;
+      left: -18px;
+    }
+    #ih-fab.peeked {
+      right: -18px;
+    }
+    #ih-fab.left-side.peeked {
+      right: auto;
+      left: -18px;
+    }
+
+    /* Status dot inside FAB */
+    #ih-fab-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #334155; flex-shrink: 0;
+      transition: background 0.4s, box-shadow 0.4s;
+    }
+    #ih-fab-dot.green  { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
+    #ih-fab-dot.yellow { background: #eab308; box-shadow: 0 0 6px #eab30888; }
+    #ih-fab-dot.red    { background: #ef4444; box-shadow: 0 0 6px #ef444488; }
+    #ih-fab-dot.pulse  { animation: ih-pulse 2s ease-in-out infinite; }
+    @keyframes ih-pulse { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+    /* Badge on FAB */
+    #ih-fab-badge {
+      position: absolute;
+      top: 4px; right: 4px;
+      min-width: 14px; height: 14px;
+      background: #ef4444;
+      border-radius: 7px;
+      font-size: 8px; font-weight: 700;
+      color: #fff;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 0 3px;
+      font-family: 'SF Mono', ui-monospace, monospace;
+      line-height: 1;
+    }
+    #ih-fab-badge.visible { display: flex; }
+
+    /* Long-press hint */
+    #ih-fab-hint {
+      position: fixed;
+      bottom: 100px;
+      right: 60px;
+      background: #0f172a;
+      color: #64748b;
+      font-size: 9px;
+      font-family: 'SF Mono', ui-monospace, monospace;
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #1e293b;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      z-index: 99997;
+      white-space: nowrap;
+    }
+    #ih-fab-hint.show { opacity: 1; }
+
+    /* Spin while loading */
+    #ih-fab.loading #ih-fab-dot {
+      animation: ih-spin 0.8s linear infinite;
+      width: 8px; height: 8px;
+      background: transparent;
+      border: 1.5px solid #334155;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+    }
+
+    /* ── Overlay backdrop ────────────────────────────────────────── */
+    #ih-backdrop {
+      position: fixed; inset: 0;
+      background: #00000088;
+      z-index: 99998;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    #ih-backdrop.open { opacity: 1; pointer-events: all; }
+
+    /* ── Panel ─────────────────────────────────────────────────────────── */
+    #ih-panel {
+      position: fixed;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%) translateY(100%);
+      width: min(480px, 100vw);
+      max-height: 88vh;
+      background: #05090f;
+      border: 1px solid #1e293b;
+      border-bottom: none;
+      border-radius: 14px 14px 0 0;
+      z-index: 99999;
+      display: flex; flex-direction: column;
+      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
       font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
       font-size: 11px; line-height: 1.4;
     }
+    #ih-panel.open { transform: translateX(-50%) translateY(0); }
 
-    /* ── Strip ─────────────────────────────────────────────────────────── */
-    #ih-strip {
-      background: #080e1a; color: #64748b; height: 28px;
-      display: flex; align-items: center; padding: 0 10px; gap: 10px;
-      cursor: pointer; user-select: none;
-      border-top: 1px solid #1e293b;
-      transition: background 0.15s, border-color 0.4s;
+    #ih-panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px 8px;
+      border-bottom: 1px solid #0f172a;
+      flex-shrink: 0;
     }
-    #ih-strip:hover { background: #0d1526; }
-    #ih-strip.offline { border-top-color: #7f1d1d; background: #0a0404; }
+    #ih-panel-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #334155; }
+    #ih-panel-meta  { font-size: 9px; color: #1e293b; }
+    #ih-panel-close {
+      background: none; border: none; cursor: pointer;
+      color: #334155; font-size: 14px; padding: 0 2px;
+      line-height: 1; font-family: inherit; transition: color 0.15s;
+    }
+    #ih-panel-close:hover { color: #ef4444; }
 
+    #ih-drag-handle {
+      width: 36px; height: 4px; border-radius: 2px;
+      background: #1e293b; margin: 8px auto 0; flex-shrink: 0;
+    }
+
+    #ih-panel-inner {
+      flex: 1; overflow-y: auto; padding: 0 0 20px;
+      scrollbar-width: thin; scrollbar-color: #1e293b transparent;
+    }
+
+    /* ── Shared styles ─────────────────────────────────────────────────── */
     .ih-dot {
       width: 7px; height: 7px; border-radius: 50%;
       display: inline-block; flex-shrink: 0;
@@ -35,47 +167,9 @@
     .ih-dot.red    { background: #ef4444; box-shadow: 0 0 5px #ef444466; }
     .ih-dot.blue   { background: #3b82f6; box-shadow: 0 0 5px #3b82f666; }
     .ih-dot.grey   { background: #2d3f55; box-shadow: none; }
-    .ih-dot.pulse  { animation: ih-pulse 2s ease-in-out infinite; }
-    @keyframes ih-pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
-
-    .ih-strip-indicator { display: none; align-items: center; gap: 4px; }
-    .ih-strip-indicator.visible { display: flex; }
-    .ih-strip-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #2d3f55; }
-
-    .ih-badge { background: #0f2a4a; color: #7dd3fc; padding: 0 6px; border-radius: 3px; font-size: 10px; }
-    .ih-badge.warn { background: #3b0a0a; color: #fca5a5; }
-
-    #ih-strip-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-    #ih-refresh-btn {
-      background: none; border: none; cursor: pointer; padding: 2px 4px;
-      color: #2d3f55; font-size: 10px; font-family: inherit;
-      transition: color 0.15s; line-height: 1;
-    }
-    #ih-refresh-btn:hover { color: #64748b; }
-    #ih-refresh-btn.spinning { animation: ih-spin 0.7s linear infinite; }
-    #ih-chevron { color: #1e293b; font-size: 8px; transition: transform 0.25s; }
-    #ih-chevron.up { transform: rotate(180deg); }
-
-    .ih-spin { width: 7px; height: 7px; border: 1.5px solid #1e293b; border-top-color: #3b82f6; border-radius: 50%; animation: ih-spin 0.7s linear infinite; display: inline-block; }
-    @keyframes ih-spin { to { transform: rotate(360deg); } }
-
-    /* ── Panel ─────────────────────────────────────────────────────────── */
-    #ih-panel {
-      background: #05090f;
-      border-top: 1px solid #0f172a;
-      height: 0; overflow: hidden;
-      transition: height 0.3s cubic-bezier(0.4,0,0.2,1);
-      display: flex; flex-direction: column;
-    }
-    #ih-panel.open { height: calc(100vh - 28px); }
-    #ih-panel-inner {
-      flex: 1; overflow-y: auto; padding: 0 0 20px;
-      scrollbar-width: thin; scrollbar-color: #1e293b transparent;
-    }
 
     .ih-section { padding: 10px 14px 8px; border-bottom: 1px solid #080d16; }
     .ih-section:last-child { border-bottom: none; }
-
     .ih-section-title {
       font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em;
       color: #2d3f55; margin-bottom: 8px;
@@ -83,29 +177,19 @@
     }
     .ih-section-title span { color: #1a2435; font-size: 9px; }
 
-    /* ── System status grid ────────────────────────────────────────────── */
     .ih-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 0; }
-    .ih-row {
-      display: flex; align-items: center; gap: 7px;
-      padding: 5px 0; border-bottom: 1px solid #080d16;
-    }
+    .ih-row { display: flex; align-items: center; gap: 7px; padding: 5px 0; border-bottom: 1px solid #080d16; }
     .ih-row:last-child { border-bottom: none; }
-    .ih-row-label {
-      color: #2d3f55; width: 54px; flex-shrink: 0;
-      font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em;
-    }
+    .ih-row-label { color: #2d3f55; width: 54px; flex-shrink: 0; font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; }
     .ih-row-val { color: #7a8fa8; flex: 1; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ih-row-val.good { color: #4ade80; }
-    .ih-row-val.warn { color: #f59e0b; }
     .ih-row-val.bad  { color: #f87171; }
 
-    /* ── Actions ───────────────────────────────────────────────────────── */
     .ih-actions { display: flex; gap: 6px; flex-wrap: wrap; padding: 6px 0 2px; }
     .ih-btn {
       background: #0a1120; color: #4a5f78; border: 1px solid #162032;
       padding: 4px 10px; border-radius: 4px; font-size: 10px;
       font-family: inherit; cursor: pointer; transition: all 0.15s; white-space: nowrap;
-      display: inline-flex; align-items: center; gap: 5px;
     }
     .ih-btn:hover:not(:disabled) { background: #162032; color: #cbd5e1; border-color: #2d3f55; }
     .ih-btn:disabled { opacity: 0.3; cursor: not-allowed; }
@@ -113,72 +197,40 @@
     .ih-btn.ok   { color: #4ade80 !important; border-color: #166534 !important; }
     .ih-btn.fail { color: #f87171 !important; border-color: #7f1d1d !important; }
 
-    /* ── Staged drafts ─────────────────────────────────────────────────── */
     .ih-staged-list { display: flex; flex-direction: column; gap: 3px; }
-    .ih-staged-row {
-      display: flex; align-items: center; gap: 8px; padding: 5px 8px;
-      background: #080e1a; border-radius: 4px; border: 1px solid #0f2a4a;
-    }
+    .ih-staged-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; background: #080e1a; border-radius: 4px; border: 1px solid #0f2a4a; }
     .ih-staged-path { color: #7dd3fc; font-size: 10px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ih-staged-size { color: #2d3f55; font-size: 9.5px; flex-shrink: 0; }
-    .ih-staged-discard {
-      background: none; border: none; cursor: pointer; color: #2d3f55;
-      font-size: 10px; padding: 0 2px; font-family: inherit;
-      transition: color 0.15s; flex-shrink: 0; line-height: 1;
-    }
+    .ih-staged-discard { background: none; border: none; cursor: pointer; color: #2d3f55; font-size: 10px; padding: 0 2px; font-family: inherit; transition: color 0.15s; flex-shrink: 0; line-height: 1; }
     .ih-staged-discard:hover { color: #ef4444; }
 
-    /* ── Series cards ──────────────────────────────────────────────────── */
     .ih-series-list { display: flex; flex-direction: column; gap: 5px; }
-    .ih-series-card {
-      padding: 9px 10px; border-radius: 5px;
-      border: 1px solid #0f172a; background: #060b14;
-      transition: border-color 0.3s;
-    }
+    .ih-series-card { padding: 9px 10px; border-radius: 5px; border: 1px solid #0f172a; background: #060b14; }
     .ih-series-card.complete { border-color: #052e16; background: #030d07; }
     .ih-series-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
     .ih-series-name { font-size: 11px; color: #7dd3fc; text-transform: capitalize; }
     .ih-series-card.complete .ih-series-name { color: #4ade80; }
-    .ih-series-badge {
-      font-size: 9px; padding: 1px 7px; border-radius: 10px;
-      font-weight: 600; letter-spacing: 0.05em;
-    }
+    .ih-series-badge { font-size: 9px; padding: 1px 7px; border-radius: 10px; font-weight: 600; letter-spacing: 0.05em; }
     .ih-series-badge.active   { background: #0f2040; color: #38bdf8; }
     .ih-series-badge.complete { background: #052e16; color: #4ade80; }
-
-    /* Progress bar */
     .ih-progress-wrap { margin-bottom: 6px; }
-    .ih-progress-bar {
-      height: 2px; background: #0f172a; border-radius: 1px; overflow: hidden;
-    }
-    .ih-progress-fill {
-      height: 100%; border-radius: 1px;
-      transition: width 0.5s ease;
-    }
+    .ih-progress-bar { height: 2px; background: #0f172a; border-radius: 1px; overflow: hidden; }
+    .ih-progress-fill { height: 100%; border-radius: 1px; transition: width 0.5s ease; }
     .ih-progress-fill.active   { background: linear-gradient(90deg, #1d4ed8, #38bdf8); }
     .ih-progress-fill.complete { background: linear-gradient(90deg, #166534, #4ade80); }
-
     .ih-series-stats { display: flex; align-items: center; gap: 10px; font-size: 10px; color: #3a4f66; margin-bottom: 6px; }
     .ih-series-next { color: #22c55e; }
     .ih-series-gap  { color: #f59e0b; }
     .ih-series-done { color: #4ade80; }
     .ih-series-actions { display: flex; gap: 5px; align-items: center; }
-    .ih-series-btn {
-      font-size: 9px; padding: 2px 8px; border-radius: 3px;
-      border: 1px solid #162032; background: #0a1120; color: #3a4f66;
-      cursor: pointer; font-family: inherit; transition: all 0.15s;
-    }
+    .ih-series-btn { font-size: 9px; padding: 2px 8px; border-radius: 3px; border: 1px solid #162032; background: #0a1120; color: #3a4f66; cursor: pointer; font-family: inherit; transition: all 0.15s; }
     .ih-series-btn:hover { background: #162032; color: #7a8fa8; border-color: #2d3f55; }
     .ih-series-btn.complete-btn:hover { background: #052e16; color: #4ade80; border-color: #166534; }
     .ih-series-btn.active-btn:hover   { background: #0f2040; color: #38bdf8; border-color: #1d4ed8; }
     .ih-completed-at { font-size: 9px; color: #1a2435; margin-left: auto; }
 
-    /* ── Cron log ──────────────────────────────────────────────────────── */
     .ih-cron-list { display: flex; flex-direction: column; gap: 2px; }
-    .ih-cron-row {
-      display: flex; align-items: center; gap: 8px; padding: 4px 8px;
-      background: #060b14; border-radius: 3px;
-    }
+    .ih-cron-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: #060b14; border-radius: 3px; }
     .ih-cron-time  { color: #2d3f55; font-size: 10px; width: 56px; flex-shrink: 0; }
     .ih-cron-stats { display: flex; gap: 8px; flex: 1; }
     .ih-cron-stat.pub  { color: #22c55e; font-size: 10px; }
@@ -187,103 +239,77 @@
     .ih-cron-stat.idle { color: #1a2435; font-size: 10px; }
     .ih-cron-files { font-size: 9.5px; color: #2d3f55; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    /* ── Activity log ──────────────────────────────────────────────────── */
     .ih-activity-list { display: flex; flex-direction: column; gap: 2px; }
-    .ih-activity-row {
-      display: flex; align-items: center; gap: 8px; padding: 4px 8px;
-      background: #060b14; border-radius: 3px;
-    }
-    .ih-activity-action {
-      font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;
-      width: 72px; flex-shrink: 0; font-weight: 600;
-    }
+    .ih-activity-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: #060b14; border-radius: 3px; }
+    .ih-activity-action { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; width: 72px; flex-shrink: 0; font-weight: 600; }
     .ih-activity-path { color: #3a4f66; font-size: 10px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ih-activity-time { color: #1a2435; font-size: 9.5px; flex-shrink: 0; }
 
     .ih-empty { color: #1a2435; font-size: 10px; padding: 4px 8px; }
+    .ih-badge { background: #0f2a4a; color: #7dd3fc; padding: 0 6px; border-radius: 3px; font-size: 10px; }
+    .ih-badge.warn { background: #3b0a0a; color: #fca5a5; }
     .ih-label { color: #2d3f55; margin-right: 2px; }
     .ih-val   { color: #94a3b8; }
+
+    @keyframes ih-spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js" type="module" data-cfasync="false"></script>
 
-  <div id="ih-bar">
-    <div id="ih-panel">
-      <div id="ih-panel-inner">
+  <div id="ih-fab-hint">Hold to switch sides</div>
 
-        <!-- System Status -->
-        <div class="ih-section">
-          <div class="ih-section-title">System Status <span id="ih-refresh-time"></span></div>
-          <div class="ih-grid">
-            <div class="ih-row"><span class="ih-row-label">Worker</span><span class="ih-dot grey" id="p-worker-dot"></span><span class="ih-row-val" id="p-worker-val">&#8212;</span></div>
-            <div class="ih-row"><span class="ih-row-label">GitHub</span><span class="ih-dot grey" id="p-github-dot"></span><span class="ih-row-val" id="p-github-val">&#8212;</span></div>
-            <div class="ih-row"><span class="ih-row-label">D1</span><span class="ih-dot grey" id="p-d1-dot"></span><span class="ih-row-val" id="p-d1-val">&#8212;</span></div>
-            <div class="ih-row"><span class="ih-row-label">Claude</span><span class="ih-dot grey" id="p-claude-dot"></span><span class="ih-row-val" id="p-claude-val">&#8212;</span></div>
-            <div class="ih-row"><span class="ih-row-label">Queue</span><span class="ih-dot grey" id="p-queue-dot"></span><span class="ih-row-val" id="p-queue-val">&#8212;</span></div>
-            <div class="ih-row"><span class="ih-row-label">Cron</span><span class="ih-dot grey" id="p-cron-dot"></span><span class="ih-row-val" id="p-cron-val">&#8212;</span></div>
-            <div class="ih-row"><span class="ih-row-label">Dead</span><span class="ih-dot grey" id="p-dead-dot"></span><span class="ih-row-val" id="p-dead-val">&#8212;</span></div>
-            <div class="ih-row"><span class="ih-row-label">Webhook</span><span class="ih-dot grey" id="p-webhook-dot"></span><span class="ih-row-val" id="p-webhook-val">&#8212;</span></div>
-          </div>
-        </div>
+  <div id="ih-fab" title="Status dashboard">
+    <div id="ih-fab-dot"></div>
+    <div id="ih-fab-badge"></div>
+  </div>
 
-        <!-- Actions -->
-        <div class="ih-section">
-          <div class="ih-section-title">Actions</div>
-          <div class="ih-actions">
-            <button class="ih-btn" onclick="ihAction('trigger-cron', this)">&#9654; Run Cron</button>
-            <button class="ih-btn" onclick="ihAction('process-staged', this)">&#11014; Publish Staged (<span id="btn-staged-count">0</span>)</button>
-            <button class="ih-btn warn" onclick="ihAction('clear-dead-letter', this)">&#10005; Clear Failed</button>
-          </div>
-        </div>
+  <div id="ih-backdrop" onclick="ihClose()"></div>
 
-        <!-- Staged Drafts (hidden when empty) -->
-        <div class="ih-section" id="section-staged" style="display:none">
-          <div class="ih-section-title">Staged Drafts <span id="staged-count-label"></span></div>
-          <div class="ih-staged-list" id="staged-list"></div>
-        </div>
-
-        <!-- Series -->
-        <div class="ih-section">
-          <div class="ih-section-title">Series <span id="series-summary"></span></div>
-          <div class="ih-series-list" id="series-list"><div class="ih-empty">Loading...</div></div>
-        </div>
-
-        <!-- Cron Log -->
-        <div class="ih-section">
-          <div class="ih-section-title">Cron Log <span>last 5 runs</span></div>
-          <div class="ih-cron-list" id="cron-list"><div class="ih-empty">No runs yet</div></div>
-        </div>
-
-        <!-- Activity -->
-        <div class="ih-section">
-          <div class="ih-section-title">Activity <span>last 10 events</span></div>
-          <div class="ih-activity-list" id="activity-list"><div class="ih-empty">No activity yet</div></div>
-        </div>
-
-      </div>
+  <div id="ih-panel">
+    <div id="ih-drag-handle"></div>
+    <div id="ih-panel-header">
+      <span id="ih-panel-title">ishistory CMS</span>
+      <span id="ih-panel-meta"></span>
+      <button id="ih-panel-close" onclick="ihClose()">&#10005;</button>
     </div>
-
-    <!-- Strip -->
-    <div id="ih-strip" onclick="ihToggle()">
-      <span id="ih-loading" style="display:none"><span class="ih-spin"></span></span>
-      <span class="ih-dot grey pulse" id="s-main" style="display:none"></span>
-      <span class="ih-strip-indicator" id="s-worker">
-        <span class="ih-dot grey" id="s-worker-dot"></span>
-        <span class="ih-strip-label">worker</span>
-      </span>
-      <span class="ih-strip-indicator" id="s-claude">
-        <span class="ih-dot grey" id="s-claude-dot"></span>
-        <span class="ih-strip-label">claude</span>
-      </span>
-      <span id="s-staged" style="display:none"></span>
-      <span id="s-dead"   style="display:none"></span>
-      <span id="s-gaps"   style="display:none"></span>
-      <span id="s-cron"   style="display:none"></span>
-      <span id="s-retry"  style="display:none"></span>
-      <div id="ih-strip-right" onclick="event.stopPropagation()">
-        <button id="ih-refresh-btn" onclick="ihManualRefresh()" title="Refresh">&#8635;</button>
-        <span id="ih-chevron" onclick="event.stopPropagation(); ihToggle()">&#9650;</span>
+    <div id="ih-panel-inner">
+      <div class="ih-section">
+        <div class="ih-section-title">System Status <span id="ih-refresh-time"></span></div>
+        <div class="ih-grid">
+          <div class="ih-row"><span class="ih-row-label">Worker</span><span class="ih-dot grey" id="p-worker-dot"></span><span class="ih-row-val" id="p-worker-val">&#8212;</span></div>
+          <div class="ih-row"><span class="ih-row-label">GitHub</span><span class="ih-dot grey" id="p-github-dot"></span><span class="ih-row-val" id="p-github-val">&#8212;</span></div>
+          <div class="ih-row"><span class="ih-row-label">D1</span><span class="ih-dot grey" id="p-d1-dot"></span><span class="ih-row-val" id="p-d1-val">&#8212;</span></div>
+          <div class="ih-row"><span class="ih-row-label">Claude</span><span class="ih-dot grey" id="p-claude-dot"></span><span class="ih-row-val" id="p-claude-val">&#8212;</span></div>
+          <div class="ih-row"><span class="ih-row-label">Queue</span><span class="ih-dot grey" id="p-queue-dot"></span><span class="ih-row-val" id="p-queue-val">&#8212;</span></div>
+          <div class="ih-row"><span class="ih-row-label">Cron</span><span class="ih-dot grey" id="p-cron-dot"></span><span class="ih-row-val" id="p-cron-val">&#8212;</span></div>
+          <div class="ih-row"><span class="ih-row-label">Dead</span><span class="ih-dot grey" id="p-dead-dot"></span><span class="ih-row-val" id="p-dead-val">&#8212;</span></div>
+          <div class="ih-row"><span class="ih-row-label">Webhook</span><span class="ih-dot grey" id="p-webhook-dot"></span><span class="ih-row-val" id="p-webhook-val">&#8212;</span></div>
+        </div>
+      </div>
+      <div class="ih-section">
+        <div class="ih-section-title">Actions</div>
+        <div class="ih-actions">
+          <button class="ih-btn" onclick="ihAction('trigger-cron', this)">&#9654; Run Cron</button>
+          <button class="ih-btn" onclick="ihAction('process-staged', this)">&#11014; Publish Staged (<span id="btn-staged-count">0</span>)</button>
+          <button class="ih-btn warn" onclick="ihAction('clear-dead-letter', this)">&#10005; Clear Failed</button>
+        </div>
+      </div>
+      <div class="ih-section" id="section-staged" style="display:none">
+        <div class="ih-section-title">Staged Drafts <span id="staged-count-label"></span></div>
+        <div class="ih-staged-list" id="staged-list"></div>
+      </div>
+      <div class="ih-section">
+        <div class="ih-section-title">Series <span id="series-summary"></span></div>
+        <div class="ih-series-list" id="series-list"><div class="ih-empty">Loading...</div></div>
+      </div>
+      <div class="ih-section">
+        <div class="ih-section-title">Cron Log <span>last 5 runs</span></div>
+        <div class="ih-cron-list" id="cron-list"><div class="ih-empty">No runs yet</div></div>
+      </div>
+      <div class="ih-section">
+        <div class="ih-section-title">Activity <span>last 10 events</span></div>
+        <div class="ih-activity-list" id="activity-list"><div class="ih-empty">No activity yet</div></div>
       </div>
     </div>
   </div>
@@ -293,330 +319,295 @@
     const BASE_MS = 60000;
     const MAX_MS  = 300000;
     const TIMEOUT = 5000;
+    const PEEK    = -18;
 
-    let panelOpen  = false;
+    let isOpen     = false;
     let failCount  = 0;
     let pollTimer  = null;
     let d1Bookmark = null;
 
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && panelOpen) ihToggle();
+    const fab  = document.getElementById('ih-fab');
+    const hint = document.getElementById('ih-fab-hint');
+    let onLeft = false;
+    let fabY   = 50;
+    let dragging = false;
+    let longPressTimer = null;
+    let dragStartY = 0, fabStartY = 0;
+    let hasDragged = false;
+
+    try {
+      const saved = JSON.parse(localStorage.getItem('ih-fab-pos') || '{}');
+      if (saved.left !== undefined) onLeft = saved.left;
+      if (saved.y    !== undefined) fabY   = saved.y;
+    } catch(e) {}
+
+    function applyFabPos(animate) {
+      if (!animate) fab.style.transition = 'none';
+      fab.style.top       = fabY + '%';
+      fab.style.transform = 'none';
+      if (onLeft) { fab.style.left = PEEK + 'px'; fab.style.right = 'auto'; }
+      else        { fab.style.right = PEEK + 'px'; fab.style.left = 'auto'; }
+      if (!animate) requestAnimationFrame(() => fab.style.transition = '');
+    }
+    applyFabPos(false);
+
+    function saveFabPos() {
+      try { localStorage.setItem('ih-fab-pos', JSON.stringify({ left: onLeft, y: fabY })); } catch(e) {}
+    }
+
+    function switchSide() {
+      onLeft = !onLeft;
+      applyFabPos(true);
+      saveFabPos();
+      hint.style.right = onLeft ? 'auto' : '60px';
+      hint.style.left  = onLeft ? '60px' : 'auto';
+      hint.classList.add('show');
+      setTimeout(() => hint.classList.remove('show'), 1500);
+    }
+
+    fab.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      dragging = false; hasDragged = false;
+      dragStartY = e.clientY;
+      fabStartY  = parseFloat(fab.style.top) || fabY;
+      longPressTimer = setTimeout(() => { if (!hasDragged) switchSide(); }, 500);
+      fab.setPointerCapture(e.pointerId);
     });
 
-    function ihToggle() {
-      panelOpen = !panelOpen;
-      document.getElementById('ih-panel').classList.toggle('open', panelOpen);
-      document.getElementById('ih-chevron').classList.toggle('up', panelOpen);
+    fab.addEventListener('pointermove', e => {
+      if (!e.buttons) return;
+      const dy      = e.clientY - dragStartY;
+      const winH    = window.innerHeight;
+      const newYpx  = (fabStartY / 100) * winH + dy;
+      const newYpct = Math.max(8, Math.min(92, (newYpx / winH) * 100));
+      if (Math.abs(dy) > 6) { hasDragged = true; dragging = true; clearTimeout(longPressTimer); }
+      if (dragging) { fab.style.top = newYpct + '%'; fabY = newYpct; }
+    });
+
+    fab.addEventListener('pointerup', e => {
+      clearTimeout(longPressTimer);
+      fab.releasePointerCapture(e.pointerId);
+      if (dragging)       { saveFabPos(); dragging = false; }
+      else if (!hasDragged) { ihToggle(); }
+    });
+
+    function ihOpen()   { isOpen = true;  document.getElementById('ih-panel').classList.add('open');    document.getElementById('ih-backdrop').classList.add('open'); }
+    function ihClose()  { isOpen = false; document.getElementById('ih-panel').classList.remove('open'); document.getElementById('ih-backdrop').classList.remove('open'); }
+    function ihToggle() { isOpen ? ihClose() : ihOpen(); }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen) ihClose(); });
+
+    function dot(id,c)   { const el=document.getElementById(id); if(el) el.className='ih-dot '+c; }
+    function set(id,t)   { const el=document.getElementById(id); if(el) el.textContent=t; }
+    function html(id,mk) { const el=document.getElementById(id); if(el) el.innerHTML=mk; }
+    function show(id,mk) { const el=document.getElementById(id); if(!el) return; el.style.display='inline'; if(mk!==undefined) el.innerHTML=mk; }
+    function showBlock(id) { const el=document.getElementById(id); if(el) el.style.display='block'; }
+    function hide(id)    { const el=document.getElementById(id); if(el) el.style.display='none'; }
+    function valCls(el,c){ if(el) el.className='ih-row-val '+(c||''); }
+    function fileName(p) { return p?p.split('/').pop():''; }
+
+    function relTime(s) {
+      if (!s) return 'never';
+      const ms = new Date(s.replace(' ','T')+(s.includes('T')?'':'Z')).getTime();
+      if (isNaN(ms)) return '—';
+      const d = Math.floor((Date.now()-ms)/1000);
+      if (d<5)     return 'just now';
+      if (d<60)    return d+'s ago';
+      if (d<3600)  return Math.floor(d/60)+'m ago';
+      if (d<86400) return Math.floor(d/3600)+'h ago';
+      return Math.floor(d/86400)+'d ago';
     }
 
-    function ihManualRefresh() {
-      const btn = document.getElementById('ih-refresh-btn');
-      btn.classList.add('spinning');
-      ihRefresh().finally(() => btn.classList.remove('spinning'));
+    function connStatus(c) {
+      if (!c||c.status==='never') return {color:'grey',  text:'never connected'};
+      if (c.status==='active')    return {color:'green', text:'active · '+relTime(c.last_seen)};
+      if (c.status==='idle')      return {color:'yellow',text:'idle · '+relTime(c.last_seen)};
+      return                             {color:'red',   text:'offline · '+relTime(c.last_seen)};
     }
 
-    function dot(id, color)  { const el = document.getElementById(id); if (el) el.className = 'ih-dot ' + color; }
-    function set(id, text)   { const el = document.getElementById(id); if (el) el.textContent = text; }
-    function html(id, mk)    { const el = document.getElementById(id); if (el) el.innerHTML = mk; }
-    function show(id, mk)    { const el = document.getElementById(id); if (!el) return; el.style.display = 'inline'; if (mk !== undefined) el.innerHTML = mk; }
-    function showBlock(id)   { const el = document.getElementById(id); if (el) el.style.display = 'block'; }
-    function hide(id)        { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
-    function showFlex(id)    { const el = document.getElementById(id); if (el) el.classList.add('visible'); }
-    function valClass(el, c) { if (el) { el.className = 'ih-row-val ' + (c || ''); } }
-    function fileName(p)     { return p ? p.split('/').pop() : ''; }
-
-    function relTime(isoStr) {
-      if (!isoStr) return 'never';
-      const ms = new Date(isoStr.replace(' ', 'T') + (isoStr.includes('T') ? '' : 'Z')).getTime();
-      if (isNaN(ms)) return '&#8212;';
-      const diff = Math.floor((Date.now() - ms) / 1000);
-      if (diff < 5)     return 'just now';
-      if (diff < 60)    return diff + 's ago';
-      if (diff < 3600)  return Math.floor(diff / 60) + 'm ago';
-      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-      return Math.floor(diff / 86400) + 'd ago';
-    }
-
-    function connStatus(conn) {
-      if (!conn || conn.status === 'never') return { color: 'grey',   text: 'never connected' };
-      if (conn.status === 'active')         return { color: 'green',  text: 'active \u00b7 ' + relTime(conn.last_seen) };
-      if (conn.status === 'idle')           return { color: 'yellow', text: 'idle \u00b7 '   + relTime(conn.last_seen) };
-      return                                       { color: 'red',    text: 'offline \u00b7 ' + relTime(conn.last_seen) };
-    }
-
-    async function fetchWithTimeout(url, opts = {}) {
+    async function fetchT(url, opts={}) {
       const ctrl = new AbortController();
-      const id   = setTimeout(() => ctrl.abort(), TIMEOUT);
-      try {
-        const res = await fetch(url, { ...opts, signal: ctrl.signal });
-        clearTimeout(id); return res;
-      } catch (e) { clearTimeout(id); throw e; }
+      const id   = setTimeout(()=>ctrl.abort(), TIMEOUT);
+      try { const r=await fetch(url,{...opts,signal:ctrl.signal}); clearTimeout(id); return r; }
+      catch(e) { clearTimeout(id); throw e; }
     }
 
-    async function ihAction(actionType, btn) {
-      btn.disabled = true;
-      const orig = btn.innerHTML;
-      btn.textContent = '...';
+    async function ihAction(type, btn) {
+      btn.disabled=true; const orig=btn.innerHTML; btn.textContent='...';
       try {
-        const headers = { 'Content-Type': 'application/json' };
-        if (d1Bookmark) headers['X-D1-Bookmark'] = d1Bookmark;
-        const res = await fetchWithTimeout(`${WORKER}/claude/action`, {
-          method: 'POST', headers,
-          body: JSON.stringify({ action: actionType }),
-        });
-        if (!res.ok) throw new Error('Failed');
-        const bm = res.headers.get('x-d1-bookmark');
-        if (bm) d1Bookmark = bm;
-        btn.classList.add('ok'); btn.textContent = 'Done';
-        setTimeout(() => ihRefresh(), 600);
-      } catch (e) {
-        btn.classList.add('fail'); btn.textContent = 'Error';
-      } finally {
-        setTimeout(() => { btn.disabled = false; btn.classList.remove('ok','fail'); btn.innerHTML = orig; }, 2000);
-      }
+        const hdr={'Content-Type':'application/json'}; if(d1Bookmark) hdr['X-D1-Bookmark']=d1Bookmark;
+        const res=await fetchT(`${WORKER}/claude/action`,{method:'POST',headers:hdr,body:JSON.stringify({action:type})});
+        if(!res.ok) throw new Error();
+        const bm=res.headers.get('x-d1-bookmark'); if(bm) d1Bookmark=bm;
+        btn.classList.add('ok'); btn.textContent='Done';
+        setTimeout(()=>ihRefresh(),600);
+      } catch(e) { btn.classList.add('fail'); btn.textContent='Error'; }
+      finally { setTimeout(()=>{ btn.disabled=false; btn.classList.remove('ok','fail'); btn.innerHTML=orig; },2000); }
     }
 
-    async function discardDraft(filePath, btn) {
-      btn.disabled = true;
+    async function discardDraft(path, btn) {
+      btn.disabled=true;
       try {
-        const headers = { 'Content-Type': 'application/json' };
-        if (d1Bookmark) headers['X-D1-Bookmark'] = d1Bookmark;
-        const res = await fetchWithTimeout(
-          `${WORKER}/claude/discard?path=${encodeURIComponent(filePath)}`,
-          { headers }
-        );
-        if (!res.ok) throw new Error('Failed');
-        const bm = res.headers.get('x-d1-bookmark');
-        if (bm) d1Bookmark = bm;
-        btn.closest('.ih-staged-row').style.opacity = '0.3';
-        setTimeout(() => ihRefresh(), 400);
-      } catch (e) { btn.disabled = false; }
+        const hdr={}; if(d1Bookmark) hdr['X-D1-Bookmark']=d1Bookmark;
+        const res=await fetchT(`${WORKER}/claude/discard?path=${encodeURIComponent(path)}`,{headers:hdr});
+        if(!res.ok) throw new Error();
+        const bm=res.headers.get('x-d1-bookmark'); if(bm) d1Bookmark=bm;
+        btn.closest('.ih-staged-row').style.opacity='0.3';
+        setTimeout(()=>ihRefresh(),400);
+      } catch(e) { btn.disabled=false; }
     }
 
     async function toggleSeries(name, newStatus, btn) {
-      btn.disabled = true;
-      const orig = btn.textContent;
-      btn.textContent = '...';
+      btn.disabled=true; const orig=btn.textContent; btn.textContent='...';
       try {
-        const headers = { 'Content-Type': 'application/json' };
-        if (d1Bookmark) headers['X-D1-Bookmark'] = d1Bookmark;
-        const res = await fetchWithTimeout(`${WORKER}/claude/action`, {
-          method: 'POST', headers,
-          body: JSON.stringify({ action: newStatus === 'complete' ? 'mark-complete' : 'mark-active', series: name }),
-        });
-        if (!res.ok) throw new Error('Failed');
-        const bm = res.headers.get('x-d1-bookmark');
-        if (bm) d1Bookmark = bm;
-        setTimeout(() => ihRefresh(), 300);
-      } catch (e) { btn.disabled = false; btn.textContent = orig; }
+        const hdr={'Content-Type':'application/json'}; if(d1Bookmark) hdr['X-D1-Bookmark']=d1Bookmark;
+        const res=await fetchT(`${WORKER}/claude/action`,{method:'POST',headers:hdr,body:JSON.stringify({action:newStatus==='complete'?'mark-complete':'mark-active',series:name})});
+        if(!res.ok) throw new Error();
+        const bm=res.headers.get('x-d1-bookmark'); if(bm) d1Bookmark=bm;
+        setTimeout(()=>ihRefresh(),300);
+      } catch(e) { btn.disabled=false; btn.textContent=orig; }
     }
 
     function renderStaged(staged) {
-      if (!staged || !staged.length) { hide('section-staged'); return; }
-      showBlock('section-staged');
-      set('staged-count-label', staged.length);
-      const rows = staged.map(d => `
+      if (!staged||!staged.length) { hide('section-staged'); return; }
+      showBlock('section-staged'); set('staged-count-label', staged.length);
+      html('staged-list', staged.map(d=>`
         <div class="ih-staged-row">
           <span class="ih-staged-path" title="${d.path}">${fileName(d.path)}</span>
           <span class="ih-staged-size">${(d.size/1024).toFixed(1)}kb</span>
-          <button class="ih-staged-discard" title="Discard draft"
-            onclick="discardDraft('${d.path.replace(/'/g,"\\'")}", this)">&#10005;</button>
-        </div>`);
-      html('staged-list', rows.join(''));
+          <button class="ih-staged-discard" onclick="discardDraft('${d.path.replace(/'/g,"\\'")}",this)">&#10005;</button>
+        </div>`).join(''));
     }
 
     function renderSeries(stats) {
-      if (!stats || !Object.keys(stats).length) {
-        html('series-list', '<div class="ih-empty">No series found</div>'); return;
-      }
-      const entries   = Object.entries(stats);
-      const completed = entries.filter(([, d]) => d.status === 'complete').length;
-      set('series-summary', `${completed}/${entries.length} complete`);
-      entries.sort(([,a],[,b]) => a.status === b.status ? 0 : a.status === 'active' ? -1 : 1);
-
-      const cards = entries.map(([name, d]) => {
-        const isComplete  = d.status === 'complete';
-        const label       = name.replace(/-/g, ' ');
-        const eps         = d.episodes || 0;
-        const pct         = isComplete ? 100 : Math.round((eps % 10 || (eps > 0 ? 10 : 0)) / 10 * 100);
-
-        const statsLine = [
-          `<span>${eps} ep${eps !== 1 ? 's' : ''}</span>`,
-          d.profiles > 0 ? `<span>${d.profiles} profiles</span>` : '',
-          isComplete
-            ? `<span class="ih-series-done">\u2713 complete</span>`
-            : d.episode_gaps && d.episode_gaps.length > 0
-              ? `<span class="ih-series-gap">\u26a0 gap ${d.episode_gaps.join(', ')}</span>`
-              : `<span class="ih-series-next">next: #${d.next_episode}</span>`
+      if (!stats||!Object.keys(stats).length) { html('series-list','<div class="ih-empty">No series found</div>'); return; }
+      const entries=Object.entries(stats);
+      const completed=entries.filter(([,d])=>d.status==='complete').length;
+      set('series-summary',`${completed}/${entries.length} complete`);
+      entries.sort(([,a],[,b])=>a.status===b.status?0:a.status==='active'?-1:1);
+      html('series-list', entries.map(([name,d])=>{
+        const isC=d.status==='complete';
+        const eps=d.episodes||0;
+        const pct=isC?100:Math.round(((eps%10)||(eps>0?10:0))/10*100);
+        const stat=[
+          `<span>${eps} ep${eps!==1?'s':''}</span>`,
+          d.profiles>0?`<span>${d.profiles} profiles</span>`:'',
+          isC?`<span class="ih-series-done">✓ complete</span>`
+            :d.episode_gaps?.length?`<span class="ih-series-gap">⚠ gap ${d.episode_gaps.join(', ')}</span>`
+            :`<span class="ih-series-next">next: #${d.next_episode}</span>`
         ].filter(Boolean).join('');
-
-        const toggleBtn = isComplete
-          ? `<button class="ih-series-btn active-btn" onclick="toggleSeries('${name}','active',this)">\u21ba Mark Active</button>`
-          : `<button class="ih-series-btn complete-btn" onclick="toggleSeries('${name}','complete',this)">\u2713 Mark Complete</button>`;
-
-        const completedAt = isComplete && d.completed_at
-          ? `<span class="ih-completed-at">completed ${relTime(d.completed_at)}</span>` : '';
-
-        return `
-          <div class="ih-series-card ${isComplete ? 'complete' : ''}">
-            <div class="ih-series-card-top">
-              <span class="ih-series-name">${label}</span>
-              <span class="ih-series-badge ${isComplete ? 'complete' : 'active'}">${isComplete ? '\u2713 COMPLETE' : 'ACTIVE'}</span>
-            </div>
-            <div class="ih-progress-wrap">
-              <div class="ih-progress-bar">
-                <div class="ih-progress-fill ${isComplete ? 'complete' : 'active'}" style="width:${pct}%"></div>
-              </div>
-            </div>
-            <div class="ih-series-stats">${statsLine}</div>
-            <div class="ih-series-actions">${toggleBtn}${completedAt}</div>
-          </div>`;
-      });
-      html('series-list', cards.join(''));
+        const tog=isC
+          ?`<button class="ih-series-btn active-btn" onclick="toggleSeries('${name}','active',this)">↺ Mark Active</button>`
+          :`<button class="ih-series-btn complete-btn" onclick="toggleSeries('${name}','complete',this)">✓ Mark Complete</button>`;
+        const ca=isC&&d.completed_at?`<span class="ih-completed-at">completed ${relTime(d.completed_at)}</span>`:""
+        return `<div class="ih-series-card ${isC?'complete':''}">
+          <div class="ih-series-card-top">
+            <span class="ih-series-name">${name.replace(/-/g,' ')}</span>
+            <span class="ih-series-badge ${isC?'complete':'active'}">${isC?'✓ COMPLETE':'ACTIVE'}</span>
+          </div>
+          <div class="ih-progress-wrap"><div class="ih-progress-bar">
+            <div class="ih-progress-fill ${isC?'complete':'active'}" style="width:${pct}%"></div>
+          </div></div>
+          <div class="ih-series-stats">${stat}</div>
+          <div class="ih-series-actions">${tog}${ca}</div>
+        </div>`;
+      }).join(''));
     }
 
-    function renderCronLog(cronLog) {
-      if (!cronLog || !cronLog.length) { html('cron-list', '<div class="ih-empty">No runs yet</div>'); return; }
-      const rows = cronLog.map(r => {
-        const pub   = `<span class="ih-cron-stat ${r.published > 0 ? 'pub' : 'idle'}">+${r.published}</span>`;
-        const del   = `<span class="ih-cron-stat ${r.deleted   > 0 ? 'del' : 'idle'}">${r.deleted > 0 ? '-' : '\u00b7'}${r.deleted}</span>`;
-        const fail  = r.failed > 0 ? `<span class="ih-cron-stat fail">\u2715${r.failed}</span>` : '';
-        const files = r.details && r.details.length > 0
-          ? r.details.filter(d => d.success).map(d => fileName(d.path)).filter(Boolean).join(', ')
-          : '';
+    function renderCronLog(log) {
+      if (!log?.length) { html('cron-list','<div class="ih-empty">No runs yet</div>'); return; }
+      html('cron-list', log.map(r=>{
+        const pub=`<span class="ih-cron-stat ${r.published>0?'pub':'idle'}">+${r.published}</span>`;
+        const del=`<span class="ih-cron-stat ${r.deleted>0?'del':'idle'}">${r.deleted>0?'-':'·'}${r.deleted}</span>`;
+        const fail=r.failed>0?`<span class="ih-cron-stat fail">✕${r.failed}</span>`:'';
+        const files=r.details?.filter(d=>d.success).map(d=>fileName(d.path)).filter(Boolean).join(', ')||'';
         return `<div class="ih-cron-row">
           <span class="ih-cron-time">${relTime(r.ran_at)}</span>
           <div class="ih-cron-stats">${pub}${del}${fail}</div>
-          ${files ? `<span class="ih-cron-files" title="${files}">${files}</span>` : ''}
+          ${files?`<span class="ih-cron-files" title="${files}">${files}</span>`:''}
         </div>`;
-      });
-      html('cron-list', rows.join(''));
+      }).join(''));
     }
 
     function renderActivity(activity) {
-      if (!activity || !activity.length) { html('activity-list', '<div class="ih-empty">No activity yet</div>'); return; }
-      const styles = {
-        publish:      { color: '#22c55e', label: 'publish' },
-        delete:       { color: '#ef4444', label: 'delete'  },
-        rollback:     { color: '#f59e0b', label: 'rollback' },
-        webhook_sync: { color: '#3b82f6', label: 'webhook' },
-      };
-      const rows = activity.map(r => {
-        const s = styles[r.action] || { color: '#475569', label: r.action };
+      if (!activity?.length) { html('activity-list','<div class="ih-empty">No activity yet</div>'); return; }
+      const styles={publish:{color:'#22c55e',label:'publish'},delete:{color:'#ef4444',label:'delete'},rollback:{color:'#f59e0b',label:'rollback'},webhook_sync:{color:'#3b82f6',label:'webhook'}};
+      html('activity-list', activity.map(r=>{
+        const s=styles[r.action]||{color:'#475569',label:r.action};
         return `<div class="ih-activity-row">
           <span class="ih-activity-action" style="color:${s.color}">${s.label}</span>
-          <span class="ih-activity-path" title="${r.path}">${fileName(r.path) || r.path}</span>
+          <span class="ih-activity-path" title="${r.path}">${fileName(r.path)||r.path}</span>
           <span class="ih-activity-time">${relTime(r.happened_at)}</span>
         </div>`;
-      });
-      html('activity-list', rows.join(''));
+      }).join(''));
     }
 
     async function ihRefresh() {
       clearTimeout(pollTimer);
-      show('ih-loading');
-
+      fab.classList.add('loading');
       try {
-        const headers = {};
-        if (d1Bookmark) headers['X-D1-Bookmark'] = d1Bookmark;
-        const res = await fetchWithTimeout(`${WORKER}/claude/heartbeat`, { headers });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const bm = res.headers.get('x-d1-bookmark');
-        if (bm) d1Bookmark = bm;
-        const { health, connections, stats, cron_log, staged, activity } = await res.json();
+        const hdr={}; if(d1Bookmark) hdr['X-D1-Bookmark']=d1Bookmark;
+        const res=await fetchT(`${WORKER}/claude/heartbeat`,{headers:hdr});
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+        const bm=res.headers.get('x-d1-bookmark'); if(bm) d1Bookmark=bm;
+        const {health,connections,stats,cron_log,staged,activity}=await res.json();
 
-        failCount = 0;
-        hide('s-retry');
-        document.getElementById('ih-strip').classList.remove('offline');
-        hide('ih-loading');
-        show('s-main');
+        failCount=0;
+        fab.classList.remove('loading');
         set('ih-refresh-time', relTime(new Date().toISOString()));
+        set('ih-panel-meta',   relTime(new Date().toISOString()));
 
-        const workerOk  = health.status === 'ok' || health.status === 'warning';
-        const mainColor = !workerOk ? 'red' : health.status === 'warning' ? 'yellow' : 'green';
-        document.getElementById('s-main').className = 'ih-dot ' + mainColor;
+        const workerOk=health.status==='ok'||health.status==='warning';
+        const mainColor=!workerOk?'red':health.status==='warning'?'yellow':'green';
+        document.getElementById('ih-fab-dot').className=mainColor;
 
-        dot('p-worker-dot', workerOk ? 'green' : 'red');
-        const wEl = document.getElementById('p-worker-val');
-        wEl.textContent = workerOk ? 'Online' : 'Offline';
-        valClass(wEl, workerOk ? 'good' : 'bad');
+        const badge=document.getElementById('ih-fab-badge');
+        const totalDraft=health.drafts||0;
+        const deadN=health.dead_letter||0;
+        if (deadN>0)        { badge.textContent=deadN;       badge.className='visible'; badge.style.background='#ef4444'; }
+        else if(totalDraft>0){ badge.textContent=totalDraft; badge.className='visible'; badge.style.background='#3b82f6'; }
+        else                 { badge.className=''; }
 
-        dot('p-github-dot', health.github_user ? 'green' : 'red');
-        document.getElementById('p-github-val').textContent = health.github_user || 'Not connected';
+        dot('p-worker-dot', workerOk?'green':'red');
+        const wEl=document.getElementById('p-worker-val');
+        wEl.textContent=workerOk?'Online':'Offline'; valCls(wEl, workerOk?'good':'bad');
 
-        dot('p-d1-dot', health.d1 === 'connected' ? 'green' : 'red');
-        document.getElementById('p-d1-val').textContent = health.d1 || '\u2014';
+        dot('p-github-dot', health.github_user?'green':'red');
+        set('p-github-val', health.github_user||'Not connected');
 
-        showFlex('s-worker');
-        dot('s-worker-dot', workerOk ? 'green' : 'red');
+        dot('p-d1-dot', health.d1==='connected'?'green':'red');
+        set('p-d1-val', health.d1||'—');
 
-        const connMap = {};
-        (connections || []).forEach(c => connMap[c.name] = c);
-        const claudeS = connStatus(connMap['claude']);
-        dot('p-claude-dot', claudeS.color);
-        document.getElementById('p-claude-val').textContent = claudeS.text;
-        showFlex('s-claude');
-        dot('s-claude-dot', claudeS.color);
+        const connMap={}; (connections||[]).forEach(c=>connMap[c.name]=c);
+        const cs=connStatus(connMap['claude']);
+        dot('p-claude-dot',cs.color); set('p-claude-val',cs.text);
 
-        const totalDrafts = health.drafts || 0;
-        dot('p-queue-dot', totalDrafts > 0 ? 'blue' : 'grey');
-        document.getElementById('p-queue-val').textContent =
-          totalDrafts > 0 ? `${totalDrafts} draft${totalDrafts !== 1 ? 's' : ''}` : 'Empty';
-        document.getElementById('btn-staged-count').textContent = totalDrafts;
-        totalDrafts > 0
-          ? show('s-staged', `<span class="ih-badge">${totalDrafts} staged</span>`)
-          : hide('s-staged');
+        dot('p-queue-dot', totalDraft>0?'blue':'grey');
+        set('p-queue-val', totalDraft>0?`${totalDraft} draft${totalDraft!==1?'s':''}`:'Empty');
+        document.getElementById('btn-staged-count').textContent=totalDraft;
 
-        if (health.last_cron) {
-          dot('p-cron-dot', 'green');
-          document.getElementById('p-cron-val').textContent = relTime(health.last_cron.ran_at);
-          show('s-cron', `<span class="ih-label">cron</span><span class="ih-val">${relTime(health.last_cron.ran_at)}</span>`);
-        } else {
-          dot('p-cron-dot', 'grey');
-          document.getElementById('p-cron-val').textContent = 'Never run';
-          hide('s-cron');
-        }
+        if (health.last_cron) { dot('p-cron-dot','green'); set('p-cron-val',relTime(health.last_cron.ran_at)); }
+        else                  { dot('p-cron-dot','grey');  set('p-cron-val','Never run'); }
 
-        const deadN = health.dead_letter || 0;
-        dot('p-dead-dot', deadN > 0 ? 'red' : 'grey');
-        const dEl = document.getElementById('p-dead-val');
-        dEl.textContent = deadN > 0 ? `${deadN} failed` : 'None';
-        valClass(dEl, deadN > 0 ? 'bad' : '');
-        deadN > 0 ? show('s-dead', `<span class="ih-badge warn">\u26a0 ${deadN} failed</span>`) : hide('s-dead');
+        const dEl=document.getElementById('p-dead-val');
+        dot('p-dead-dot', deadN>0?'red':'grey');
+        dEl.textContent=deadN>0?`${deadN} failed`:'None'; valCls(dEl, deadN>0?'bad':'');
 
-        const lastWebhook = (activity || []).find(a => a.action === 'webhook_sync');
-        dot('p-webhook-dot', lastWebhook ? 'green' : 'grey');
-        document.getElementById('p-webhook-val').textContent =
-          lastWebhook ? relTime(lastWebhook.happened_at) : 'No syncs yet';
-
-        const allGaps = [];
-        if (stats) Object.entries(stats).forEach(([s, d]) => {
-          if (d.episode_gaps && d.episode_gaps.length > 0) allGaps.push(`${s}: ep ${d.episode_gaps.join(', ')}`);
-        });
-        allGaps.length > 0
-          ? show('s-gaps', '<span style="color:#f59e0b">\u26a0 gap</span>')
-          : hide('s-gaps');
+        const lastWH=(activity||[]).find(a=>a.action==='webhook_sync');
+        dot('p-webhook-dot', lastWH?'green':'grey');
+        set('p-webhook-val', lastWH?relTime(lastWH.happened_at):'No syncs yet');
 
         renderStaged(staged);
         renderSeries(stats);
         renderCronLog(cron_log);
         renderActivity(activity);
 
-      } catch (e) {
+      } catch(e) {
         failCount++;
-        hide('ih-loading');
-        document.getElementById('ih-strip').classList.add('offline');
-        document.getElementById('s-main').style.display = 'inline-block';
-        document.getElementById('s-main').className = 'ih-dot red pulse';
-        showFlex('s-worker');
-        dot('s-worker-dot', 'red');
-        dot('p-worker-dot', 'red');
-        document.getElementById('p-worker-val').textContent = 'Unreachable';
-        if (failCount > 1)
-          show('s-retry', `<span style="color:#f97316;font-size:9px;background:#1c0700;padding:0 5px;border-radius:2px">retry ${failCount}</span>`);
+        fab.classList.remove('loading');
+        document.getElementById('ih-fab-dot').className='red pulse';
       } finally {
-        const nextMs = Math.min(BASE_MS * Math.pow(1.5, failCount), MAX_MS);
-        pollTimer = setTimeout(ihRefresh, nextMs);
+        pollTimer=setTimeout(ihRefresh, Math.min(BASE_MS*Math.pow(1.5,failCount), MAX_MS));
       }
     }
 
