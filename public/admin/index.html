@@ -140,27 +140,23 @@
   </div>
 
   <script>
-    // ── Config ────────────────────────────────────────────────────────────────
-    const WORKER   = 'https://claude.ishaan00.workers.dev';
-    const BASE_MS  = 60000;
-    const MAX_MS   = 300000;
-    const TIMEOUT  = 5000;
-    const API_KEY  = 'ishistory-cms-2026-xK9mPqR7-qeww233'; // replace with your CMS_API_KEY value
+    const WORKER  = 'https://claude.ishaan00.workers.dev';
+    const BASE_MS = 60000;
+    const MAX_MS  = 300000;
+    const TIMEOUT = 5000;
+    const API_KEY = 'ishistory-cms-2026-xK9mPqR7-qeww233';
 
-    // ── State ─────────────────────────────────────────────────────────────────
-    let panelOpen    = false;
-    let failCount    = 0;
-    let pollTimer    = null;
-    let activeAbort  = null; // AbortController for in-flight heartbeat
+    let panelOpen   = false;
+    let failCount   = 0;
+    let pollTimer   = null;
+    let activeAbort = null;
 
-    // ── Security: HTML escaping ───────────────────────────────────────────────
     function esc(str) {
       const d = document.createElement('div');
       d.textContent = String(str ?? '');
       return d.innerHTML;
     }
 
-    // ── Panel toggle (button-based, keyboard accessible) ──────────────────────
     function ihToggle() {
       panelOpen = !panelOpen;
       const panel   = document.getElementById('ih-panel');
@@ -172,13 +168,8 @@
     }
 
     document.getElementById('ih-strip').addEventListener('click', ihToggle);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && panelOpen) ihToggle(); });
 
-    // Escape key closes the panel
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && panelOpen) ihToggle();
-    });
-
-    // ── DOM helpers ───────────────────────────────────────────────────────────
     function dot(id, c)  { const e = document.getElementById(id); if (e) e.className = 'ih-dot ' + c; }
     function set(id, t)  { const e = document.getElementById(id); if (e) e.textContent = t; }
     function html(id, m) { const e = document.getElementById(id); if (e) e.innerHTML = m; }
@@ -197,13 +188,12 @@
     }
 
     function connStatus(c) {
-      if (!c || c.status === 'never') return { color: 'grey',  text: 'never connected' };
-      if (c.status === 'active')      return { color: 'green', text: 'active · ' + relTime(c.last_seen) };
-      if (c.status === 'idle')        return { color: 'yellow',text: 'idle · ' + relTime(c.last_seen) };
-      return                                  { color: 'red',   text: 'offline · ' + relTime(c.last_seen) };
+      if (!c || c.status === 'never') return { color: 'grey',   text: 'never connected' };
+      if (c.status === 'active')      return { color: 'green',  text: 'active · ' + relTime(c.last_seen) };
+      if (c.status === 'idle')        return { color: 'yellow', text: 'idle · ' + relTime(c.last_seen) };
+      return                                  { color: 'red',    text: 'offline · ' + relTime(c.last_seen) };
     }
 
-    // ── Fetch with timeout + auth header + AbortController ───────────────────
     async function fetchT(url, opts = {}) {
       const ctrl = new AbortController();
       const id   = setTimeout(() => ctrl.abort(), TIMEOUT);
@@ -219,7 +209,6 @@
       }
     }
 
-    // ── Action buttons (event delegation — no inline onclick) ─────────────────
     document.querySelector('.ih-actions').addEventListener('click', e => {
       const btn = e.target.closest('[data-action]');
       if (!btn || btn.disabled) return;
@@ -267,7 +256,6 @@
       } catch { btn.disabled = false; btn.textContent = orig; }
     }
 
-    // ── Renderers ─────────────────────────────────────────────────────────────
     function renderSeries(stats) {
       if (!stats || !Object.keys(stats).length) { html('series-list', '<div class="ih-empty">No data</div>'); return; }
       const entries = Object.entries(stats);
@@ -275,12 +263,11 @@
       set('series-summary', `${done}/${entries.length} complete`);
       entries.sort(([, a], [, b]) => a.status === b.status ? 0 : a.status === 'active' ? -1 : 1);
       html('series-list', entries.map(([name, d]) => {
-        const isC  = d.status === 'complete';
+        const isC   = d.status === 'complete';
         const label = esc(name.replace(/-/g, ' '));
         const gapHtml = d.episode_gaps?.length ? `<span class="ih-series-gap">⚠ gap ${esc(d.episode_gaps.join(','))}</span>` : '';
-        const stats = `<span>${esc(d.episodes)} ep</span>${d.profiles > 0 ? `<span>${esc(d.profiles)} pr</span>` : ''}`
+        const statsHtml = `<span>${esc(d.episodes)} ep</span>${d.profiles > 0 ? `<span>${esc(d.profiles)} pr</span>` : ''}`
           + (isC ? `<span class="ih-series-done">✓ complete</span>` : gapHtml || `<span class="ih-series-next">next: ${esc(d.next_episode)}</span>`);
-        // Use data attributes instead of inline onclick
         const btnHtml = isC
           ? `<button class="ih-series-btn active-btn" data-series-name="${esc(name)}" data-series-action="active">↺ Mark Active</button>`
           : `<button class="ih-series-btn complete-btn" data-series-name="${esc(name)}" data-series-action="complete">✓ Mark Complete</button>`;
@@ -289,7 +276,7 @@
             <span class="ih-series-name">${label}</span>
             <span class="ih-series-badge ${isC ? 'complete' : 'active'}">${isC ? '✓ COMPLETE' : 'ACTIVE'}</span>
           </div>
-          <div class="ih-series-stats">${stats}</div>
+          <div class="ih-series-stats">${statsHtml}</div>
           <div class="ih-series-actions">${btnHtml}</div>
         </div>`;
       }).join(''));
@@ -298,9 +285,9 @@
     function renderCronLog(log) {
       if (!log?.length) { html('cron-list', '<div class="ih-empty">No runs yet</div>'); return; }
       html('cron-list', log.map(r => {
-        const pub  = `<span class="ih-cron-stat ${r.published > 0 ? 'pub' : 'idle'}">${r.published > 0 ? '++' : '·'}${esc(r.published)}</span>`;
-        const del  = `<span class="ih-cron-stat ${r.deleted > 0 ? 'del' : 'idle'}">${r.deleted > 0 ? '-' : '·'}${esc(r.deleted)}</span>`;
-        const fail = r.failed > 0 ? `<span class="ih-cron-stat fail">✕${esc(r.failed)}</span>` : '';
+        const pub   = `<span class="ih-cron-stat ${r.published > 0 ? 'pub' : 'idle'}">${r.published > 0 ? '++' : '·'}${esc(r.published)}</span>`;
+        const del   = `<span class="ih-cron-stat ${r.deleted > 0 ? 'del' : 'idle'}">${r.deleted > 0 ? '-' : '·'}${esc(r.deleted)}</span>`;
+        const fail  = r.failed > 0 ? `<span class="ih-cron-stat fail">✕${esc(r.failed)}</span>` : '';
         const files = r.details?.filter(d => d.success).map(d => fname(d.path)).join(', ') || '';
         return `<div class="ih-cron-row">
           <span class="ih-cron-time">${esc(relTime(r.ran_at))}</span>
@@ -333,12 +320,9 @@
         </div>`).join(''));
     }
 
-    // ── Heartbeat (with AbortController to cancel in-flight requests) ─────────
     async function ihRefresh() {
       clearTimeout(pollTimer);
-
-      // Cancel any in-flight request before starting a new one
-      if (activeAbort) { activeAbort.abort(); }
+      if (activeAbort) activeAbort.abort();
       activeAbort = new AbortController();
       const signal = activeAbort.signal;
 
@@ -360,18 +344,14 @@
         mainDot.style.display = 'inline-block';
         mainDot.className     = 'ih-dot ' + mainCol;
 
-        dot('p-worker-dot', ok ? 'green' : 'red');
-        set('p-worker-val', ok ? 'Online' : 'Offline');
-        dot('p-github-dot', health.github_user ? 'green' : 'red');
-        set('p-github-val', health.github_user || '—');
-        dot('p-d1-dot', health.d1 === 'connected' ? 'green' : 'red');
-        set('p-d1-val', health.d1 || '—');
+        dot('p-worker-dot', ok ? 'green' : 'red');       set('p-worker-val', ok ? 'Online' : 'Offline');
+        dot('p-github-dot', health.github_user ? 'green' : 'red'); set('p-github-val', health.github_user || '—');
+        dot('p-d1-dot', health.d1 === 'connected' ? 'green' : 'red'); set('p-d1-val', health.d1 || '—');
 
         const cm = {};
         (connections || []).forEach(c => cm[c.name] = c);
         const cs = connStatus(cm['claude']);
-        dot('p-claude-dot', cs.color);
-        set('p-claude-val', cs.text);
+        dot('p-claude-dot', cs.color); set('p-claude-val', cs.text);
 
         const td = health.drafts || 0, tq = health.queue || 0;
         dot('p-queue-dot', td > 0 ? 'blue' : 'grey');
@@ -379,14 +359,9 @@
         document.getElementById('btn-staged-count').textContent = td;
 
         if (health.last_cron) {
-          dot('p-cron-dot', 'green');
-          set('p-cron-val', relTime(health.last_cron.ran_at));
+          dot('p-cron-dot', 'green'); set('p-cron-val', relTime(health.last_cron.ran_at));
           show('s-cron', `<span class="ih-label">cron</span><span class="ih-val">${esc(relTime(health.last_cron.ran_at))}</span>`);
-        } else {
-          dot('p-cron-dot', 'grey');
-          set('p-cron-val', 'Never run');
-          hide('s-cron');
-        }
+        } else { dot('p-cron-dot', 'grey'); set('p-cron-val', 'Never run'); hide('s-cron'); }
 
         const dn = health.dead_letter || 0;
         dot('p-dead-dot', dn > 0 ? 'red' : 'grey');
@@ -396,13 +371,10 @@
         const gaps = [];
         if (stats) Object.entries(stats).forEach(([s, d]) => { if (d.episode_gaps?.length) gaps.push(`${s}: ${d.episode_gaps.join(',')}`); });
         if (gaps.length) {
-          dot('p-gaps-dot', 'yellow');
-          set('p-gaps-val', gaps.join(' · '));
+          dot('p-gaps-dot', 'yellow'); set('p-gaps-val', gaps.join(' · '));
           show('s-gaps', '<span style="color:#f59e0b">⚠ gap</span>');
         } else {
-          dot('p-gaps-dot', 'green');
-          set('p-gaps-val', 'None detected');
-          hide('s-gaps');
+          dot('p-gaps-dot', 'green'); set('p-gaps-val', 'None detected'); hide('s-gaps');
         }
         td > 0 ? show('s-staged', `<span class="ih-badge">${esc(td)} staged</span>`) : hide('s-staged');
 
@@ -412,15 +384,13 @@
         renderActivity(activity);
 
       } catch (e) {
-        if (e.name === 'AbortError') return; // cancelled — ignore silently
+        if (e.name === 'AbortError') return;
         failCount++;
         hide('ih-loading');
         document.getElementById('ih-strip').classList.add('offline');
         const d = document.getElementById('s-main');
-        d.style.display = 'inline-block';
-        d.className = 'ih-dot red pulse';
-        dot('p-worker-dot', 'red');
-        set('p-worker-val', 'Unreachable');
+        d.style.display = 'inline-block'; d.className = 'ih-dot red pulse';
+        dot('p-worker-dot', 'red'); set('p-worker-val', 'Unreachable');
         if (failCount > 1) show('s-retry', `<span style="color:#f97316;font-size:9px;background:#1c0a00;padding:0 5px;border-radius:2px">retry ${esc(failCount)}</span>`);
       } finally {
         pollTimer = setTimeout(ihRefresh, Math.min(BASE_MS * Math.pow(1.5, failCount), MAX_MS));
