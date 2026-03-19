@@ -1,0 +1,35 @@
+export const series = {
+  'ai-history': {
+    label: 'History of AI',
+    shortLabel: 'AI History',
+    description: 'From ancient myth to modern algorithm — the complete history of artificial intelligence.',
+    longDescription: 'Twenty-five episodes tracing the ideas, people, and breakthroughs that built the thinking machines of today.',
+    color: '#c8973a',
+    slug: 'ai-history',
+    glyph: 'AI',
+    status: 'complete',
+    feed: '/ai-history/feed.xml',
+  },
+  'internet-history': {
+    label: 'History of the Internet',
+    shortLabel: 'Internet History',
+    description: 'From ARPANET to the algorithm — the complete history of the internet.',
+    longDescription: 'Thirty-seven episodes on the protocols, people, and politics that connected the world.',
+    color: '#7ac87a',
+    slug: 'internet-history',
+    glyph: 'NET',
+    status: 'active',
+    feed: '/internet-history/feed.xml',
+  },
+  'robotics': {
+    label: 'History of Robotics',
+    shortLabel: 'Robotics',
+    description: 'From clockwork knights to humanoid robots — the complete history of robotics.',
+    longDescription: 'Twenty-seven episodes on the engineers, dreamers, and machines that gave metal a body.',
+    color: '#7a9cc8',
+    slug: 'robotics',
+    glyph: 'R',
+    status: 'active',
+    feed: '/robotics/feed.xml',
+  }
+};
