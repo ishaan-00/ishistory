@@ -7,11 +7,9 @@
   <title>ishistory CMS</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
-
-    /* ── FAB button ────────────────────────────────────────────── */
     #ih-fab {
       position: fixed;
-      right: 6px;             /* sits at edge with small margin */
+      right: 6px;
       top: 50%;
       transform: translateY(-50%);
       width: 48px;
@@ -24,25 +22,13 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      touch-action: none;
+      touch-action: manipulation;
       user-select: none;
       transition: right 0.2s ease, left 0.2s ease, border-color 0.4s, background 0.2s;
       box-shadow: 0 2px 12px #00000066;
     }
     #ih-fab:active { background: #0f172a; }
-    #ih-fab.left-side {
-      right: auto;
-      left: -18px;
-    }
-    #ih-fab.peeked {
-      right: -18px;
-    }
-    #ih-fab.left-side.peeked {
-      right: auto;
-      left: -18px;
-    }
-
-    /* Status dot inside FAB */
+    #ih-fab.left-side { right: auto; left: 6px; }
     #ih-fab-dot {
       width: 10px; height: 10px; border-radius: 50%;
       background: #334155; flex-shrink: 0;
@@ -53,13 +39,10 @@
     #ih-fab-dot.red    { background: #ef4444; box-shadow: 0 0 6px #ef444488; }
     #ih-fab-dot.pulse  { animation: ih-pulse 2s ease-in-out infinite; }
     @keyframes ih-pulse { 0%,100%{opacity:1} 50%{opacity:.2} }
-
-    /* Badge on FAB */
     #ih-fab-badge {
       position: absolute;
       top: 4px; right: 4px;
       min-width: 14px; height: 14px;
-      background: #ef4444;
       border-radius: 7px;
       font-size: 8px; font-weight: 700;
       color: #fff;
@@ -71,28 +54,19 @@
       line-height: 1;
     }
     #ih-fab-badge.visible { display: flex; }
-
-    /* Long-press hint */
     #ih-fab-hint {
       position: fixed;
-      bottom: 100px;
-      right: 60px;
-      background: #0f172a;
-      color: #64748b;
+      bottom: 100px; right: 60px;
+      background: #0f172a; color: #64748b;
       font-size: 9px;
       font-family: 'SF Mono', ui-monospace, monospace;
-      padding: 4px 8px;
-      border-radius: 4px;
+      padding: 4px 8px; border-radius: 4px;
       border: 1px solid #1e293b;
-      opacity: 0;
-      pointer-events: none;
+      opacity: 0; pointer-events: none;
       transition: opacity 0.3s;
-      z-index: 99997;
-      white-space: nowrap;
+      z-index: 99997; white-space: nowrap;
     }
     #ih-fab-hint.show { opacity: 1; }
-
-    /* Spin while loading */
     #ih-fab.loading #ih-fab-dot {
       animation: ih-spin 0.8s linear infinite;
       width: 8px; height: 8px;
@@ -101,8 +75,6 @@
       border-top-color: #3b82f6;
       border-radius: 50%;
     }
-
-    /* ── Overlay backdrop ────────────────────────────────────────── */
     #ih-backdrop {
       position: fixed; inset: 0;
       background: #00000088;
@@ -111,8 +83,6 @@
       transition: opacity 0.25s;
     }
     #ih-backdrop.open { opacity: 1; pointer-events: all; }
-
-    /* ── Panel ─────────────────────────────────────────────────────────── */
     #ih-panel {
       position: fixed;
       bottom: 0; left: 50%;
@@ -130,7 +100,6 @@
       font-size: 11px; line-height: 1.4;
     }
     #ih-panel.open { transform: translateX(-50%) translateY(0); }
-
     #ih-panel-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 12px 14px 8px;
@@ -139,44 +108,20 @@
     }
     #ih-panel-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #334155; }
     #ih-panel-meta  { font-size: 9px; color: #1e293b; }
-    #ih-panel-close {
-      background: none; border: none; cursor: pointer;
-      color: #334155; font-size: 14px; padding: 0 2px;
-      line-height: 1; font-family: inherit; transition: color 0.15s;
-    }
+    #ih-panel-close { background: none; border: none; cursor: pointer; color: #334155; font-size: 14px; padding: 0 2px; line-height: 1; font-family: inherit; transition: color 0.15s; }
     #ih-panel-close:hover { color: #ef4444; }
-
-    #ih-drag-handle {
-      width: 36px; height: 4px; border-radius: 2px;
-      background: #1e293b; margin: 8px auto 0; flex-shrink: 0;
-    }
-
-    #ih-panel-inner {
-      flex: 1; overflow-y: auto; padding: 0 0 20px;
-      scrollbar-width: thin; scrollbar-color: #1e293b transparent;
-    }
-
-    /* ── Shared styles ─────────────────────────────────────────────────── */
-    .ih-dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      display: inline-block; flex-shrink: 0;
-      transition: background 0.4s, box-shadow 0.4s;
-    }
+    #ih-drag-handle { width: 36px; height: 4px; border-radius: 2px; background: #1e293b; margin: 8px auto 0; flex-shrink: 0; }
+    #ih-panel-inner { flex: 1; overflow-y: auto; padding: 0 0 20px; scrollbar-width: thin; scrollbar-color: #1e293b transparent; }
+    .ih-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; transition: background 0.4s, box-shadow 0.4s; }
     .ih-dot.green  { background: #22c55e; box-shadow: 0 0 5px #22c55e66; }
     .ih-dot.yellow { background: #eab308; box-shadow: 0 0 5px #eab30866; }
     .ih-dot.red    { background: #ef4444; box-shadow: 0 0 5px #ef444466; }
     .ih-dot.blue   { background: #3b82f6; box-shadow: 0 0 5px #3b82f666; }
     .ih-dot.grey   { background: #2d3f55; box-shadow: none; }
-
     .ih-section { padding: 10px 14px 8px; border-bottom: 1px solid #080d16; }
     .ih-section:last-child { border-bottom: none; }
-    .ih-section-title {
-      font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em;
-      color: #2d3f55; margin-bottom: 8px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
+    .ih-section-title { font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: #2d3f55; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
     .ih-section-title span { color: #1a2435; font-size: 9px; }
-
     .ih-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 0; }
     .ih-row { display: flex; align-items: center; gap: 7px; padding: 5px 0; border-bottom: 1px solid #080d16; }
     .ih-row:last-child { border-bottom: none; }
@@ -184,26 +129,19 @@
     .ih-row-val { color: #7a8fa8; flex: 1; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ih-row-val.good { color: #4ade80; }
     .ih-row-val.bad  { color: #f87171; }
-
     .ih-actions { display: flex; gap: 6px; flex-wrap: wrap; padding: 6px 0 2px; }
-    .ih-btn {
-      background: #0a1120; color: #4a5f78; border: 1px solid #162032;
-      padding: 4px 10px; border-radius: 4px; font-size: 10px;
-      font-family: inherit; cursor: pointer; transition: all 0.15s; white-space: nowrap;
-    }
+    .ih-btn { background: #0a1120; color: #4a5f78; border: 1px solid #162032; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-family: inherit; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
     .ih-btn:hover:not(:disabled) { background: #162032; color: #cbd5e1; border-color: #2d3f55; }
     .ih-btn:disabled { opacity: 0.3; cursor: not-allowed; }
     .ih-btn.warn:hover:not(:disabled) { background: #2d0808; color: #fca5a5; border-color: #7f1d1d; }
     .ih-btn.ok   { color: #4ade80 !important; border-color: #166534 !important; }
     .ih-btn.fail { color: #f87171 !important; border-color: #7f1d1d !important; }
-
     .ih-staged-list { display: flex; flex-direction: column; gap: 3px; }
     .ih-staged-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; background: #080e1a; border-radius: 4px; border: 1px solid #0f2a4a; }
     .ih-staged-path { color: #7dd3fc; font-size: 10px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ih-staged-size { color: #2d3f55; font-size: 9.5px; flex-shrink: 0; }
     .ih-staged-discard { background: none; border: none; cursor: pointer; color: #2d3f55; font-size: 10px; padding: 0 2px; font-family: inherit; transition: color 0.15s; flex-shrink: 0; line-height: 1; }
     .ih-staged-discard:hover { color: #ef4444; }
-
     .ih-series-list { display: flex; flex-direction: column; gap: 5px; }
     .ih-series-card { padding: 9px 10px; border-radius: 5px; border: 1px solid #0f172a; background: #060b14; }
     .ih-series-card.complete { border-color: #052e16; background: #030d07; }
@@ -228,7 +166,6 @@
     .ih-series-btn.complete-btn:hover { background: #052e16; color: #4ade80; border-color: #166534; }
     .ih-series-btn.active-btn:hover   { background: #0f2040; color: #38bdf8; border-color: #1d4ed8; }
     .ih-completed-at { font-size: 9px; color: #1a2435; margin-left: auto; }
-
     .ih-cron-list { display: flex; flex-direction: column; gap: 2px; }
     .ih-cron-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: #060b14; border-radius: 3px; }
     .ih-cron-time  { color: #2d3f55; font-size: 10px; width: 56px; flex-shrink: 0; }
@@ -238,34 +175,25 @@
     .ih-cron-stat.fail { color: #ef4444; font-size: 10px; }
     .ih-cron-stat.idle { color: #1a2435; font-size: 10px; }
     .ih-cron-files { font-size: 9.5px; color: #2d3f55; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
     .ih-activity-list { display: flex; flex-direction: column; gap: 2px; }
     .ih-activity-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: #060b14; border-radius: 3px; }
     .ih-activity-action { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; width: 72px; flex-shrink: 0; font-weight: 600; }
     .ih-activity-path { color: #3a4f66; font-size: 10px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ih-activity-time { color: #1a2435; font-size: 9.5px; flex-shrink: 0; }
-
     .ih-empty { color: #1a2435; font-size: 10px; padding: 4px 8px; }
     .ih-badge { background: #0f2a4a; color: #7dd3fc; padding: 0 6px; border-radius: 3px; font-size: 10px; }
     .ih-badge.warn { background: #3b0a0a; color: #fca5a5; }
-    .ih-label { color: #2d3f55; margin-right: 2px; }
-    .ih-val   { color: #94a3b8; }
-
     @keyframes ih-spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js" type="module" data-cfasync="false"></script>
-
   <div id="ih-fab-hint">Hold to switch sides</div>
-
-  <div id="ih-fab" title="Status dashboard">
+  <div id="ih-fab" title="Status">
     <div id="ih-fab-dot"></div>
     <div id="ih-fab-badge"></div>
   </div>
-
   <div id="ih-backdrop" onclick="ihClose()"></div>
-
   <div id="ih-panel">
     <div id="ih-drag-handle"></div>
     <div id="ih-panel-header">
@@ -313,48 +241,41 @@
       </div>
     </div>
   </div>
-
   <script>
     const WORKER  = 'https://claude.ishaan00.workers.dev';
     const BASE_MS = 60000;
     const MAX_MS  = 300000;
     const TIMEOUT = 5000;
     const PEEK    = 6;
-
     let isOpen     = false;
     let failCount  = 0;
     let pollTimer  = null;
     let d1Bookmark = null;
-
     const fab  = document.getElementById('ih-fab');
     const hint = document.getElementById('ih-fab-hint');
     let onLeft = false;
     let fabY   = 50;
-    let dragging = false;
+    let dragging   = false;
     let longPressTimer = null;
     let dragStartY = 0, fabStartY = 0;
     let hasDragged = false;
-
     try {
       const saved = JSON.parse(localStorage.getItem('ih-fab-pos') || '{}');
       if (saved.left !== undefined) onLeft = saved.left;
       if (saved.y    !== undefined) fabY   = saved.y;
     } catch(e) {}
-
     function applyFabPos(animate) {
       if (!animate) fab.style.transition = 'none';
       fab.style.top       = fabY + '%';
       fab.style.transform = 'none';
       if (onLeft) { fab.style.left = PEEK + 'px'; fab.style.right = 'auto'; }
-      else        { fab.style.right = PEEK + 'px'; fab.style.left = 'auto';  }
+      else        { fab.style.right = PEEK + 'px'; fab.style.left = 'auto'; }
       if (!animate) requestAnimationFrame(() => fab.style.transition = '');
     }
     applyFabPos(false);
-
     function saveFabPos() {
       try { localStorage.setItem('ih-fab-pos', JSON.stringify({ left: onLeft, y: fabY })); } catch(e) {}
     }
-
     function switchSide() {
       onLeft = !onLeft;
       applyFabPos(true);
@@ -364,16 +285,20 @@
       hint.classList.add('show');
       setTimeout(() => hint.classList.remove('show'), 1500);
     }
-
-    fab.addEventListener('pointerdown', e => {
-      dragging    = false;
-      hasDragged  = false;
-      dragStartY  = e.clientY;
-      fabStartY   = parseFloat(fab.style.top) || fabY;
-      longPressTimer = setTimeout(() => { if (!hasDragged) switchSide(); }, 500);
-      fab.setPointerCapture(e.pointerId);
+    // Primary tap: onclick fires instantly with no delay on any browser
+    fab.addEventListener('click', () => {
+      if (!dragging) ihToggle();
     });
-
+    // Pointer events only for drag + long press — no toggle logic here
+    fab.addEventListener('pointerdown', e => {
+      dragging   = false;
+      hasDragged = false;
+      dragStartY = e.clientY;
+      fabStartY  = parseFloat(fab.style.top) || fabY;
+      longPressTimer = setTimeout(() => {
+        if (!hasDragged && !dragging) switchSide();
+      }, 600);
+    });
     fab.addEventListener('pointermove', e => {
       if (!e.buttons) return;
       const dy      = e.clientY - dragStartY;
@@ -383,27 +308,14 @@
       if (Math.abs(dy) > 14) { hasDragged = true; dragging = true; clearTimeout(longPressTimer); }
       if (dragging) { fab.style.top = newYpct + '%'; fabY = newYpct; }
     });
-
-    fab.addEventListener('pointerup', e => {
+    fab.addEventListener('pointerup', () => {
       clearTimeout(longPressTimer);
-      fab.releasePointerCapture(e.pointerId);
-      if (dragging)       { saveFabPos(); dragging = false; }
-      else if (!hasDragged) { ihToggle(); }
+      if (dragging) { saveFabPos(); dragging = false; }
     });
-
-    // Belt-and-suspenders: click fires on Android even when pointerup misses
-    let lastToggleTime = 0;
-    fab.addEventListener('click', () => {
-      const now = Date.now();
-      if (now - lastToggleTime > 300 && !dragging) { lastToggleTime = now; ihToggle(); }
-    });
-
     function ihOpen()   { isOpen = true;  document.getElementById('ih-panel').classList.add('open');    document.getElementById('ih-backdrop').classList.add('open'); }
     function ihClose()  { isOpen = false; document.getElementById('ih-panel').classList.remove('open'); document.getElementById('ih-backdrop').classList.remove('open'); }
     function ihToggle() { isOpen ? ihClose() : ihOpen(); }
-
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen) ihClose(); });
-
     function dot(id,c)   { const el=document.getElementById(id); if(el) el.className='ih-dot '+c; }
     function set(id,t)   { const el=document.getElementById(id); if(el) el.textContent=t; }
     function html(id,mk) { const el=document.getElementById(id); if(el) el.innerHTML=mk; }
@@ -412,7 +324,6 @@
     function hide(id)    { const el=document.getElementById(id); if(el) el.style.display='none'; }
     function valCls(el,c){ if(el) el.className='ih-row-val '+(c||''); }
     function fileName(p) { return p?p.split('/').pop():''; }
-
     function relTime(s) {
       if (!s) return 'never';
       const ms = new Date(s.replace(' ','T')+(s.includes('T')?'':'Z')).getTime();
@@ -424,21 +335,18 @@
       if (d<86400) return Math.floor(d/3600)+'h ago';
       return Math.floor(d/86400)+'d ago';
     }
-
     function connStatus(c) {
       if (!c||c.status==='never') return {color:'grey',  text:'never connected'};
       if (c.status==='active')    return {color:'green', text:'active · '+relTime(c.last_seen)};
       if (c.status==='idle')      return {color:'yellow',text:'idle · '+relTime(c.last_seen)};
       return                             {color:'red',   text:'offline · '+relTime(c.last_seen)};
     }
-
     async function fetchT(url, opts={}) {
       const ctrl = new AbortController();
       const id   = setTimeout(()=>ctrl.abort(), TIMEOUT);
       try { const r=await fetch(url,{...opts,signal:ctrl.signal}); clearTimeout(id); return r; }
       catch(e) { clearTimeout(id); throw e; }
     }
-
     async function ihAction(type, btn) {
       btn.disabled=true; const orig=btn.innerHTML; btn.textContent='...';
       try {
@@ -451,7 +359,6 @@
       } catch(e) { btn.classList.add('fail'); btn.textContent='Error'; }
       finally { setTimeout(()=>{ btn.disabled=false; btn.classList.remove('ok','fail'); btn.innerHTML=orig; },2000); }
     }
-
     async function discardDraft(path, btn) {
       btn.disabled=true;
       try {
@@ -463,7 +370,6 @@
         setTimeout(()=>ihRefresh(),400);
       } catch(e) { btn.disabled=false; }
     }
-
     async function toggleSeries(name, newStatus, btn) {
       btn.disabled=true; const orig=btn.textContent; btn.textContent='...';
       try {
@@ -474,18 +380,11 @@
         setTimeout(()=>ihRefresh(),300);
       } catch(e) { btn.disabled=false; btn.textContent=orig; }
     }
-
     function renderStaged(staged) {
       if (!staged||!staged.length) { hide('section-staged'); return; }
       showBlock('section-staged'); set('staged-count-label', staged.length);
-      html('staged-list', staged.map(d=>`
-        <div class="ih-staged-row">
-          <span class="ih-staged-path" title="${d.path}">${fileName(d.path)}</span>
-          <span class="ih-staged-size">${(d.size/1024).toFixed(1)}kb</span>
-          <button class="ih-staged-discard" onclick="discardDraft('${d.path.replace(/'/g,"\\'")}",this)">&#10005;</button>
-        </div>`).join(''));
+      html('staged-list', staged.map(d=>`<div class="ih-staged-row"><span class="ih-staged-path" title="${d.path}">${fileName(d.path)}</span><span class="ih-staged-size">${(d.size/1024).toFixed(1)}kb</span><button class="ih-staged-discard" onclick="discardDraft('${d.path.replace(/'/g,"\\'")}",this)">&#10005;</button></div>`).join(''));
     }
-
     function renderSeries(stats) {
       if (!stats||!Object.keys(stats).length) { html('series-list','<div class="ih-empty">No series found</div>'); return; }
       const entries=Object.entries(stats);
@@ -496,59 +395,21 @@
         const isC=d.status==='complete';
         const eps=d.episodes||0;
         const pct=isC?100:Math.round(((eps%10)||(eps>0?10:0))/10*100);
-        const stat=[
-          `<span>${eps} ep${eps!==1?'s':''}</span>`,
-          d.profiles>0?`<span>${d.profiles} profiles</span>`:'',
-          isC?`<span class="ih-series-done">✓ complete</span>`
-            :d.episode_gaps?.length?`<span class="ih-series-gap">⚠ gap ${d.episode_gaps.join(', ')}</span>`
-            :`<span class="ih-series-next">next: #${d.next_episode}</span>`
-        ].filter(Boolean).join('');
-        const tog=isC
-          ?`<button class="ih-series-btn active-btn" onclick="toggleSeries('${name}','active',this)">↺ Mark Active</button>`
-          :`<button class="ih-series-btn complete-btn" onclick="toggleSeries('${name}','complete',this)">✓ Mark Complete</button>`;
+        const stat=[`<span>${eps} ep${eps!==1?'s':''}</span>`,d.profiles>0?`<span>${d.profiles} profiles</span>`:'',isC?`<span class="ih-series-done">✓ complete</span>`:d.episode_gaps?.length?`<span class="ih-series-gap">⚠ gap ${d.episode_gaps.join(', ')}</span>`:`<span class="ih-series-next">next: #${d.next_episode}</span>`].filter(Boolean).join('');
+        const tog=isC?`<button class="ih-series-btn active-btn" onclick="toggleSeries('${name}','active',this)">↺ Mark Active</button>`:`<button class="ih-series-btn complete-btn" onclick="toggleSeries('${name}','complete',this)">✓ Mark Complete</button>`;
         const ca=isC&&d.completed_at?`<span class="ih-completed-at">completed ${relTime(d.completed_at)}</span>`:'';
-        return `<div class="ih-series-card ${isC?'complete':''}">
-          <div class="ih-series-card-top">
-            <span class="ih-series-name">${name.replace(/-/g,' ')}</span>
-            <span class="ih-series-badge ${isC?'complete':'active'}">${isC?'✓ COMPLETE':'ACTIVE'}</span>
-          </div>
-          <div class="ih-progress-wrap"><div class="ih-progress-bar">
-            <div class="ih-progress-fill ${isC?'complete':'active'}" style="width:${pct}%"></div>
-          </div></div>
-          <div class="ih-series-stats">${stat}</div>
-          <div class="ih-series-actions">${tog}${ca}</div>
-        </div>`;
+        return `<div class="ih-series-card ${isC?'complete':'"}"><div class="ih-series-card-top"><span class="ih-series-name">${name.replace(/-/g,' ')}</span><span class="ih-series-badge ${isC?'complete':'active'}">${isC?'✓ COMPLETE':'ACTIVE'}</span></div><div class="ih-progress-wrap"><div class="ih-progress-bar"><div class="ih-progress-fill ${isC?'complete':'active'}" style="width:${pct}%"></div></div></div><div class="ih-series-stats">${stat}</div><div class="ih-series-actions">${tog}${ca}</div></div>`;
       }).join(''));
     }
-
     function renderCronLog(log) {
       if (!log?.length) { html('cron-list','<div class="ih-empty">No runs yet</div>'); return; }
-      html('cron-list', log.map(r=>{
-        const pub=`<span class="ih-cron-stat ${r.published>0?'pub':'idle'}">+${r.published}</span>`;
-        const del=`<span class="ih-cron-stat ${r.deleted>0?'del':'idle'}">${r.deleted>0?'-':'·'}${r.deleted}</span>`;
-        const fail=r.failed>0?`<span class="ih-cron-stat fail">✕${r.failed}</span>`:'';
-        const files=r.details?.filter(d=>d.success).map(d=>fileName(d.path)).filter(Boolean).join(', ')||'';
-        return `<div class="ih-cron-row">
-          <span class="ih-cron-time">${relTime(r.ran_at)}</span>
-          <div class="ih-cron-stats">${pub}${del}${fail}</div>
-          ${files?`<span class="ih-cron-files" title="${files}">${files}</span>`:''}
-        </div>`;
-      }).join(''));
+      html('cron-list', log.map(r=>{ const pub=`<span class="ih-cron-stat ${r.published>0?'pub':'idle'}">+${r.published}</span>`; const del=`<span class="ih-cron-stat ${r.deleted>0?'del':'idle'}">${r.deleted>0?'-':'·'}${r.deleted}</span>`; const fail=r.failed>0?`<span class="ih-cron-stat fail">✕${r.failed}</span>`:''; const files=r.details?.filter(d=>d.success).map(d=>fileName(d.path)).filter(Boolean).join(', ')||''; return `<div class="ih-cron-row"><span class="ih-cron-time">${relTime(r.ran_at)}</span><div class="ih-cron-stats">${pub}${del}${fail}</div>${files?`<span class="ih-cron-files" title="${files}">${files}</span>`:''}</div>`; }).join(''));
     }
-
     function renderActivity(activity) {
       if (!activity?.length) { html('activity-list','<div class="ih-empty">No activity yet</div>'); return; }
       const styles={publish:{color:'#22c55e',label:'publish'},delete:{color:'#ef4444',label:'delete'},rollback:{color:'#f59e0b',label:'rollback'},webhook_sync:{color:'#3b82f6',label:'webhook'}};
-      html('activity-list', activity.map(r=>{
-        const s=styles[r.action]||{color:'#475569',label:r.action};
-        return `<div class="ih-activity-row">
-          <span class="ih-activity-action" style="color:${s.color}">${s.label}</span>
-          <span class="ih-activity-path" title="${r.path}">${fileName(r.path)||r.path}</span>
-          <span class="ih-activity-time">${relTime(r.happened_at)}</span>
-        </div>`;
-      }).join(''));
+      html('activity-list', activity.map(r=>{ const s=styles[r.action]||{color:'#475569',label:r.action}; return `<div class="ih-activity-row"><span class="ih-activity-action" style="color:${s.color}">${s.label}</span><span class="ih-activity-path" title="${r.path}">${fileName(r.path)||r.path}</span><span class="ih-activity-time">${relTime(r.happened_at)}</span></div>`; }).join(''));
     }
-
     async function ihRefresh() {
       clearTimeout(pollTimer);
       fab.classList.add('loading');
@@ -558,64 +419,44 @@
         if(!res.ok) throw new Error(`HTTP ${res.status}`);
         const bm=res.headers.get('x-d1-bookmark'); if(bm) d1Bookmark=bm;
         const {health,connections,stats,cron_log,staged,activity}=await res.json();
-
         failCount=0;
         fab.classList.remove('loading');
         set('ih-refresh-time', relTime(new Date().toISOString()));
         set('ih-panel-meta',   relTime(new Date().toISOString()));
-
         const workerOk=health.status==='ok'||health.status==='warning';
         const mainColor=!workerOk?'red':health.status==='warning'?'yellow':'green';
         document.getElementById('ih-fab-dot').className=mainColor;
-
         const badge=document.getElementById('ih-fab-badge');
         const totalDraft=health.drafts||0;
         const deadN=health.dead_letter||0;
-        if (deadN>0)        { badge.textContent=deadN;       badge.className='visible'; badge.style.background='#ef4444'; }
+        if (deadN>0)         { badge.textContent=deadN;       badge.className='visible'; badge.style.background='#ef4444'; }
         else if(totalDraft>0){ badge.textContent=totalDraft; badge.className='visible'; badge.style.background='#3b82f6'; }
         else                 { badge.className=''; }
-
         dot('p-worker-dot', workerOk?'green':'red');
         const wEl=document.getElementById('p-worker-val');
         wEl.textContent=workerOk?'Online':'Offline'; valCls(wEl, workerOk?'good':'bad');
-        dot('p-github-dot', health.github_user?'green':'red');
-        set('p-github-val', health.github_user||'Not connected');
-        dot('p-d1-dot', health.d1==='connected'?'green':'red');
-        set('p-d1-val', health.d1||'—');
-
+        dot('p-github-dot', health.github_user?'green':'red'); set('p-github-val', health.github_user||'Not connected');
+        dot('p-d1-dot', health.d1==='connected'?'green':'red'); set('p-d1-val', health.d1||'—');
         const connMap={}; (connections||[]).forEach(c=>connMap[c.name]=c);
-        const cs=connStatus(connMap['claude']);
-        dot('p-claude-dot',cs.color); set('p-claude-val',cs.text);
-
+        const cs=connStatus(connMap['claude']); dot('p-claude-dot',cs.color); set('p-claude-val',cs.text);
         dot('p-queue-dot', totalDraft>0?'blue':'grey');
         set('p-queue-val', totalDraft>0?`${totalDraft} draft${totalDraft!==1?'s':''}`:'Empty');
         document.getElementById('btn-staged-count').textContent=totalDraft;
-
         if (health.last_cron) { dot('p-cron-dot','green'); set('p-cron-val',relTime(health.last_cron.ran_at)); }
         else                  { dot('p-cron-dot','grey');  set('p-cron-val','Never run'); }
-
         const dEl=document.getElementById('p-dead-val');
         dot('p-dead-dot', deadN>0?'red':'grey');
         dEl.textContent=deadN>0?`${deadN} failed`:'None'; valCls(dEl, deadN>0?'bad':'');
-
         const lastWH=(activity||[]).find(a=>a.action==='webhook_sync');
-        dot('p-webhook-dot', lastWH?'green':'grey');
-        set('p-webhook-val', lastWH?relTime(lastWH.happened_at):'No syncs yet');
-
-        renderStaged(staged);
-        renderSeries(stats);
-        renderCronLog(cron_log);
-        renderActivity(activity);
-
+        dot('p-webhook-dot', lastWH?'green':'grey'); set('p-webhook-val', lastWH?relTime(lastWH.happened_at):'No syncs yet');
+        renderStaged(staged); renderSeries(stats); renderCronLog(cron_log); renderActivity(activity);
       } catch(e) {
-        failCount++;
-        fab.classList.remove('loading');
+        failCount++; fab.classList.remove('loading');
         document.getElementById('ih-fab-dot').className='red pulse';
       } finally {
         pollTimer=setTimeout(ihRefresh, Math.min(BASE_MS*Math.pow(1.5,failCount), MAX_MS));
       }
     }
-
     ihRefresh();
   </script>
 </body>
