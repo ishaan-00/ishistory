@@ -1,0 +1,85 @@
+backend:
+  name: github
+  repo: ishaan-00/ishistory
+  branch: main
+  base_url: https://sveltia-cms-auth.ishaan00.workers.dev
+
+media_folder: public/images
+public_folder: /images
+
+site_url: https://ishistory.pages.dev
+
+collections:
+
+  - name: ai-history-episodes
+    label: "AI History - Episodes"
+    label_singular: Episode
+    folder: src/content/ai-history
+    create: true
+    slug: "episode-{{episode_number}}"
+    fields:
+      - { label: Title, name: title, widget: string }
+      - { label: Series, name: series, widget: hidden, default: "ai-history" }
+      - { label: Episode Number, name: episode_number, widget: number, value_type: int }
+      - { label: Roman Numeral, name: roman, widget: string }
+      - { label: Part Key, name: part, widget: string }
+      - { label: Part Label, name: part_label, widget: string }
+      - { label: Tag, name: tag, widget: string }
+      - { label: Description, name: description, widget: text }
+      - { label: Publish Date, name: date, widget: datetime, format: YYYY-MM-DD, date_format: YYYY-MM-DD, time_format: false }
+      - { label: Body, name: body, widget: markdown }
+
+  - name: ai-history-profiles
+    label: "AI History - Profiles"
+    label_singular: Profile
+    folder: src/content/ai-history
+    create: true
+    slug: "profile-{{episode_number}}-{{title}}"
+    fields:
+      - { label: Title, name: title, widget: string }
+      - { label: Series, name: series, widget: hidden, default: "ai-history" }
+      - { label: Type, name: type, widget: hidden, default: profile }
+      - { label: Episode Number, name: episode_number, widget: number, value_type: int }
+      - { label: Roman Numeral, name: roman, widget: string }
+      - { label: Part Key, name: part, widget: string }
+      - { label: Part Label, name: part_label, widget: string }
+      - { label: Tag, name: tag, widget: hidden, default: Profile }
+      - { label: Description, name: description, widget: text }
+      - { label: Publish Date, name: date, widget: datetime, format: YYYY-MM-DD, date_format: YYYY-MM-DD, time_format: false }
+      - { label: Body, name: body, widget: markdown }
+
+  - name: internet-history-episodes
+    label: "Internet History - Episodes"
+    label_singular: Episode
+    folder: src/content/internet-history
+    create: true
+    slug: "internet-{{episode_number}}"
+    fields:
+      - { label: Title, name: title, widget: string }
+      - { label: Series, name: series, widget: hidden, default: "internet-history" }
+      - { label: Episode Number, name: episode_number, widget: number, value_type: int }
+      - { label: Roman Numeral, name: roman, widget: string }
+      - { label: Part Key, name: part, widget: string }
+      - { label: Part Label, name: part_label, widget: string }
+      - { label: Tag, name: tag, widget: string }
+      - { label: Description, name: description, widget: text }
+      - { label: Publish Date, name: date, widget: datetime, format: YYYY-MM-DD, date_format: YYYY-MM-DD, time_format: false }
+      - { label: Body, name: body, widget: markdown }
+
+  - name: robotics-episodes
+    label: "Robotics - Episodes"
+    label_singular: Episode
+    folder: src/content/robotics
+    create: true
+    slug: "robotics-{{episode_number}}"
+    fields:
+      - { label: Title, name: title, widget: string }
+      - { label: Series, name: series, widget: hidden, default: "robotics" }
+      - { label: Episode Number, name: episode_number, widget: number, value_type: int }
+      - { label: Roman Numeral, name: roman, widget: string }
+      - { label: Part Key, name: part, widget: string }
+      - { label: Part Label, name: part_label, widget: string }
+      - { label: Tag, name: tag, widget: string }
+      - { label: Description, name: description, widget: text }
+      - { label: Publish Date, name: date, widget: datetime, format: YYYY-MM-DD, date_format: YYYY-MM-DD, time_format: false }
+      - { label: Body, name: body, widget: markdown }
