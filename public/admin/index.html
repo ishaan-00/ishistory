@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex" />
   <title>ishistory CMS</title>
   <style>
-    #ih-bar{position:fixed;bottom:0;left:0;right:0;z-index:99999;font-family:'SF Mono','Fira Code',ui-monospace,monospace;font-size:11px;line-height:1.4;display:none}
+    #ih-bar{position:fixed;bottom:0;left:0;right:0;z-index:99999;font-family:'SF Mono','Fira Code',ui-monospace,monospace;font-size:11px;line-height:1.4}
     #ih-strip{background:#080e1a;color:#64748b;height:26px;display:flex;align-items:center;padding:0 12px;gap:12px;cursor:pointer;user-select:none;border-top:1px solid #1e293b;transition:background .15s,border-color .4s;width:100%;border-left:none;border-right:none;border-bottom:none}
     #ih-strip:hover{background:#0f172a}
     #ih-strip.offline{border-top-color:#7f1d1d;background:#0a0404}
@@ -112,10 +112,10 @@
       <span id="ih-loading"><span class="ih-spin"></span></span>
       <span class="ih-dot grey pulse" id="s-main" style="display:none"></span>
       <span id="s-staged" style="display:none"></span>
-      <span id="s-dead" style="display:none"></span>
-      <span id="s-gaps" style="display:none"></span>
-      <span id="s-cron" style="display:none"></span>
-      <span id="s-retry" style="display:none"></span>
+      <span id="s-dead"   style="display:none"></span>
+      <span id="s-gaps"   style="display:none"></span>
+      <span id="s-cron"   style="display:none"></span>
+      <span id="s-retry"  style="display:none"></span>
       <span id="ih-chevron" aria-hidden="true">▲</span>
     </button>
   </div>
@@ -131,67 +131,31 @@
     let pollTimer   = null;
     let activeAbort = null;
     let ghToken     = null;
-    let barReady    = false;
 
     function esc(s){const d=document.createElement('div');d.textContent=String(s??'');return d.innerHTML;}
 
-    // ── Find GitHub token from Sveltia localStorage ───────────────────────────
+    // Find GitHub token from Sveltia localStorage
     function findGitHubToken() {
-      const stores = [localStorage, sessionStorage];
-      for (const store of stores) {
-        for (const key of Object.keys(store)) {
-          try {
-            const raw = store.getItem(key);
-            if (!raw) continue;
-            if (/^(ghp|gho|github_pat|ghs|ghr)_[A-Za-z0-9_]{20,}$/.test(raw.trim())) return raw.trim();
-            const obj = JSON.parse(raw);
-            if (obj && typeof obj === 'object') {
-              for (const f of ['token','access_token','gh_token','github_token','authToken']) {
-                if (typeof obj[f] === 'string' && obj[f].length > 20) return obj[f];
+      const stores=[localStorage,sessionStorage];
+      for(const store of stores){
+        for(const key of Object.keys(store)){
+          try{
+            const raw=store.getItem(key);
+            if(!raw)continue;
+            if(/^(ghp|gho|github_pat|ghs|ghr)_[A-Za-z0-9_]{20,}$/.test(raw.trim()))return raw.trim();
+            const obj=JSON.parse(raw);
+            if(obj&&typeof obj==='object'){
+              for(const f of['token','access_token','gh_token','github_token','authToken']){
+                if(typeof obj[f]==='string'&&obj[f].length>20)return obj[f];
               }
             }
-          } catch {}
+          }catch{}
         }
       }
       return null;
     }
 
-    // ── Show the bar ──────────────────────────────────────────────────────────
-    function initBar() {
-      if (barReady) return;
-      // Only show after CMS is showing collections (user is logged in)
-      const hash = location.hash;
-      if (!hash || hash === '#/' || hash === '#' || hash.includes('login')) return;
-      barReady = true;
-      ghToken  = findGitHubToken();
-      document.getElementById('ih-bar').style.display = 'block';
-      ihRefresh();
-    }
-
-    // ── Poll for login state every 500ms for first 60s ────────────────────────
-    // This handles both: already logged in (hash set by Sveltia after ~1-2s)
-    // and fresh login (hash changes when Sveltia redirects to collections)
-    let loginPollTimer = null;
-    let loginPollCount = 0;
-
-    function pollForLogin() {
-      loginPollCount++;
-      initBar();
-      if (!barReady && loginPollCount < 120) { // 120 × 500ms = 60 seconds
-        loginPollTimer = setTimeout(pollForLogin, 500);
-      }
-    }
-
-    // Start polling immediately
-    pollForLogin();
-
-    // Also listen for hash changes (fired when Sveltia navigates post-login)
-    window.addEventListener('hashchange', () => {
-      clearTimeout(loginPollTimer);
-      initBar();
-    });
-
-    // ── Panel toggle ──────────────────────────────────────────────────────────
+    // Panel toggle
     function ihToggle(){
       panelOpen=!panelOpen;
       document.getElementById('ih-panel').classList.toggle('open',panelOpen);
@@ -201,7 +165,7 @@
     document.getElementById('ih-strip').addEventListener('click',ihToggle);
     document.addEventListener('keydown',e=>{if(e.key==='Escape'&&panelOpen)ihToggle();});
 
-    // ── DOM helpers ───────────────────────────────────────────────────────────
+    // DOM helpers
     function dot(id,c){const e=document.getElementById(id);if(e)e.className='ih-dot '+c;}
     function set(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
     function html(id,m){const e=document.getElementById(id);if(e)e.innerHTML=m;}
@@ -212,19 +176,19 @@
     function relTime(iso){if(!iso)return'never';const d=Math.floor((Date.now()-new Date(iso).getTime())/1000);if(d<60)return d+'s ago';if(d<3600)return Math.floor(d/60)+'m ago';if(d<86400)return Math.floor(d/3600)+'h ago';return Math.floor(d/86400)+'d ago';}
     function connStatus(c){if(!c||c.status==='never')return{color:'grey',text:'never'};if(c.status==='active')return{color:'green',text:'active · '+relTime(c.last_seen)};if(c.status==='idle')return{color:'yellow',text:'idle · '+relTime(c.last_seen)};return{color:'red',text:'offline · '+relTime(c.last_seen)};}
 
-    // ── Fetch with GitHub token ───────────────────────────────────────────────
-    async function fetchT(url, opts={}) {
-      const headers = {...opts.headers};
-      if (ghToken) headers['Authorization'] = 'Bearer ' + ghToken;
-      const ctrl = new AbortController();
-      const id   = setTimeout(()=>ctrl.abort(), TIMEOUT);
-      opts.signal  = opts.signal ?? ctrl.signal;
-      opts.headers = headers;
-      try { const r=await fetch(url,opts); clearTimeout(id); return r; }
-      catch(e) { clearTimeout(id); throw e; }
+    // Fetch — sends GitHub token if available, no auth required for heartbeat
+    async function fetchT(url,opts={}){
+      const headers={...opts.headers};
+      if(ghToken)headers['Authorization']='Bearer '+ghToken;
+      const ctrl=new AbortController();
+      const id=setTimeout(()=>ctrl.abort(),TIMEOUT);
+      opts.signal=opts.signal??ctrl.signal;
+      opts.headers=headers;
+      try{const r=await fetch(url,opts);clearTimeout(id);return r;}
+      catch(e){clearTimeout(id);throw e;}
     }
 
-    // ── Event delegation ──────────────────────────────────────────────────────
+    // Event delegation
     document.querySelector('.ih-actions').addEventListener('click',e=>{
       const btn=e.target.closest('[data-action]');
       if(!btn||btn.disabled)return;
@@ -257,7 +221,6 @@
       }catch{btn.disabled=false;btn.textContent=orig;}
     }
 
-    // ── Renderers ─────────────────────────────────────────────────────────────
     function renderSeries(stats){
       if(!stats||!Object.keys(stats).length){html('series-list','<div class="ih-empty">No data</div>');return;}
       const entries=Object.entries(stats);
@@ -296,16 +259,19 @@
       html('staged-list',staged.map(d=>`<div class="ih-staged-row"><span class="ih-staged-path" title="${esc(d.path)}">${fname(d.path)}</span><span class="ih-staged-size">${esc((d.size/1024).toFixed(1))}kb</span></div>`).join(''));
     }
 
-    // ── Heartbeat ─────────────────────────────────────────────────────────────
     async function ihRefresh(){
       clearTimeout(pollTimer);
       if(activeAbort)activeAbort.abort();
       activeAbort=new AbortController();
+      console.log('[ishistory] Fetching heartbeat...');
       show('ih-loading');
       try{
         const r=await fetchT(`${WORKER}/claude/heartbeat`,{signal:activeAbort.signal});
+        console.log('[ishistory] Response:',r.status);
         if(!r.ok)throw new Error('HTTP '+r.status);
-        const{health,connections,stats,cron_log,staged,activity}=await r.json();
+        const data=await r.json();
+        console.log('[ishistory] Data received',data.health?.status);
+        const{health,connections,stats,cron_log,staged,activity}=data;
         failCount=0;hide('s-retry');
         document.getElementById('ih-strip').classList.remove('offline');
         hide('ih-loading');set('ih-refresh-time','updated just now');
@@ -335,17 +301,28 @@
         renderStaged(staged);renderSeries(stats);renderCronLog(cron_log);renderActivity(activity);
       }catch(e){
         if(e.name==='AbortError')return;
+        console.error('[ishistory] Heartbeat failed:',e.message);
         failCount++;hide('ih-loading');
         document.getElementById('ih-strip').classList.add('offline');
         const d=document.getElementById('s-main');
         d.style.display='inline-block';d.className='ih-dot red pulse';
         dot('p-worker-dot','red');set('p-worker-val','Unreachable');
-        console.error('[status-bar] heartbeat failed:',e.message);
         if(failCount>1)show('s-retry',`<span style="color:#f97316;font-size:9px;background:#1c0a00;padding:0 5px;border-radius:2px">retry ${esc(failCount)}</span>`);
       }finally{
         pollTimer=setTimeout(ihRefresh,Math.min(BASE_MS*Math.pow(1.5,failCount),MAX_MS));
       }
     }
+
+    // ── Start: grab token then begin polling after 3s ─────────────────────────
+    // Heartbeat is public so no token needed — bar shows immediately.
+    // Token is grabbed for action buttons (Run Cron etc).
+    // 3s delay gives Sveltia time to fully initialise before we show the bar.
+    console.log('[ishistory] CMS status bar initialising...');
+    setTimeout(() => {
+      ghToken = findGitHubToken();
+      console.log('[ishistory] GitHub token:', ghToken ? 'found ✓' : 'not found (read-only mode)');
+      ihRefresh();
+    }, 3000);
   </script>
 </body>
 </html>
