@@ -1,0 +1,248 @@
+---
+import Base from '../../layouts/Base.astro';
+import Cosmos from '../../components/Cosmos.astro';
+import Nav from '../../components/Nav.astro';
+import Footer from '../../components/Footer.astro';
+import { series as allSeries } from '../../data/series.js';
+
+export function getStaticPaths() {
+  return Object.keys(allSeries).map(key => ({ params: { seriesKey: key } }));
+}
+
+const { seriesKey } = Astro.params;
+const s = allSeries[seriesKey];
+
+const allContent = await Astro.glob('../../content/**/*.md');
+const pages = allContent
+  .filter(p => p.frontmatter.series === seriesKey && !p.frontmatter.draft)
+  .sort((a, b) => (a.frontmatter.episode_number ?? 999) - (b.frontmatter.episode_number ?? 999));
+
+const episodes = pages.filter(p => p.frontmatter.type !== 'profile');
+const profiles  = pages.filter(p => p.frontmatter.type === 'profile');
+
+const partMap = new Map();
+const partOrder = [];
+for (const page of episodes) {
+  const pl = page.frontmatter.part_label ?? 'Episodes';
+  if (!partMap.has(pl)) { partMap.set(pl, []); partOrder.push(pl); }
+  partMap.get(pl).push(page);
+}
+
+const otherSeries = Object.entries(allSeries).filter(([k]) => k !== seriesKey);
+
+const breadcrumbJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'ishistory', item: 'https://ishistory.pages.dev' },
+    { '@type': 'ListItem', position: 2, name: s.label, item: `https://ishistory.pages.dev/${seriesKey}/` },
+  ],
+};
+---
+<Base title={`${s.label} — ishistory`} description={s.longDescription ?? s.description}>
+<Fragment slot="head">
+  <script type="application/ld+json" set:html={JSON.stringify(breadcrumbJsonLd)}></script>
+</Fragment>
+
+<Cosmos />
+<Nav />
+
+<section class="hero" style={`--c: ${s.color}`}>
+  <div class="hero-glyph" aria-hidden="true">{s.glyph}</div>
+  <div class="hero-content">
+    <p class="hero-breadcrumb"><a href="/">ishistory</a> <span>/</span> {s.shortLabel}</p>
+    <p class="hero-eyebrow">ishistory Series</p>
+    <h1 class="hero-title">{s.label}</h1>
+    <p class="hero-desc">{s.description}</p>
+    <div class="hero-stats">
+      <div class="stat"><div class="stat-n">{episodes.length}</div><div class="stat-l">Episodes</div></div>
+      {profiles.length > 0 && <div class="stat"><div class="stat-n">{profiles.length}</div><div class="stat-l">Profiles</div></div>}
+      {s.status === 'complete' && <div class="stat"><div class="stat-n">✓</div><div class="stat-l">Complete</div></div>}
+    </div>
+    <div class="hero-cta">
+      <a href="#episodes" class="btn btn-primary">Start Reading</a>
+      <a href="/search/" class="btn btn-secondary">Search</a>
+    </div>
+  </div>
+</section>
+
+<div class="divider"><div class="divider-line"></div><div class="divider-sym">…</div><div class="divider-line"></div></div>
+
+<section class="episodes" id="episodes">
+  {partOrder.map((pl, pi) => {
+    const eps = partMap.get(pl);
+    const sub = pl.replace(/Part\s+[IVX\d]+\s*[·:\u00b7]?\s*/i, ').trim();
+    const rm  = pl.match(/Part\s+([IVX]+)/i);
+    const pRoman = rm ? rm[1] : String(pi + 1);
+    return (
+      <div class="part">
+        <div class="part-header">
+          <div class="part-roman">{pRoman}</div>
+          <div>
+            <div class="part-meta">Part {pi+1} of {partOrder.length}</div>
+            <div class="part-title">{sub || pl}</div>
+          </div>
+        </div>
+        <div class="ep-grid">
+          {eps.map(page => {
+            const fm   = page.frontmatter;
+            const slug = page.file.split('/').pop()?.replace('.md','') ?? '';
+            const words = typeof page.rawContent === 'function' ? page.rawContent().trim().split(/\s+/).length : 0;
+            const time  = Math.max(1, Math.round(words / 230));
+            return (
+              <a href={`/${seriesKey}/${slug}/`} class="ep-card" data-read-key={`read:${seriesKey}:${slug}`}>
+                <div class="ep-roman">{fm.roman}</div>
+                <div class="ep-body">
+                  <div class="ep-tag">{fm.tag ?? 'Episode'}</div>
+                  <div class="ep-title">
+                    {fm.title}
+                    <span class="ep-read-check" aria-label="Read">✓</span>
+                  </div>
+                  <div class="ep-desc">{fm.description}</div>
+                  <div class="ep-time">{time} min read</div>
+                </div>
+                <div class="ep-arrow">→</div>
+              </a>
+            );
+          })}
+        </div>
+      </div>
+    );
+  })}
+</section>
+
+{otherSeries.length > 0 && (
+  <section class="other">
+    <p class="other-label">More from ishistory</p>
+    <div class="other-grid">
+      {otherSeries.map(([key, os]) => (
+        <a href={`/${key}/`} class="other-card">
+          <div class="other-card-label">Series</div>
+          <div class="other-card-title">{os.label}</div>
+          <p class="other-card-desc">{os.description}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+)}
+
+<Footer />
+
+<script>
+  document.querySelectorAll('.ep-card[data-read-key]').forEach(card => {
+    if (localStorage.getItem(card.getAttribute('data-read-key'))) card.classList.add('is-read');
+  });
+</script>
+</Base>
+
+<style>
+.hero {
+  min-height: 70vh; display: flex; flex-direction: column;
+  justify-content: center; padding: 9rem 3rem 5rem;
+  position: relative; z-index: 1; overflow: hidden;
+}
+.hero-glyph {
+  position: absolute; right: 3%; top: 50%; transform: translateY(-48%);
+  font-family: var(--font-mono); font-size: clamp(10rem,18vw,20rem);
+  font-weight: 400; color: rgba(200,151,58,0.04);
+  line-height: 1; pointer-events: none; user-select: none;
+  letter-spacing: -0.05em;
+}
+.hero-content { position: relative; max-width: 720px; }
+.hero-breadcrumb {
+  font-family: var(--font-sans); font-size: 0.58rem;
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--dust);
+  margin-bottom: 1.4rem;
+  opacity: 0; animation: fadeUp 0.7s 0.1s ease forwards;
+}
+.hero-breadcrumb a { color: var(--fog); transition: color 0.2s; }
+.hero-breadcrumb a:hover { color: var(--amber); }
+.hero-breadcrumb span { margin: 0 0.6rem; opacity: 0.3; }
+.hero-eyebrow {
+  font-family: var(--font-sans); font-size: 0.6rem;
+  letter-spacing: 0.32em; text-transform: uppercase; color: var(--ember);
+  margin-bottom: 1.2rem; display: flex; align-items: center; gap: 1.2rem;
+  opacity: 0; animation: fadeUp 0.8s 0.22s ease forwards;
+}
+.hero-eyebrow::before { content: '; width: 26px; height: 1px; background: var(--ember); opacity: 0.7; }
+.hero-title {
+  font-family: var(--font-serif); font-size: clamp(2.6rem,6vw,5.5rem);
+  font-weight: 700; line-height: 0.95; letter-spacing: -0.02em;
+  color: var(--cream); margin-bottom: 1.4rem;
+  opacity: 0; animation: fadeUp 1s 0.34s ease forwards;
+}
+.hero-desc {
+  font-family: var(--font-body); font-size: 1.15rem; line-height: 1.85;
+  color: var(--linen); max-width: 540px; font-style: italic; margin-bottom: 2rem;
+  opacity: 0; animation: fadeUp 0.9s 0.5s ease forwards;
+}
+.hero-stats {
+  display: flex; gap: 2.5rem; margin-bottom: 2rem; flex-wrap: wrap;
+  opacity: 0; animation: fadeUp 0.8s 0.6s ease forwards;
+}
+.stat-n { font-family: var(--font-serif); font-size: 2rem; font-style: italic; color: var(--amber); line-height: 1; }
+.stat-l { font-family: var(--font-sans); font-size: 0.55rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dust); margin-top: 0.2rem; }
+.hero-cta { display: flex; gap: 1rem; flex-wrap: wrap; opacity: 0; animation: fadeUp 0.9s 0.7s ease forwards; }
+.episodes { padding: 2rem 3rem 6rem; max-width: var(--max-w); margin: 0 auto; position: relative; z-index: 1; }
+.part { margin-bottom: 4rem; }
+.part-header {
+  display: flex; align-items: center; gap: 1.5rem;
+  padding-bottom: 1rem; margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-dim);
+}
+.part-roman {
+  font-family: var(--font-serif); font-size: 2.5rem;
+  font-style: italic; font-weight: 300; color: rgba(200,151,58,0.15);
+  line-height: 1; flex-shrink: 0; min-width: 2.5rem;
+}
+.part-meta { font-family: var(--font-sans); font-size: 0.55rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dust); margin-bottom: 0.2rem; }
+.part-title { font-family: var(--font-serif); font-size: 1.1rem; font-style: italic; color: var(--fog); }
+.ep-grid { display: flex; flex-direction: column; gap: 1px; }
+.ep-card {
+  display: flex; align-items: flex-start; gap: 1.5rem;
+  padding: 1.4rem 1.6rem; background: rgba(13,17,23,0.4);
+  border: 1px solid var(--border-dim);
+  text-decoration: none; color: inherit;
+  transition: background 0.2s, border-color 0.2s;
+  position: relative;
+}
+.ep-card:hover { background: rgba(22,28,38,0.8); border-color: var(--border); }
+.ep-card.is-read::after {
+  content: '✓'; position: absolute; top: 0.8rem; right: 0.8rem;
+  font-family: var(--font-sans); font-size: 0.55rem;
+  color: var(--amber); opacity: 0.5;
+}
+.ep-roman {
+  font-family: var(--font-serif); font-size: 1.4rem;
+  font-style: italic; font-weight: 300;
+  color: rgba(200,151,58,0.15); line-height: 1;
+  flex-shrink: 0; min-width: 2rem; padding-top: 0.1rem;
+}
+.ep-body { flex: 1; }
+.ep-tag { font-family: var(--font-sans); font-size: 0.54rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--ember); margin-bottom: 0.3rem; opacity: 0.75; }
+.ep-title {
+  font-family: var(--font-serif); font-size: 1.1rem;
+  font-weight: 600; color: var(--cream); margin-bottom: 0.35rem;
+  line-height: 1.3; transition: color 0.2s;
+}
+.ep-card:hover .ep-title { color: var(--amber); }
+.ep-read-check { display: none; }
+.ep-desc { font-family: var(--font-body); font-size: 0.92rem; line-height: 1.65; color: var(--fog); }
+.ep-time { font-family: var(--font-mono); font-size: 0.58rem; color: var(--muted); margin-top: 0.5rem; }
+.ep-arrow { font-size: 0.85rem; color: rgba(200,151,58,0.15); align-self: center; transition: color 0.2s, transform 0.2s; flex-shrink: 0; }
+.ep-card:hover .ep-arrow { color: var(--amber); transform: translateX(3px); }
+.other { padding: 4rem 3rem; border-top: 1px solid var(--border-dim); position: relative; z-index: 1; max-width: var(--max-w); margin: 0 auto; }
+.other-label { font-family: var(--font-sans); font-size: 0.6rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--ember); opacity: 0.8; margin-bottom: 1.8rem; }
+.other-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 1px; }
+.other-card { padding: 1.8rem 2rem; border: 1px solid var(--border-dim); text-decoration: none; color: inherit; background: rgba(13,17,23,0.4); transition: background 0.2s, border-color 0.2s; }
+.other-card:hover { background: rgba(22,28,38,0.8); border-color: var(--border); }
+.other-card-label { font-family: var(--font-sans); font-size: 0.55rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ember); margin-bottom: 0.5rem; opacity: 0.7; }
+.other-card-title { font-family: var(--font-serif); font-size: 1.15rem; font-weight: 700; font-style: italic; color: var(--cream); margin-bottom: 0.4rem; transition: color 0.2s; }
+.other-card:hover .other-card-title { color: var(--amber); }
+.other-card-desc { font-family: var(--font-body); font-size: 0.92rem; line-height: 1.65; color: var(--fog); }
+@media (max-width: 768px) {
+  .hero { padding: 7rem 1.5rem 4rem; }
+  .episodes { padding: 1.5rem 1.5rem 4rem; }
+  .other { padding: 3rem 1.5rem; }
+}
+</style>
