@@ -2,7 +2,7 @@ backend:
   name: github
   repo: ishaan-00/ishistory
   branch: main
-  base_url: https://sveltia-cms-auth.ishaan00.workers.dev
+  base_url: https://sveltia-cms-auth.aadityadarpan5.workers.dev
 
 media_folder: public/images
 public_folder: /images
