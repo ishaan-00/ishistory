@@ -1,37 +1,135 @@
 ---
-export interface Props { backLink?: { href: string; label: string }; }
-const { backLink } = Astro.props;
+export interface Props {
+  backLink?: { href: string; label: string };
+  activeSection?: string;
+}
+const { backLink, activeSection } = Astro.props;
+
+const sections = [
+  { href: '/ai-history/',       label: 'AI' },
+  { href: '/internet-history/', label: 'Internet' },
+  { href: '/robotics/',         label: 'Robotics' },
+];
 ---
+
 <nav id="nav">
   <div class="nav-inner">
     {backLink ? (
       <a href={backLink.href} class="nav-back">
-        <span>←</span><span class="nav-back-label">{backLink.label}</span>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="nav-back-label">{backLink.label}</span>
       </a>
     ) : (
       <a href="/" class="nav-logo">ishistory</a>
     )}
     <div class="nav-links">
-      <a href="/ai-history/">AI</a>
-      <a href="/internet-history/">Internet</a>
-      <a href="/robotics/">Robotics</a>
-      <a href="/search/" aria-label="Search">
-        <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.2"/><line x1="10.5" y1="10.5" x2="14" y2="14" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      {sections.map(s => (
+        <a
+          href={s.href}
+          class={`nav-link ${activeSection === s.href ? 'active' : ''}`}
+        >
+          {s.label}
+        </a>
+      ))}
+      <a href="/search/" class="nav-search" aria-label="Search">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+          <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.2"/>
+          <line x1="10.5" y1="10.5" x2="14" y2="14" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
       </a>
     </div>
   </div>
 </nav>
+
+<script>
+  const nav = document.getElementById('nav');
+  const onScroll = () => { nav?.classList.toggle('scrolled', window.scrollY > 40); };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+</script>
+
 <style>
-#nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: var(--nav-h); background: rgba(10,13,18,0.85); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-dim); }
-.nav-inner { max-width: var(--max-w); margin: 0 auto; height: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; }
-.nav-logo { font-family: var(--font-serif); font-size: 1.1rem; font-style: italic; color: var(--cream); transition: color 0.2s; }
-.nav-logo:hover { color: var(--amber); }
-.nav-back { display: flex; align-items: center; gap: 0.6rem; font-family: var(--font-sans); font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--fog); transition: color 0.2s; }
-.nav-back:hover { color: var(--amber); }
-.nav-back-label { display: none; }
-@media (min-width: 480px) { .nav-back-label { display: inline; } }
-.nav-links { display: flex; align-items: center; gap: 2rem; }
-.nav-links a { font-family: var(--font-sans); font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--fog); transition: color 0.2s; display: flex; align-items: center; }
-.nav-links a:hover { color: var(--amber); }
-@media (max-width: 640px) { .nav-inner { padding: 0 1.2rem; } .nav-links a:not(:last-child) { display: none; } }
+  #nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 900;
+    height: var(--nav-h);
+    background: linear-gradient(to bottom, rgba(8,9,13,0.97) 0%, rgba(8,9,13,0.88) 100%);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border-dim);
+    transition: border-color 0.4s ease;
+  }
+  #nav.scrolled { border-color: var(--border); }
+  .nav-inner {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+  }
+  .nav-logo {
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    font-weight: 700;
+    font-style: italic;
+    color: var(--cream);
+    letter-spacing: 0.01em;
+    transition: color 0.15s ease;
+  }
+  .nav-logo:hover { color: var(--amber); }
+  .nav-back {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-family: var(--font-sans);
+    font-size: 0.58rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--fog);
+    transition: color 0.15s ease, gap 0.2s ease;
+  }
+  .nav-back:hover { color: var(--amber); gap: 0.7rem; }
+  .nav-back-label { display: none; }
+  @media (min-width: 480px) { .nav-back-label { display: inline; } }
+  .nav-links { display: flex; align-items: center; gap: 2rem; }
+  .nav-link {
+    font-family: var(--font-sans);
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--fog);
+    transition: color 0.15s ease;
+    position: relative;
+    padding-bottom: 3px;
+  }
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 0; right: 0;
+    height: 1px;
+    background: var(--amber);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.22s ease;
+  }
+  .nav-link:hover, .nav-link.active { color: var(--cream); }
+  .nav-link:hover::after, .nav-link.active::after { transform: scaleX(1); }
+  .nav-search {
+    display: flex;
+    align-items: center;
+    color: var(--fog);
+    transition: color 0.15s ease;
+    margin-left: 0.25rem;
+  }
+  .nav-search:hover { color: var(--amber); }
+  @media (max-width: 640px) {
+    .nav-inner { padding: 0 1.25rem; }
+    .nav-links { gap: 1.25rem; }
+    .nav-link:not(:last-of-type) { display: none; }
+  }
 </style>

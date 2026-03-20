@@ -37,7 +37,7 @@ import { series } from '../data/series.js';
 
 <div class="divider" style="margin:0">
   <div class="divider-line"></div>
-  <div class="divider-sym">✦</div>
+  <div class="divider-sym">✶</div>
   <div class="divider-line"></div>
 </div>
 
@@ -82,7 +82,6 @@ import { series } from '../data/series.js';
 </Base>
 
 <style>
-/* ── Hero ──────────────────────────────────────────────────────────── */
 .hero {
   min-height: 100vh;
   display: flex;
@@ -93,7 +92,6 @@ import { series } from '../data/series.js';
   z-index: 1;
   overflow: hidden;
 }
-
 .hero-bg-glyph {
   position: absolute;
   right: -1%;
@@ -110,12 +108,10 @@ import { series } from '../data/series.js';
   user-select: none;
   letter-spacing: -0.04em;
 }
-
 .hero-content {
   position: relative;
   max-width: 700px;
 }
-
 .hero-eyebrow {
   font-family: var(--font-sans);
   font-size: 0.62rem;
@@ -137,7 +133,6 @@ import { series } from '../data/series.js';
   opacity: 0.6;
   flex-shrink: 0;
 }
-
 .hero-title {
   font-family: var(--font-serif);
   font-size: clamp(3.4rem, 9vw, 7.5rem);
@@ -155,7 +150,6 @@ import { series } from '../data/series.js';
   color: var(--amber);
   display: block;
 }
-
 .hero-sub {
   font-family: var(--font-sans);
   font-size: 0.58rem;
@@ -169,7 +163,6 @@ import { series } from '../data/series.js';
   opacity: 0;
   animation: fadeUp 0.8s 0.5s ease forwards;
 }
-
 .hero-tagline {
   font-family: var(--font-body);
   font-size: 1.25rem;
@@ -181,7 +174,6 @@ import { series } from '../data/series.js';
   opacity: 0;
   animation: fadeUp 0.9s 0.6s ease forwards;
 }
-
 .hero-cta {
   display: flex;
   gap: 1rem;
@@ -189,7 +181,6 @@ import { series } from '../data/series.js';
   opacity: 0;
   animation: fadeUp 0.9s 0.72s ease forwards;
 }
-
 .hero-scroll-hint {
   position: absolute;
   bottom: 2.5rem;
@@ -214,8 +205,6 @@ import { series } from '../data/series.js';
   text-transform: uppercase;
   color: var(--dust);
 }
-
-/* ── Series intro ──────────────────────────────────────────────────── */
 .series-intro {
   padding: 5rem 3rem 3.5rem;
   max-width: 720px;
@@ -223,11 +212,7 @@ import { series } from '../data/series.js';
   position: relative;
   z-index: 1;
 }
-
-.series-intro .section-label {
-  margin-bottom: 1.5rem;
-}
-
+.series-intro .section-label { margin-bottom: 1.5rem; }
 .series-intro-text {
   font-family: var(--font-serif);
   font-size: clamp(1.3rem, 2.5vw, 1.75rem);
@@ -237,8 +222,6 @@ import { series } from '../data/series.js';
   font-style: italic;
   max-width: 100%;
 }
-
-/* ── Series grid ───────────────────────────────────────────────────── */
 .series-grid {
   padding: 1rem 2rem 8rem;
   max-width: var(--max-w);
@@ -250,7 +233,6 @@ import { series } from '../data/series.js';
   position: relative;
   z-index: 1;
 }
-
 .series-card {
   text-decoration: none;
   color: inherit;
@@ -262,7 +244,6 @@ import { series } from '../data/series.js';
   animation: fadeUp 0.8s calc(0.1s * var(--i, 0) + 0.2s) ease forwards;
 }
 .series-card:hover { background: var(--deep); }
-
 .series-card-inner {
   padding: 2.6rem 2.2rem 2.2rem;
   display: flex;
@@ -272,8 +253,6 @@ import { series } from '../data/series.js';
   position: relative;
   z-index: 1;
 }
-
-/* Left accent bar */
 .series-card::before {
   content: '';
   position: absolute;
@@ -285,8 +264,6 @@ import { series } from '../data/series.js';
   transition: transform 0.35s ease;
 }
 .series-card:hover::before { transform: scaleY(1); }
-
-/* Subtle top glow on hover */
 .series-card-accent {
   position: absolute;
   top: 0; left: 0; right: 0;
@@ -297,13 +274,11 @@ import { series } from '../data/series.js';
   pointer-events: none;
 }
 .series-card:hover .series-card-accent { opacity: 1; }
-
 .series-card-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
 }
-
 .series-card-glyph {
   font-family: var(--font-mono);
   font-size: 0.65rem;
@@ -313,7 +288,6 @@ import { series } from '../data/series.js';
   transition: opacity var(--t-base);
 }
 .series-card:hover .series-card-glyph { opacity: 0.9; }
-
 .series-card-badge {
   font-family: var(--font-sans);
   font-size: 0.5rem;
@@ -325,9 +299,7 @@ import { series } from '../data/series.js';
   border-radius: 1px;
   border: 1px solid rgba(200, 151, 58, 0.15);
 }
-
 .series-card-body { flex: 1; }
-
 .series-card-label {
   font-family: var(--font-sans);
   font-size: 0.54rem;
@@ -337,7 +309,6 @@ import { series } from '../data/series.js';
   margin-bottom: 0.7rem;
   opacity: 0.7;
 }
-
 .series-card-title {
   font-family: var(--font-serif);
   font-size: 1.35rem;
@@ -349,21 +320,18 @@ import { series } from '../data/series.js';
   transition: color var(--t-fast);
 }
 .series-card:hover .series-card-title { color: var(--c, var(--amber)); }
-
 .series-card-desc {
   font-family: var(--font-body);
   font-size: 0.97rem;
   line-height: 1.7;
   color: var(--fog);
 }
-
 .series-card-footer {
   padding-top: 0.5rem;
   border-top: 1px solid var(--border-dim);
   transition: border-color var(--t-base);
 }
 .series-card:hover .series-card-footer { border-color: var(--border); }
-
 .series-card-cta {
   font-family: var(--font-sans);
   font-size: 0.56rem;
@@ -375,17 +343,11 @@ import { series } from '../data/series.js';
   gap: 0.5rem;
   transition: color var(--t-fast), gap var(--t-base);
 }
-.series-card:hover .series-card-cta {
-  color: var(--amber);
-  gap: 0.75rem;
-}
-
-/* ── Responsive ────────────────────────────────────────────────────── */
+.series-card:hover .series-card-cta { color: var(--amber); gap: 0.75rem; }
 @media (max-width: 900px) {
   .series-grid { grid-template-columns: 1fr; padding: 0 1.5rem 5rem; }
   .series-card { animation: none; opacity: 1; }
 }
-
 @media (max-width: 768px) {
   .hero { padding: calc(var(--nav-h) + 3rem) 1.5rem 5rem; }
   .hero-bg-glyph { font-size: clamp(10rem, 30vw, 18rem); right: -5%; opacity: 0.7; }
