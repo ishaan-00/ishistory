@@ -8,45 +8,74 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     #ih-fab {
-      position: fixed;
-      right: 6px;
-      top: 50%;
+      position: fixed; right: 6px; top: 50%;
       transform: translateY(-50%);
-      width: 48px; height: 48px;
-      border-radius: 50%;
-      background: #080e1a;
-      border: 1.5px solid #1e293b;
-      cursor: pointer;
-      z-index: 99998;
+      width: 48px; height: 48px; border-radius: 50%;
+      background: #080e1a; border: 1.5px solid #1e293b;
+      cursor: pointer; z-index: 99998;
       display: flex; align-items: center; justify-content: center;
-      touch-action: manipulation;
-      user-select: none;
-      transition: right 0.2s ease, left 0.2s ease, border-color 0.4s, background 0.2s;
+      touch-action: manipulation; user-select: none;
+      transition: right 0.2s ease, left 0.2s ease, background 0.2s;
       box-shadow: 0 2px 12px #00000066;
     }
     #ih-fab:active { background: #0f172a; }
     #ih-fab.left-side { right: auto; left: 6px; }
-    #ih-fab-dot { width: 10px; height: 10px; border-radius: 50%; background: #334155; flex-shrink: 0; transition: background 0.4s, box-shadow 0.4s; }
+    #ih-fab-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #334155; flex-shrink: 0;
+      transition: background 0.4s, box-shadow 0.4s;
+    }
     #ih-fab-dot.green  { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
     #ih-fab-dot.yellow { background: #eab308; box-shadow: 0 0 6px #eab30888; }
     #ih-fab-dot.red    { background: #ef4444; box-shadow: 0 0 6px #ef444488; }
     #ih-fab-dot.pulse  { animation: ih-pulse 2s ease-in-out infinite; }
     @keyframes ih-pulse { 0%,100%{opacity:1} 50%{opacity:.2} }
-    #ih-fab-badge { position: absolute; top: 4px; right: 4px; min-width: 14px; height: 14px; border-radius: 7px; font-size: 8px; font-weight: 700; color: #fff; display: none; align-items: center; justify-content: center; padding: 0 3px; font-family: 'SF Mono', ui-monospace, monospace; line-height: 1; }
+    #ih-fab.loading #ih-fab-dot {
+      animation: ih-spin 0.8s linear infinite;
+      width: 8px; height: 8px; background: transparent;
+      border: 1.5px solid #334155; border-top-color: #3b82f6; border-radius: 50%;
+    }
+    @keyframes ih-spin { to { transform: rotate(360deg); } }
+    #ih-fab-badge {
+      position: absolute; top: 4px; right: 4px;
+      min-width: 14px; height: 14px; border-radius: 7px;
+      font-size: 8px; font-weight: 700; color: #fff;
+      display: none; align-items: center; justify-content: center;
+      padding: 0 3px; font-family: 'SF Mono', ui-monospace, monospace; line-height: 1;
+    }
     #ih-fab-badge.visible { display: flex; }
-    #ih-fab-hint { position: fixed; bottom: 100px; right: 60px; background: #0f172a; color: #64748b; font-size: 9px; font-family: 'SF Mono', ui-monospace, monospace; padding: 4px 8px; border-radius: 4px; border: 1px solid #1e293b; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 99997; white-space: nowrap; }
+    #ih-fab-hint {
+      position: fixed; bottom: 100px; right: 60px;
+      background: #0f172a; color: #64748b; font-size: 9px;
+      font-family: 'SF Mono', ui-monospace, monospace;
+      padding: 4px 8px; border-radius: 4px; border: 1px solid #1e293b;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s;
+      z-index: 99997; white-space: nowrap;
+    }
     #ih-fab-hint.show { opacity: 1; }
-    #ih-fab.loading #ih-fab-dot { animation: ih-spin 0.8s linear infinite; width: 8px; height: 8px; background: transparent; border: 1.5px solid #334155; border-top-color: #3b82f6; border-radius: 50%; }
-    #ih-backdrop { position: fixed; inset: 0; background: #00000088; z-index: 99998; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+    #ih-backdrop {
+      position: fixed; inset: 0; background: #00000088;
+      z-index: 99998; opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    }
     #ih-backdrop.open { opacity: 1; pointer-events: all; }
-    #ih-panel { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%); width: min(480px, 100vw); max-height: 88vh; background: #05090f; border: 1px solid #1e293b; border-bottom: none; border-radius: 14px 14px 0 0; z-index: 99999; display: flex; flex-direction: column; transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace; font-size: 11px; line-height: 1.4; }
+    #ih-panel {
+      position: fixed; bottom: 0; left: 50%;
+      transform: translateX(-50%) translateY(100%);
+      width: min(480px, 100vw); max-height: 88vh;
+      background: #05090f; border: 1px solid #1e293b; border-bottom: none;
+      border-radius: 14px 14px 0 0; z-index: 99999;
+      display: flex; flex-direction: column;
+      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+      font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
+      font-size: 11px; line-height: 1.4;
+    }
     #ih-panel.open { transform: translateX(-50%) translateY(0); }
+    #ih-drag-handle { width: 36px; height: 4px; border-radius: 2px; background: #1e293b; margin: 8px auto 0; flex-shrink: 0; }
     #ih-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 8px; border-bottom: 1px solid #0f172a; flex-shrink: 0; }
     #ih-panel-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #334155; }
     #ih-panel-meta  { font-size: 9px; color: #1e293b; }
     #ih-panel-close { background: none; border: none; cursor: pointer; color: #334155; font-size: 14px; padding: 0 2px; line-height: 1; font-family: inherit; transition: color 0.15s; }
     #ih-panel-close:hover { color: #ef4444; }
-    #ih-drag-handle { width: 36px; height: 4px; border-radius: 2px; background: #1e293b; margin: 8px auto 0; flex-shrink: 0; }
     #ih-panel-inner { flex: 1; overflow-y: auto; padding: 0 0 20px; scrollbar-width: thin; scrollbar-color: #1e293b transparent; }
     .ih-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; transition: background 0.4s, box-shadow 0.4s; }
     .ih-dot.green  { background: #22c55e; box-shadow: 0 0 5px #22c55e66; }
@@ -87,8 +116,7 @@
     .ih-series-badge { font-size: 9px; padding: 1px 7px; border-radius: 10px; font-weight: 600; letter-spacing: 0.05em; }
     .ih-series-badge.active   { background: #0f2040; color: #38bdf8; }
     .ih-series-badge.complete { background: #052e16; color: #4ade80; }
-    .ih-progress-wrap { margin-bottom: 6px; }
-    .ih-progress-bar { height: 2px; background: #0f172a; border-radius: 1px; overflow: hidden; }
+    .ih-progress-bar { height: 2px; background: #0f172a; border-radius: 1px; overflow: hidden; margin-bottom: 6px; }
     .ih-progress-fill { height: 100%; border-radius: 1px; transition: width 0.5s ease; }
     .ih-progress-fill.active   { background: linear-gradient(90deg, #1d4ed8, #38bdf8); }
     .ih-progress-fill.complete { background: linear-gradient(90deg, #166534, #4ade80); }
@@ -117,7 +145,6 @@
     .ih-activity-path { color: #3a4f66; font-size: 10px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ih-activity-time { color: #1a2435; font-size: 9.5px; flex-shrink: 0; }
     .ih-empty { color: #1a2435; font-size: 10px; padding: 4px 8px; }
-    @keyframes ih-spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -152,9 +179,9 @@
       <div class="ih-section">
         <div class="ih-section-title">Actions</div>
         <div class="ih-actions">
-          <button class="ih-btn" onclick="ihAction('trigger-cron', this)">&#9654; Run Cron</button>
-          <button class="ih-btn" onclick="ihAction('process-staged', this)">&#11014; Publish Staged (<span id="btn-staged-count">0</span>)</button>
-          <button class="ih-btn warn" onclick="ihAction('clear-dead-letter', this)">&#10005; Clear Failed</button>
+          <button class="ih-btn" onclick="ihAction('trigger-cron',this)">&#9654; Run Cron</button>
+          <button class="ih-btn" onclick="ihAction('process-staged',this)">&#11014; Publish Staged (<span id="btn-staged-count">0</span>)</button>
+          <button class="ih-btn warn" onclick="ihAction('clear-dead-letter',this)">&#10005; Clear Failed</button>
         </div>
       </div>
       <div class="ih-section" id="section-staged" style="display:none">
@@ -181,181 +208,352 @@
     const MAX_MS  = 300000;
     const TIMEOUT = 5000;
     const PEEK    = 6;
+
     let isOpen = false, failCount = 0, pollTimer = null, d1Bookmark = null;
     const fab  = document.getElementById('ih-fab');
     const hint = document.getElementById('ih-fab-hint');
     let onLeft = false, fabY = 50, dragging = false;
     let longPressTimer = null, dragStartY = 0, fabStartY = 0, hasDragged = false;
+
     try {
       const saved = JSON.parse(localStorage.getItem('ih-fab-pos') || '{}');
       if (saved.left !== undefined) onLeft = saved.left;
       if (saved.y    !== undefined) fabY   = saved.y;
     } catch(e) {}
+
     function applyFabPos(animate) {
       if (!animate) fab.style.transition = 'none';
-      fab.style.top = fabY + '%'; fab.style.transform = 'none';
+      fab.style.top = fabY + '%';
+      fab.style.transform = 'none';
       if (onLeft) { fab.style.left = PEEK + 'px'; fab.style.right = 'auto'; }
       else        { fab.style.right = PEEK + 'px'; fab.style.left = 'auto'; }
-      if (!animate) requestAnimationFrame(() => fab.style.transition = '');
+      if (!animate) requestAnimationFrame(function() { fab.style.transition = ''; });
     }
     applyFabPos(false);
-    function saveFabPos() { try { localStorage.setItem('ih-fab-pos', JSON.stringify({ left: onLeft, y: fabY })); } catch(e) {} }
+
+    function saveFabPos() {
+      try { localStorage.setItem('ih-fab-pos', JSON.stringify({ left: onLeft, y: fabY })); } catch(e) {}
+    }
+
     function switchSide() {
-      onLeft = !onLeft; applyFabPos(true); saveFabPos();
+      onLeft = !onLeft;
+      applyFabPos(true);
+      saveFabPos();
       hint.style.right = onLeft ? 'auto' : '60px';
       hint.style.left  = onLeft ? '60px' : 'auto';
-      hint.classList.add('show'); setTimeout(() => hint.classList.remove('show'), 1500);
+      hint.classList.add('show');
+      setTimeout(function() { hint.classList.remove('show'); }, 1500);
     }
-    fab.addEventListener('click', () => { if (!dragging) ihToggle(); });
-    fab.addEventListener('pointerdown', e => {
-      dragging = false; hasDragged = false;
-      dragStartY = e.clientY; fabStartY = parseFloat(fab.style.top) || fabY;
-      longPressTimer = setTimeout(() => { if (!hasDragged && !dragging) switchSide(); }, 600);
+
+    // onclick = instant tap, no delay
+    fab.addEventListener('click', function() {
+      if (!dragging) ihToggle();
     });
-    fab.addEventListener('pointermove', e => {
+
+    fab.addEventListener('pointerdown', function(e) {
+      dragging = false; hasDragged = false;
+      dragStartY = e.clientY;
+      fabStartY  = parseFloat(fab.style.top) || fabY;
+      longPressTimer = setTimeout(function() {
+        if (!hasDragged && !dragging) switchSide();
+      }, 600);
+    });
+
+    fab.addEventListener('pointermove', function(e) {
       if (!e.buttons) return;
-      const dy = e.clientY - dragStartY;
-      const newYpct = Math.max(8, Math.min(92, ((fabStartY/100)*window.innerHeight + dy) / window.innerHeight * 100));
+      var dy      = e.clientY - dragStartY;
+      var winH    = window.innerHeight;
+      var newYpct = Math.max(8, Math.min(92, ((fabStartY / 100) * winH + dy) / winH * 100));
       if (Math.abs(dy) > 14) { hasDragged = true; dragging = true; clearTimeout(longPressTimer); }
       if (dragging) { fab.style.top = newYpct + '%'; fabY = newYpct; }
     });
-    fab.addEventListener('pointerup', () => {
+
+    fab.addEventListener('pointerup', function() {
       clearTimeout(longPressTimer);
       if (dragging) { saveFabPos(); dragging = false; }
     });
+
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && isOpen) ihClose(); });
+
     function ihOpen()   { isOpen = true;  document.getElementById('ih-panel').classList.add('open');    document.getElementById('ih-backdrop').classList.add('open'); }
     function ihClose()  { isOpen = false; document.getElementById('ih-panel').classList.remove('open'); document.getElementById('ih-backdrop').classList.remove('open'); }
     function ihToggle() { isOpen ? ihClose() : ihOpen(); }
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen) ihClose(); });
-    function dot(id,c)     { const el=document.getElementById(id); if(el) el.className='ih-dot '+c; }
-    function set(id,t)     { const el=document.getElementById(id); if(el) el.textContent=t; }
-    function html(id,mk)   { const el=document.getElementById(id); if(el) el.innerHTML=mk; }
-    function showBlock(id) { const el=document.getElementById(id); if(el) el.style.display='block'; }
-    function hide(id)      { const el=document.getElementById(id); if(el) el.style.display='none'; }
-    function valCls(el,c)  { if(el) el.className='ih-row-val '+(c||''); }
-    function fileName(p)   { return p?p.split('/').pop():''; }
+
+    function $dot(id, c)   { var el = document.getElementById(id); if (el) el.className = 'ih-dot ' + c; }
+    function $set(id, t)   { var el = document.getElementById(id); if (el) el.textContent = t; }
+    function $html(id, mk) { var el = document.getElementById(id); if (el) el.innerHTML = mk; }
+    function $show(id)     { var el = document.getElementById(id); if (el) el.style.display = 'block'; }
+    function $hide(id)     { var el = document.getElementById(id); if (el) el.style.display = 'none'; }
+    function $cls(el, c)   { if (el) el.className = 'ih-row-val ' + (c || ''); }
+    function fileName(p)   { return p ? p.split('/').pop() : ''; }
+
     function relTime(s) {
       if (!s) return 'never';
-      const ms = new Date(s.replace(' ','T')+(s.includes('T')?'':'Z')).getTime();
-      if (isNaN(ms)) return '—';
-      const d = Math.floor((Date.now()-ms)/1000);
-      if (d<5) return 'just now'; if (d<60) return d+'s ago';
-      if (d<3600) return Math.floor(d/60)+'m ago'; if (d<86400) return Math.floor(d/3600)+'h ago';
-      return Math.floor(d/86400)+'d ago';
+      var ms = new Date(s.replace(' ', 'T') + (s.indexOf('T') >= 0 ? '' : 'Z')).getTime();
+      if (isNaN(ms)) return '--';
+      var d = Math.floor((Date.now() - ms) / 1000);
+      if (d < 5)     return 'just now';
+      if (d < 60)    return d + 's ago';
+      if (d < 3600)  return Math.floor(d / 60) + 'm ago';
+      if (d < 86400) return Math.floor(d / 3600) + 'h ago';
+      return Math.floor(d / 86400) + 'd ago';
     }
+
     function connStatus(c) {
-      if (!c||c.status==='never') return {color:'grey',  text:'never connected'};
-      if (c.status==='active')    return {color:'green', text:'active · '+relTime(c.last_seen)};
-      if (c.status==='idle')      return {color:'yellow',text:'idle · '+relTime(c.last_seen)};
-      return                             {color:'red',   text:'offline · '+relTime(c.last_seen)};
+      if (!c || c.status === 'never') return { color: 'grey',   text: 'never connected' };
+      if (c.status === 'active')      return { color: 'green',  text: 'active \u00b7 ' + relTime(c.last_seen) };
+      if (c.status === 'idle')        return { color: 'yellow', text: 'idle \u00b7 '   + relTime(c.last_seen) };
+      return                                 { color: 'red',    text: 'offline \u00b7 ' + relTime(c.last_seen) };
     }
-    async function fetchT(url, opts={}) {
-      const ctrl = new AbortController();
-      const id = setTimeout(()=>ctrl.abort(), TIMEOUT);
-      try { const r=await fetch(url,{...opts,signal:ctrl.signal}); clearTimeout(id); return r; }
-      catch(e) { clearTimeout(id); throw e; }
+
+    function setFabDot(color) {
+      document.getElementById('ih-fab-dot').className = color;
     }
+
+    async function fetchT(url, opts) {
+      opts = opts || {};
+      var ctrl = new AbortController();
+      var id = setTimeout(function() { ctrl.abort(); }, TIMEOUT);
+      try {
+        var r = await fetch(url, Object.assign({}, opts, { signal: ctrl.signal }));
+        clearTimeout(id);
+        return r;
+      } catch(e) { clearTimeout(id); throw e; }
+    }
+
     async function ihAction(type, btn) {
-      btn.disabled=true; const orig=btn.innerHTML; btn.textContent='...';
+      btn.disabled = true;
+      var orig = btn.innerHTML;
+      btn.textContent = '...';
       try {
-        const hdr={'Content-Type':'application/json'}; if(d1Bookmark) hdr['X-D1-Bookmark']=d1Bookmark;
-        const res=await fetchT(`${WORKER}/claude/action`,{method:'POST',headers:hdr,body:JSON.stringify({action:type})});
-        if(!res.ok) throw new Error();
-        const bm=res.headers.get('x-d1-bookmark'); if(bm) d1Bookmark=bm;
-        btn.classList.add('ok'); btn.textContent='Done'; setTimeout(()=>ihRefresh(),600);
-      } catch(e) { btn.classList.add('fail'); btn.textContent='Error'; }
-      finally { setTimeout(()=>{ btn.disabled=false; btn.classList.remove('ok','fail'); btn.innerHTML=orig; },2000); }
-    }
-    async function discardDraft(path, btn) {
-      btn.disabled=true;
-      try {
-        const hdr={}; if(d1Bookmark) hdr['X-D1-Bookmark']=d1Bookmark;
-        const res=await fetchT(`${WORKER}/claude/discard?path=${encodeURIComponent(path)}`,{headers:hdr});
-        if(!res.ok) throw new Error();
-        const bm=res.headers.get('x-d1-bookmark'); if(bm) d1Bookmark=bm;
-        btn.closest('.ih-staged-row').style.opacity='0.3'; setTimeout(()=>ihRefresh(),400);
-      } catch(e) { btn.disabled=false; }
-    }
-    async function toggleSeries(name, newStatus, btn) {
-      btn.disabled=true; const orig=btn.textContent; btn.textContent='...';
-      try {
-        const hdr={'Content-Type':'application/json'}; if(d1Bookmark) hdr['X-D1-Bookmark']=d1Bookmark;
-        const res=await fetchT(`${WORKER}/claude/action`,{method:'POST',headers:hdr,body:JSON.stringify({action:newStatus==='complete'?'mark-complete':'mark-active',series:name})});
-        if(!res.ok) throw new Error();
-        const bm=res.headers.get('x-d1-bookmark'); if(bm) d1Bookmark=bm;
-        setTimeout(()=>ihRefresh(),300);
-      } catch(e) { btn.disabled=false; btn.textContent=orig; }
-    }
-    function renderStaged(staged) {
-      if (!staged||!staged.length) { hide('section-staged'); return; }
-      showBlock('section-staged'); set('staged-count-label', staged.length);
-      html('staged-list', staged.map(d=>`<div class="ih-staged-row"><span class="ih-staged-path" title="${d.path}">${fileName(d.path)}</span><span class="ih-staged-size">${(d.size/1024).toFixed(1)}kb</span><button class="ih-staged-discard" onclick="discardDraft('${d.path.replace(/'/g,"\\'")}",this)">&#10005;</button></div>`).join(''));
-    }
-    function renderSeries(stats) {
-      if (!stats||!Object.keys(stats).length) { html('series-list','<div class="ih-empty">No series found</div>'); return; }
-      const entries=Object.entries(stats);
-      const completed=entries.filter(([,d])=>d.status==='complete').length;
-      set('series-summary',`${completed}/${entries.length} complete`);
-      entries.sort(([,a],[,b])=>a.status===b.status?0:a.status==='active'?-1:1);
-      html('series-list', entries.map(([name,d])=>{
-        const isC=d.status==='complete', eps=d.episodes||0;
-        const pct=isC?100:Math.round(((eps%10)||(eps>0?10:0))/10*100);
-        const stat=[`<span>${eps} ep${eps!==1?'s':''}</span>`,d.profiles>0?`<span>${d.profiles} profiles</span>`:'',isC?`<span class="ih-series-done">✓ complete</span>`:d.episode_gaps?.length?`<span class="ih-series-gap">⚠ gap ${d.episode_gaps.join(', ')}</span>`:`<span class="ih-series-next">next: #${d.next_episode}</span>`].filter(Boolean).join('');
-        const tog=isC?`<button class="ih-series-btn active-btn" onclick="toggleSeries('${name}','active',this)">↺ Mark Active</button>`:`<button class="ih-series-btn complete-btn" onclick="toggleSeries('${name}','complete',this)">✓ Mark Complete</button>`;
-        const ca=isC&&d.completed_at?`<span class="ih-completed-at">completed ${relTime(d.completed_at)}</span>`:'';
-        return `<div class="ih-series-card ${isC?'complete':'"}"><div class="ih-series-card-top"><span class="ih-series-name">${name.replace(/-/g,' ')}</span><span class="ih-series-badge ${isC?'complete':'active'}">${isC?'✓ COMPLETE':'ACTIVE'}</span></div><div class="ih-progress-wrap"><div class="ih-progress-bar"><div class="ih-progress-fill ${isC?'complete':'active'}" style="width:${pct}%"></div></div></div><div class="ih-series-stats">${stat}</div><div class="ih-series-actions">${tog}${ca}</div></div>`;
-      }).join(''));
-    }
-    function renderCronLog(log) {
-      if (!log?.length) { html('cron-list','<div class="ih-empty">No runs yet</div>'); return; }
-      html('cron-list', log.map(r=>{ const pub=`<span class="ih-cron-stat ${r.published>0?'pub':'idle'}">+${r.published}</span>`; const del=`<span class="ih-cron-stat ${r.deleted>0?'del':'idle'}">${r.deleted>0?'-':'·'}${r.deleted}</span>`; const fail=r.failed>0?`<span class="ih-cron-stat fail">✕${r.failed}</span>`:''; const files=r.details?.filter(d=>d.success).map(d=>fileName(d.path)).filter(Boolean).join(', ')||''; return `<div class="ih-cron-row"><span class="ih-cron-time">${relTime(r.ran_at)}</span><div class="ih-cron-stats">${pub}${del}${fail}</div>${files?`<span class="ih-cron-files" title="${files}">${files}</span>`:''}</div>`; }).join(''));
-    }
-    function renderActivity(activity) {
-      if (!activity?.length) { html('activity-list','<div class="ih-empty">No activity yet</div>'); return; }
-      const styles={publish:{color:'#22c55e',label:'publish'},delete:{color:'#ef4444',label:'delete'},rollback:{color:'#f59e0b',label:'rollback'},webhook_sync:{color:'#3b82f6',label:'webhook'}};
-      html('activity-list', activity.map(r=>{ const s=styles[r.action]||{color:'#475569',label:r.action}; return `<div class="ih-activity-row"><span class="ih-activity-action" style="color:${s.color}">${s.label}</span><span class="ih-activity-path" title="${r.path}">${fileName(r.path)||r.path}</span><span class="ih-activity-time">${relTime(r.happened_at)}</span></div>`; }).join(''));
-    }
-    async function ihRefresh() {
-      clearTimeout(pollTimer); fab.classList.add('loading');
-      try {
-        const hdr={}; if(d1Bookmark) hdr['X-D1-Bookmark']=d1Bookmark;
-        const res=await fetchT(`${WORKER}/claude/heartbeat`,{headers:hdr});
-        if(!res.ok) throw new Error(`HTTP ${res.status}`);
-        const bm=res.headers.get('x-d1-bookmark'); if(bm) d1Bookmark=bm;
-        const {health,connections,stats,cron_log,staged,activity}=await res.json();
-        failCount=0; fab.classList.remove('loading');
-        set('ih-refresh-time', relTime(new Date().toISOString()));
-        set('ih-panel-meta',   relTime(new Date().toISOString()));
-        const workerOk=health.status==='ok'||health.status==='warning';
-        document.getElementById('ih-fab-dot').className=!workerOk?'red':health.status==='warning'?'yellow':'green';
-        const badge=document.getElementById('ih-fab-badge');
-        const totalDraft=health.drafts||0, deadN=health.dead_letter||0;
-        if (deadN>0)         { badge.textContent=deadN;       badge.className='visible'; badge.style.background='#ef4444'; }
-        else if(totalDraft>0){ badge.textContent=totalDraft; badge.className='visible'; badge.style.background='#3b82f6'; }
-        else                 { badge.className=''; }
-        dot('p-worker-dot', workerOk?'green':'red');
-        const wEl=document.getElementById('p-worker-val'); wEl.textContent=workerOk?'Online':'Offline'; valCls(wEl,workerOk?'good':'bad');
-        dot('p-github-dot', health.github_user?'green':'red'); set('p-github-val', health.github_user||'Not connected');
-        dot('p-d1-dot', health.d1==='connected'?'green':'red'); set('p-d1-val', health.d1||'—');
-        const connMap={}; (connections||[]).forEach(c=>connMap[c.name]=c);
-        const cs=connStatus(connMap['claude']); dot('p-claude-dot',cs.color); set('p-claude-val',cs.text);
-        dot('p-queue-dot', totalDraft>0?'blue':'grey');
-        set('p-queue-val', totalDraft>0?`${totalDraft} draft${totalDraft!==1?'s':''}`:'Empty');
-        document.getElementById('btn-staged-count').textContent=totalDraft;
-        if (health.last_cron) { dot('p-cron-dot','green'); set('p-cron-val',relTime(health.last_cron.ran_at)); }
-        else { dot('p-cron-dot','grey'); set('p-cron-val','Never run'); }
-        const dEl=document.getElementById('p-dead-val');
-        dot('p-dead-dot', deadN>0?'red':'grey'); dEl.textContent=deadN>0?`${deadN} failed`:'None'; valCls(dEl,deadN>0?'bad':'');
-        const lastWH=(activity||[]).find(a=>a.action==='webhook_sync');
-        dot('p-webhook-dot', lastWH?'green':'grey'); set('p-webhook-val', lastWH?relTime(lastWH.happened_at):'No syncs yet');
-        renderStaged(staged); renderSeries(stats); renderCronLog(cron_log); renderActivity(activity);
+        var hdr = { 'Content-Type': 'application/json' };
+        if (d1Bookmark) hdr['X-D1-Bookmark'] = d1Bookmark;
+        var res = await fetchT(WORKER + '/claude/action', { method: 'POST', headers: hdr, body: JSON.stringify({ action: type }) });
+        if (!res.ok) throw new Error('failed');
+        var bm = res.headers.get('x-d1-bookmark');
+        if (bm) d1Bookmark = bm;
+        btn.classList.add('ok'); btn.textContent = 'Done';
+        setTimeout(function() { ihRefresh(); }, 600);
       } catch(e) {
-        failCount++; fab.classList.remove('loading');
-        document.getElementById('ih-fab-dot').className='red pulse';
+        btn.classList.add('fail'); btn.textContent = 'Error';
       } finally {
-        pollTimer=setTimeout(ihRefresh, Math.min(BASE_MS*Math.pow(1.5,failCount), MAX_MS));
+        setTimeout(function() { btn.disabled = false; btn.classList.remove('ok', 'fail'); btn.innerHTML = orig; }, 2000);
       }
     }
+
+    async function discardDraft(path, btn) {
+      btn.disabled = true;
+      try {
+        var hdr = {};
+        if (d1Bookmark) hdr['X-D1-Bookmark'] = d1Bookmark;
+        var res = await fetchT(WORKER + '/claude/discard?path=' + encodeURIComponent(path), { headers: hdr });
+        if (!res.ok) throw new Error('failed');
+        var bm = res.headers.get('x-d1-bookmark');
+        if (bm) d1Bookmark = bm;
+        btn.closest('.ih-staged-row').style.opacity = '0.3';
+        setTimeout(function() { ihRefresh(); }, 400);
+      } catch(e) { btn.disabled = false; }
+    }
+
+    async function toggleSeries(name, newStatus, btn) {
+      btn.disabled = true;
+      var orig = btn.textContent;
+      btn.textContent = '...';
+      try {
+        var hdr = { 'Content-Type': 'application/json' };
+        if (d1Bookmark) hdr['X-D1-Bookmark'] = d1Bookmark;
+        var action = newStatus === 'complete' ? 'mark-complete' : 'mark-active';
+        var res = await fetchT(WORKER + '/claude/action', { method: 'POST', headers: hdr, body: JSON.stringify({ action: action, series: name }) });
+        if (!res.ok) throw new Error('failed');
+        var bm = res.headers.get('x-d1-bookmark');
+        if (bm) d1Bookmark = bm;
+        setTimeout(function() { ihRefresh(); }, 300);
+      } catch(e) { btn.disabled = false; btn.textContent = orig; }
+    }
+
+    function renderStaged(staged) {
+      if (!staged || !staged.length) { $hide('section-staged'); return; }
+      $show('section-staged');
+      $set('staged-count-label', staged.length);
+      var rows = staged.map(function(d) {
+        var safePath = d.path.replace(/'/g, "\\'");
+        return '<div class="ih-staged-row">'
+          + '<span class="ih-staged-path" title="' + d.path + '">' + fileName(d.path) + '</span>'
+          + '<span class="ih-staged-size">' + (d.size / 1024).toFixed(1) + 'kb</span>'
+          + '<button class="ih-staged-discard" onclick="discardDraft(\'' + safePath + '\',this)">&#10005;</button>'
+          + '</div>';
+      });
+      $html('staged-list', rows.join(''));
+    }
+
+    function renderSeries(stats) {
+      if (!stats || !Object.keys(stats).length) { $html('series-list', '<div class="ih-empty">No series found</div>'); return; }
+      var entries = Object.entries(stats);
+      var completed = entries.filter(function(e) { return e[1].status === 'complete'; }).length;
+      $set('series-summary', completed + '/' + entries.length + ' complete');
+      entries.sort(function(a, b) {
+        if (a[1].status === b[1].status) return 0;
+        return a[1].status === 'active' ? -1 : 1;
+      });
+      var cards = entries.map(function(entry) {
+        var name = entry[0];
+        var d    = entry[1];
+        var isC  = d.status === 'complete';
+        var eps  = d.episodes || 0;
+        var pct  = isC ? 100 : Math.round(((eps % 10) || (eps > 0 ? 10 : 0)) / 10 * 100);
+        var cardClass = isC ? 'ih-series-card complete' : 'ih-series-card';
+        var badgeClass = isC ? 'ih-series-badge complete' : 'ih-series-badge active';
+        var badgeText  = isC ? '\u2713 COMPLETE' : 'ACTIVE';
+        var fillClass  = isC ? 'ih-progress-fill complete' : 'ih-progress-fill active';
+
+        var statParts = ['<span>' + eps + ' ep' + (eps !== 1 ? 's' : '') + '</span>'];
+        if (d.profiles > 0) statParts.push('<span>' + d.profiles + ' profiles</span>');
+        if (isC) {
+          statParts.push('<span class="ih-series-done">\u2713 complete</span>');
+        } else if (d.episode_gaps && d.episode_gaps.length) {
+          statParts.push('<span class="ih-series-gap">\u26a0 gap ' + d.episode_gaps.join(', ') + '</span>');
+        } else {
+          statParts.push('<span class="ih-series-next">next: #' + d.next_episode + '</span>');
+        }
+
+        var tog = isC
+          ? '<button class="ih-series-btn active-btn" onclick="toggleSeries(\'' + name + '\',\'active\',this)">\u21ba Mark Active</button>'
+          : '<button class="ih-series-btn complete-btn" onclick="toggleSeries(\'' + name + '\',\'complete\',this)">\u2713 Mark Complete</button>';
+        var ca = (isC && d.completed_at)
+          ? '<span class="ih-completed-at">completed ' + relTime(d.completed_at) + '</span>'
+          : '';
+
+        return '<div class="' + cardClass + '">'
+          + '<div class="ih-series-card-top">'
+          + '<span class="ih-series-name">' + name.replace(/-/g, ' ') + '</span>'
+          + '<span class="' + badgeClass + '">' + badgeText + '</span>'
+          + '</div>'
+          + '<div class="ih-progress-bar"><div class="' + fillClass + '" style="width:' + pct + '%"></div></div>'
+          + '<div class="ih-series-stats">' + statParts.join('') + '</div>'
+          + '<div class="ih-series-actions">' + tog + ca + '</div>'
+          + '</div>';
+      });
+      $html('series-list', cards.join(''));
+    }
+
+    function renderCronLog(log) {
+      if (!log || !log.length) { $html('cron-list', '<div class="ih-empty">No runs yet</div>'); return; }
+      var rows = log.map(function(r) {
+        var pubClass = r.published > 0 ? 'pub' : 'idle';
+        var delClass = r.deleted   > 0 ? 'del' : 'idle';
+        var pub  = '<span class="ih-cron-stat ' + pubClass + '">+' + r.published + '</span>';
+        var del  = '<span class="ih-cron-stat ' + delClass + '">' + (r.deleted > 0 ? '-' : '\u00b7') + r.deleted + '</span>';
+        var fail = r.failed > 0 ? '<span class="ih-cron-stat fail">\u2715' + r.failed + '</span>' : '';
+        var details = r.details || [];
+        var files = details.filter(function(d) { return d.success; }).map(function(d) { return fileName(d.path); }).filter(Boolean).join(', ');
+        var filesSpan = files ? '<span class="ih-cron-files" title="' + files + '">' + files + '</span>' : '';
+        return '<div class="ih-cron-row">'
+          + '<span class="ih-cron-time">' + relTime(r.ran_at) + '</span>'
+          + '<div class="ih-cron-stats">' + pub + del + fail + '</div>'
+          + filesSpan
+          + '</div>';
+      });
+      $html('cron-list', rows.join(''));
+    }
+
+    function renderActivity(activity) {
+      if (!activity || !activity.length) { $html('activity-list', '<div class="ih-empty">No activity yet</div>'); return; }
+      var styles = {
+        publish:      { color: '#22c55e', label: 'publish' },
+        delete:       { color: '#ef4444', label: 'delete' },
+        rollback:     { color: '#f59e0b', label: 'rollback' },
+        webhook_sync: { color: '#3b82f6', label: 'webhook' }
+      };
+      var rows = activity.map(function(r) {
+        var s = styles[r.action] || { color: '#475569', label: r.action };
+        return '<div class="ih-activity-row">'
+          + '<span class="ih-activity-action" style="color:' + s.color + '">' + s.label + '</span>'
+          + '<span class="ih-activity-path" title="' + r.path + '">' + (fileName(r.path) || r.path) + '</span>'
+          + '<span class="ih-activity-time">' + relTime(r.happened_at) + '</span>'
+          + '</div>';
+      });
+      $html('activity-list', rows.join(''));
+    }
+
+    async function ihRefresh() {
+      clearTimeout(pollTimer);
+      fab.classList.add('loading');
+      try {
+        var hdr = {};
+        if (d1Bookmark) hdr['X-D1-Bookmark'] = d1Bookmark;
+        var res = await fetchT(WORKER + '/claude/heartbeat', { headers: hdr });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var bm = res.headers.get('x-d1-bookmark');
+        if (bm) d1Bookmark = bm;
+        var data = await res.json();
+        var health = data.health, connections = data.connections, stats = data.stats;
+        var cron_log = data.cron_log, staged = data.staged, activity = data.activity;
+
+        failCount = 0;
+        fab.classList.remove('loading');
+        $set('ih-refresh-time', relTime(new Date().toISOString()));
+        $set('ih-panel-meta',   relTime(new Date().toISOString()));
+
+        var workerOk = health.status === 'ok' || health.status === 'warning';
+        var mainColor = !workerOk ? 'red' : health.status === 'warning' ? 'yellow' : 'green';
+        setFabDot(mainColor);
+
+        var badge = document.getElementById('ih-fab-badge');
+        var totalDraft = health.drafts || 0;
+        var deadN      = health.dead_letter || 0;
+        if (deadN > 0)         { badge.textContent = deadN;       badge.className = 'visible'; badge.style.background = '#ef4444'; }
+        else if (totalDraft > 0) { badge.textContent = totalDraft; badge.className = 'visible'; badge.style.background = '#3b82f6'; }
+        else                     { badge.className = ''; }
+
+        var wEl = document.getElementById('p-worker-val');
+        $dot('p-worker-dot', workerOk ? 'green' : 'red');
+        wEl.textContent = workerOk ? 'Online' : 'Offline';
+        $cls(wEl, workerOk ? 'good' : 'bad');
+
+        $dot('p-github-dot', health.github_user ? 'green' : 'red');
+        $set('p-github-val', health.github_user || 'Not connected');
+
+        $dot('p-d1-dot', health.d1 === 'connected' ? 'green' : 'red');
+        $set('p-d1-val', health.d1 || '--');
+
+        var connMap = {};
+        (connections || []).forEach(function(c) { connMap[c.name] = c; });
+        var cs = connStatus(connMap['claude']);
+        $dot('p-claude-dot', cs.color);
+        $set('p-claude-val', cs.text);
+
+        $dot('p-queue-dot', totalDraft > 0 ? 'blue' : 'grey');
+        $set('p-queue-val', totalDraft > 0 ? totalDraft + ' draft' + (totalDraft !== 1 ? 's' : '') : 'Empty');
+        document.getElementById('btn-staged-count').textContent = totalDraft;
+
+        if (health.last_cron) { $dot('p-cron-dot', 'green'); $set('p-cron-val', relTime(health.last_cron.ran_at)); }
+        else                  { $dot('p-cron-dot', 'grey');  $set('p-cron-val', 'Never run'); }
+
+        var dEl = document.getElementById('p-dead-val');
+        $dot('p-dead-dot', deadN > 0 ? 'red' : 'grey');
+        dEl.textContent = deadN > 0 ? deadN + ' failed' : 'None';
+        $cls(dEl, deadN > 0 ? 'bad' : '');
+
+        var lastWH = (activity || []).find(function(a) { return a.action === 'webhook_sync'; });
+        $dot('p-webhook-dot', lastWH ? 'green' : 'grey');
+        $set('p-webhook-val', lastWH ? relTime(lastWH.happened_at) : 'No syncs yet');
+
+        renderStaged(staged);
+        renderSeries(stats);
+        renderCronLog(cron_log);
+        renderActivity(activity);
+
+      } catch(e) {
+        failCount++;
+        fab.classList.remove('loading');
+        setFabDot('red');
+        document.getElementById('ih-fab-dot').classList.add('pulse');
+      } finally {
+        var delay = Math.min(BASE_MS * Math.pow(1.5, failCount), MAX_MS);
+        pollTimer = setTimeout(function() { ihRefresh(); }, delay);
+      }
+    }
+
     ihRefresh();
   </script>
 </body>
