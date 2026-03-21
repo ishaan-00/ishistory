@@ -36,8 +36,7 @@ const ENV = {
   CMS_API_KEY:      process.env.CMS_API_KEY              || '',
   GIT_SHA:          (process.env.GIT_SHA || '').slice(0, 7),
   GIT_REPO:         process.env.GIT_REPO || 'ishaan-00/ishistory',
-  HF_TOKEN:         process.env.HF_TOKEN || '',
-  GITHUB_TOKEN:     process.env.GITHUB_TOKEN || '',
+  GITHUB_TOKEN:     process.env.GITHUB_TOKEN || '',  // used for GitHub Models + status.json writes
 };
 
 // ─── Logger ───────────────────────────────────────────────────────────────────
@@ -128,68 +127,53 @@ function validateFm(fm) {
   return issues;
 }
 
-// ─── HF Inference API ────────────────────────────────────────────────────────
-// Single function for both generation calls.
-// Returns generated text or throws so withRetry can handle transient errors.
-const HF_MODEL   = 'mistralai/Mistral-7B-Instruct-v0.3';
-const HF_MAX_WAIT = 60; // max seconds to wait for model cold start
+// ─── GitHub Models API ───────────────────────────────────────────────────────
+// Uses GITHUB_TOKEN (already available in Actions) — no extra secret needed.
+// OpenAI-compatible endpoint. Always warm, no cold starts.
+// Requires `permissions: models: read` in the workflow.
+const GH_MODEL = 'openai/gpt-4o-mini'; // fast + cheap, great for article generation
 
-async function hfGenerate(prompt, maxTokens = 1024) {
-  if (!ENV.HF_TOKEN) throw new Error('HF_TOKEN not configured');
+async function generateContent(systemPrompt, userPrompt, maxTokens = 2000) {
+  if (!ENV.GITHUB_TOKEN) throw new Error('GITHUB_TOKEN not available');
 
-  // Retry loop handles 503 model-loading responses with HF's estimated_time
-  for (let attempt = 1; attempt <= 5; attempt++) {
-    const controller = new AbortController();
-    const timeout    = setTimeout(() => controller.abort(), 60_000); // 60s per call
+  const controller = new AbortController();
+  const timeout    = setTimeout(() => controller.abort(), 90_000); // 90s timeout
 
-    let res;
-    try {
-      res = await fetch(
-        `https://api-inference.huggingface.co/models/${HF_MODEL}`,
-        {
-          method:  'POST',
-          signal:  controller.signal,
-          headers: { Authorization: `Bearer ${ENV.HF_TOKEN}`, 'Content-Type': 'application/json' },
-          body:    JSON.stringify({
-            inputs:     prompt,
-            parameters: {
-              max_new_tokens:   maxTokens,
-              temperature:      0.7,
-              top_p:            0.9,
-              do_sample:        true,
-              return_full_text: false,
-            },
-          }),
-        }
-      );
-    } catch (e) {
-      clearTimeout(timeout);
-      if (e.name === 'AbortError') throw new Error(`HF API timed out after 60s (attempt ${attempt})`);
-      throw e;
-    }
+  let res;
+  try {
+    res = await fetch('https://models.github.ai/inference/chat/completions', {
+      method:  'POST',
+      signal:  controller.signal,
+      headers: {
+        Authorization: `Bearer ${ENV.GITHUB_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model:       GH_MODEL,
+        messages:    [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userPrompt   },
+        ],
+        max_tokens:  maxTokens,
+        temperature: 0.7,
+      }),
+    });
+  } catch (e) {
     clearTimeout(timeout);
+    if (e.name === 'AbortError') throw new Error('GitHub Models API timed out after 90s');
+    throw e;
+  }
+  clearTimeout(timeout);
 
-    // 503 = model still loading — HF tells us how long to wait
-    if (res.status === 503) {
-      const body        = await res.json().catch(() => ({}));
-      const waitSeconds = Math.min(body.estimated_time || 20, HF_MAX_WAIT);
-      log.warn(`HF model loading — waiting ${waitSeconds}s (attempt ${attempt}/5)...`);
-      await new Promise(r => setTimeout(r, waitSeconds * 1000));
-      continue;
-    }
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || err.message || `HF API HTTP ${res.status}`);
-    }
-
-    const data = await res.json();
-    const text = Array.isArray(data) ? data[0]?.generated_text : data?.generated_text;
-    if (!text) throw new Error('HF API returned empty response');
-    return text.trim();
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || err.message || `GitHub Models HTTP ${res.status}`);
   }
 
-  throw new Error('HF model did not load after 5 attempts — try again later');
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) throw new Error('GitHub Models returned empty response');
+  return text.trim();
 }
 
 // ─── Generate Dev.to content (1,200–1,300 words) ─────────────────────────────
@@ -206,26 +190,26 @@ async function generateDevtoContent(fm) {
   if (cached && !cacheOk) {
     log.warn(`Dev.to: cached content too short (${wc(fm.devto_content)} words) — regenerating`);
   }
-  log.info('Dev.to: generating via Mistral-7B…');
+  log.info('Dev.to: generating via GitHub Models (gpt-4o-mini)…');
   const seriesName = (fm.series || '').replace(/-/g, ' ');
   const epNum      = fm.episode_number ? `, Episode ${fm.episode_number}` : '';
-  const prompt = `<s>[INST] Write a 1,200-1,300 word article for the Dev.to developer and tech community.
+
+  const system = `You are a technical history writer for Dev.to. Write engaging, well-structured articles for a developer audience. Use clear H2 headings, keep sections 150-200 words each. Write only the article body in markdown — no title, no preamble.`;
+
+  const user = `Write a 1,200-1,300 word article for the Dev.to developer and tech community.
 
 Title: "${fm.title}"
 Subtitle: "${fm.description || ''}"
 Series: ${seriesName}${epNum}
 
 Requirements:
-- Engaging, informative tone suited to a curious technical audience
-- Use clear H2 section headings to break up the article
-- Include historical context, key figures, and why this matters today
-- Each section should be 150-200 words
+- Engaging tone suited to curious technical readers
+- Clear H2 section headings breaking up the article
+- Historical context, key figures, why this matters today
 - End with a paragraph noting this is part of the ${seriesName} series on ishistory.pages.dev
-- Write only the article body in markdown — no title, no preamble, no commentary
+- Write only the article body — no title heading, no preamble, no commentary`;
 
-Begin writing now: [/INST]`;
-
-  return withRetry('HF Dev.to', () => hfGenerate(prompt, 1400));
+  return withRetry('GitHub Models Dev.to', () => generateContent(system, user, 2000));
 }
 
 // ─── Generate Hashnode content (1,500–2,000 words) ───────────────────────────
@@ -242,26 +226,27 @@ async function generateHashnodeContent(fm) {
   if (cached && !cacheOk) {
     log.warn(`Hashnode: cached content too short (${wc(fm.hashnode_content)} words) — regenerating`);
   }
-  log.info('Hashnode: generating via Mistral-7B…');
+  log.info('Hashnode: generating via GitHub Models (gpt-4o-mini)…');
   const seriesName = (fm.series || '').replace(/-/g, ' ');
   const epNum      = fm.episode_number ? `, Episode ${fm.episode_number}` : '';
-  const prompt = `<s>[INST] Write a 1,500-2,000 word editorial article for a history and ideas blog.
+
+  const system = `You are an authoritative history writer for Hashnode. Write rich, narrative-driven long-form articles in a literary journalism style. Favour dense flowing paragraphs over bullet points. Write only the article body in markdown — no title, no preamble.`;
+
+  const user = `Write a 1,500-2,000 word editorial article for a history and ideas blog.
 
 Title: "${fm.title}"
 Subtitle: "${fm.description || ''}"
 Series: ${seriesName}${epNum}
 
 Requirements:
-- Authoritative, richly written, narrative-driven long-form journalism style
-- Single flowing argument — avoid bullet points, favour dense paragraphs
-- Historically rich with specific names, dates, and primary details
+- Authoritative, richly written, narrative-driven journalism style
+- Single flowing argument with dense paragraphs — avoid bullet points
+- Historically rich: specific names, dates, primary details
 - Build towards a conclusion about why this history matters now
 - End with a paragraph noting this is part of the ${seriesName} series on ishistory.pages.dev
-- Write only the article body in markdown — no title, no preamble, no commentary
+- Write only the article body — no title heading, no preamble, no commentary`;
 
-Begin writing now: [/INST]`;
-
-  return withRetry('HF Hashnode', () => hfGenerate(prompt, 1900));
+  return withRetry('GitHub Models Hashnode', () => generateContent(system, user, 2500));
 }
 
 // ─── Write generated content back to .md frontmatter ─────────────────────────
@@ -657,13 +642,13 @@ async function main() {
   log.info(`Article:  ${wc(body)} words`);
 
   // Generate platform-specific content via HF API (2 calls total)
-  // Falls back to description if HF_TOKEN not set — never blocks the pipeline
+  // Falls back to description if GITHUB_TOKEN unavailable — never blocks the pipeline
   log.section('Generating platform content');
   const [devtoRaw, hashnodeRaw] = await Promise.all([
-    ENV.HF_TOKEN
+    ENV.GITHUB_TOKEN
       ? generateDevtoContent(fm).catch(e => { log.warn(`Dev.to gen failed: ${e.message} — using description`); return fm.description || fm.title; })
       : Promise.resolve(fm.description || fm.title),
-    ENV.HF_TOKEN
+    ENV.GITHUB_TOKEN
       ? generateHashnodeContent(fm).catch(e => { log.warn(`Hashnode gen failed: ${e.message} — using description`); return fm.description || fm.title; })
       : Promise.resolve(fm.description || fm.title),
   ]);
