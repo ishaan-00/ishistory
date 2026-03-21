@@ -1,1 +1,48 @@
+name: Daily
 
+on:
+  schedule:
+    - cron: '0 9 * * *'   # 09:00 UTC every day
+  workflow_dispatch:       # manual trigger for testing
+
+jobs:
+  daily:
+    name: Today in History + Scheduled Posts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write      # needed to update scheduled.json
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --no-save gray-matter
+
+      - name: Run daily tasks
+        env:
+          DISCORD_WEBHOOK_TODAY:    ${{ secrets.DISCORD_WEBHOOK_TODAY }}
+          DISCORD_WEBHOOK_ARTICLES: ${{ secrets.DISCORD_WEBHOOK_ARTICLES }}
+          DEVTO_API_KEY:            ${{ secrets.DEVTO_API_KEY }}
+          HASHNODE_API_KEY:         ${{ secrets.HASHNODE_API_KEY }}
+          HASHNODE_PUBLICATION_ID:  ${{ secrets.HASHNODE_PUBLICATION_ID }}
+          NTFY_TOPIC:               ${{ secrets.NTFY_TOPIC }}
+          INDEXNOW_KEY:             ${{ secrets.INDEXNOW_KEY }}
+          WORKER_URL:               ${{ secrets.WORKER_URL }}
+          CMS_API_KEY:              ${{ secrets.CMS_API_KEY }}
+          GITHUB_TOKEN:             ${{ secrets.GITHUB_TOKEN }}
+          GIT_REPO:                 ${{ github.repository }}
+          GIT_SHA:                  ${{ github.sha }}
+        run: node .github/scripts/daily.mjs
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Daily Run — $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "Cron: Today in History + Scheduled posts processed." >> $GITHUB_STEP_SUMMARY
