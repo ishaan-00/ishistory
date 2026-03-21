@@ -64,6 +64,7 @@ jobs:
           WORKER_URL:               ${{ secrets.WORKER_URL }}
           CMS_API_KEY:              ${{ secrets.CMS_API_KEY }}
           GITHUB_TOKEN:             ${{ secrets.GITHUB_TOKEN }}
+          HF_TOKEN:                 ${{ secrets.HF_TOKEN }}
           GIT_SHA:                  ${{ github.sha }}
           GIT_REPO:                 ${{ github.repository }}
         run: |
