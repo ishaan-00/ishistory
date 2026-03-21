@@ -185,7 +185,6 @@
 </head>
 <body>
 
-<!-- Load Sveltia CMS normally -->
 <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js" type="module" data-cfasync="false"></script>
 
 <!-- Login screen -->
@@ -284,57 +283,19 @@
 <div id="d-toast"></div>
 
 <script>
-  const REPO    = 'ishaan-00/ishistory';
-  const GH_API  = 'https://api.github.com';
-  const TOK_KEY = 'ih-gh-token';
+  const REPO     = 'ishaan-00/ishistory';
+  const AUTH_URL = 'https://sveltia-cms-auth.aadityadarpan5.workers.dev';
+  // All GitHub API calls go through our proxy — raw token never touches the browser
+  const GH_API   = AUTH_URL + '/api/github';
 
-  let TOKEN = null, isOpen = false, activeTab = 'overview', treeCache = null;
+  let isOpen = false, activeTab = 'overview', treeCache = null;
+  let SESSION_LOGIN = null; // GitHub username, set after session verify
 
-  // ── Auth & SSO ────────────────────────────────────────────────────────────
-  const AUTH_WORKER = 'https://sveltia-cms-auth.aadityadarpan5.workers.dev';
-  const SITE_ID     = location.host || 'ishistory.pages.dev';
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  // Uses HttpOnly session cookie set by sveltia-cms-auth Worker.
+  // The raw GitHub token never reaches the browser.
+  const SITE_ID = location.host || 'ishistory.pages.dev';
 
-  // 1. Fetch token from Sveltia CMS IndexedDB quietly
-  async function getSveltiaToken() {
-    return new Promise((resolve) => {
-      // Sveltia CMS uses localforage which defaults to 'sveltia-cms' DB
-      const dbName = 'sveltia-cms'; 
-      const storeName = 'keyvaluepairs';
-      const keyName = 'sveltia-cms.user';
-
-      const req = indexedDB.open(dbName);
-      
-      req.onerror = () => resolve(null);
-      req.onsuccess = (event) => {
-        const db = event.target.result;
-        
-        // Safely check if the store exists
-        if (!db.objectStoreNames.contains(storeName)) {
-          return resolve(null);
-        }
-        
-        try {
-          const tx = db.transaction(storeName, 'readonly');
-          const store = tx.objectStore(storeName);
-          const userReq = store.get(keyName);
-          
-          userReq.onsuccess = () => {
-            const user = userReq.result;
-            if (user && user.token) {
-              resolve(user.token);
-            } else {
-              resolve(null);
-            }
-          };
-          userReq.onerror = () => resolve(null);
-        } catch (e) {
-          resolve(null);
-        }
-      };
-    });
-  }
-
-  /// 2. Manual Login flow fallback
   function doOAuth() {
     const status = document.getElementById('login-status');
     status.textContent = 'Opening GitHub login…';
@@ -342,78 +303,56 @@
     const left = Math.max(0, (screen.width  - w) / 2);
     const top  = Math.max(0, (screen.height - h) / 2);
     const popup = window.open(
-      AUTH_WORKER + '/auth?provider=github&site_id=' + SITE_ID,
+      AUTH_URL + '/auth?provider=github&site_id=' + SITE_ID,
       'gh-oauth',
       'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top
     );
-    if (!popup) { status.textContent = 'Popup blocked — allow popups for this page'; return; }
+    if (!popup) { status.textContent = 'Popup blocked — please allow popups for this page'; return; }
 
+    // Listen for Sveltia's postMessage — this confirms OAuth completed.
+    // The session cookie is already set by the Worker at this point.
     const onMsg = async (e) => {
-      // === THE FIX: HANDSHAKE ECHO ===
-      // The worker pauses on a white screen until we echo 'authorizing:github' back to it.
-      if (e.data === 'authorizing:github' || (e.data && e.data.type === 'authorizing:github')) {
-        if (e.source) {
-          e.source.postMessage(e.data, e.origin);
-        } else if (popup) {
-          popup.postMessage(e.data, e.origin);
-        }
-        return; // Don't proceed yet, wait for the next message with the token
-      }
-
-      let token = null;
-
-      // === TOKEN EXTRACTION ===
-      // Handle both string and JSON object payloads robustly
-      if (typeof e.data === 'string' && e.data.startsWith('authorization:github:success:')) {
-        try {
-          const payloadStr = e.data.substring('authorization:github:success:'.length);
-          const payload = JSON.parse(payloadStr);
-          token = payload.token || payload.access_token;
-        } catch (err) {
-          console.error("Failed to parse auth string", err);
-        }
-      } else if (e.data && e.data.type === 'authorization:github:success' && e.data.payload) {
-        token = e.data.payload.token || e.data.payload.access_token;
-      }
-
-      // Ignore unrelated messages
-      if (!token) return;
-
+      if (typeof e.data !== 'string') return;
+      if (!e.data.startsWith('authorization:github:success:')) return;
       window.removeEventListener('message', onMsg);
-      
-      try {
-        status.textContent = 'Verifying with GitHub...';
-        const u = await ghRaw('/user', 'GET', null, token);
-        localStorage.setItem(TOK_KEY, token);
-        TOKEN = token;
-        setUser(u.login);
-        
-        document.getElementById('d-login').classList.remove('show');
-        status.textContent = '';
-        if (!popup.closed) popup.close();
-        
-        // Re-initialize UI
-        dInit();
-      } catch(e2) {
-        status.textContent = 'Auth failed: ' + e2.message;
-      }
+      clearInterval(checkClosed);
+      popup.close();
+      status.textContent = 'Verifying session…';
+      // Verify the session cookie was set correctly
+      await verifySession();
     };
     window.addEventListener('message', onMsg);
 
-    // Clean up if popup closed manually
     const checkClosed = setInterval(() => {
       if (popup.closed) {
         clearInterval(checkClosed);
         window.removeEventListener('message', onMsg);
         const s = document.getElementById('login-status');
-        if (s && s.textContent === 'Opening GitHub login…') s.textContent = '';
+        if (s && s.textContent.startsWith('Opening')) s.textContent = '';
       }
     }, 500);
   }
 
-  function doLogout() {
-    localStorage.removeItem(TOK_KEY);
-    TOKEN = null;
+  async function verifySession() {
+    try {
+      const res  = await fetch(AUTH_URL + '/session/verify', { credentials: 'include' });
+      const data = await res.json();
+      if (data.ok && data.login) {
+        SESSION_LOGIN = data.login;
+        setUser(data.login);
+        document.getElementById('d-login').classList.remove('show');
+        document.getElementById('login-status').textContent = '';
+        return true;
+      }
+    } catch(e) {
+      console.warn('[auth] session verify failed:', e.message);
+    }
+    return false;
+  }
+
+  async function doLogout() {
+    try { await fetch(AUTH_URL + '/session/logout', { method: 'POST', credentials: 'include' }); } catch(_) {}
+    SESSION_LOGIN = null;
     document.getElementById('d-user').style.display = 'none';
     document.getElementById('d-login').classList.add('show');
     dClose();
@@ -425,20 +364,23 @@
     el.style.display = 'block';
   }
 
-  // ── GitHub API ────────────────────────────────────────────────────────────
-  async function ghRaw(endpoint, method, body, tok) {
+  // ── GitHub API — via Worker proxy ────────────────────────────────────────
+  // All requests go to AUTH_URL/api/github/* with credentials:include
+  // The Worker reads the session cookie and attaches the GitHub token server-side.
+  // The raw token never touches the browser.
+  async function gh(endpoint, method, body) {
     const res = await fetch(GH_API + endpoint, {
-      method: method || 'GET',
-      headers: { Authorization: 'Bearer ' + (tok || TOKEN), Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-      body: body ? JSON.stringify(body) : null,
+      method:      method || 'GET',
+      credentials: 'include',   // sends HttpOnly session cookie
+      headers:     { 'Content-Type': 'application/json' },
+      body:        body ? JSON.stringify(body) : null,
     });
-    if (res.status === 401) { doLogout(); throw new Error('Token expired — please log in again'); }
+    if (res.status === 401) { doLogout(); throw new Error('Session expired — please log in again'); }
     if (res.status === 204) return null;
     const d = await res.json();
     if (!res.ok) throw new Error(d.message || 'HTTP ' + res.status);
     return d;
   }
-  const gh = (ep, m, b) => ghRaw(ep, m, b, TOKEN);
 
   async function ghFile(fp) {
     const d = await gh('/repos/' + REPO + '/contents/' + fp);
@@ -513,7 +455,7 @@
   // ── Panel ─────────────────────────────────────────────────────────────────
   function dToggle() { isOpen ? dClose() : dOpen(); }
   function dOpen() {
-    if (!TOKEN) { document.getElementById('d-login').classList.add('show'); return; }
+    if (!SESSION_LOGIN) { document.getElementById('d-login').classList.add('show'); return; }
     isOpen = true;
     document.getElementById('d-panel').classList.add('open');
     document.getElementById('d-overlay').classList.add('open');
@@ -717,35 +659,11 @@
 
   // ── Init ──────────────────────────────────────────────────────────────────
   async function dInit() {
-    // 1. Check local storage
-    TOKEN = localStorage.getItem(TOK_KEY);
-
-    // 2. If no token, attempt to sync silently from Sveltia CMS IndexedDB
-    if (!TOKEN) {
-      const sveltiaToken = await getSveltiaToken();
-      if (sveltiaToken) {
-        TOKEN = sveltiaToken;
-        localStorage.setItem(TOK_KEY, TOKEN);
-        toast('Synced login from CMS ✓', 'ok');
-      }
-    }
-
-    // 3. If STILL no token, show the login screen and exit setup
-    if (!TOKEN) { 
-      document.getElementById('d-login').classList.add('show'); 
-      return; 
-    }
-    
-    // 4. Verify token and set user
-    try {
-      const u = await gh('/user');
-      setUser(u.login);
-    } catch(e) {
+    const ok = await verifySession();
+    if (!ok) {
       document.getElementById('d-login').classList.add('show');
       return;
     }
-
-    // Pre-fetch status for FAB dot colour
     getStatus().then(s => {
       const last  = s.runs?.[0];
       if (!last) return;
