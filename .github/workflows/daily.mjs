@@ -4,19 +4,9 @@
  * Runs at 09:00 UTC every day via daily.yml.
  * 1. Posts "Today in History" to Discord
  * 2. Reads src/data/scheduled.json, publishes any posts due today,
- *    removes them from the file, commits back.
+ * removes them from the file, commits back.
  * ─────────────────────────────────────────────────────────────────────────────
  */
-
-import fs   from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { execSync } from 'node:child_process';
-import matter from 'gray-matter';
-
-const __dir     = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = path.resolve(__dir, '../..');
-const SITE_URL  = 'https://ishistory.pages.dev';
 
 const ENV = {
   DISCORD_TODAY:    process.env.DISCORD_WEBHOOK_TODAY    || '',
@@ -198,3 +188,5 @@ async function main() {
 }
 
 main().catch(e => { console.error(e); process.exit(1); });
+
+    
