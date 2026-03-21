@@ -1,0 +1,98 @@
+name: Publish Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/content/**/*.md'
+
+# Never cancel a running pipeline — always finish what was started
+concurrency:
+  group: publish-pipeline
+  cancel-in-progress: false
+
+jobs:
+  pipeline:
+    name: Distribute to social platforms
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      # ── 1. Checkout with enough depth to diff against previous commit ────────
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      # ── 2. Detect which .md files were ADDED (not modified) in this push ────
+      - name: Detect new content files
+        id: changed
+        uses: tj-actions/changed-files@v44
+        with:
+          files: 'src/content/**/*.md'
+          # Only trigger pipeline for brand-new posts, not edits
+          since_last_remote_commit: true
+
+      - name: Log detected files
+        run: |
+          echo "Added files:    ${{ steps.changed.outputs.added_files }}"
+          echo "Modified files: ${{ steps.changed.outputs.modified_files }}"
+          if [ -z "${{ steps.changed.outputs.added_files }}" ]; then
+            echo "No new posts detected — only edits or non-content files changed."
+          fi
+
+      # ── 3. Setup Node (only if there are new posts to process) ──────────────
+      - name: Setup Node.js
+        if: steps.changed.outputs.added_files != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ── 4. Install deps (gray-matter added to root package.json) ────────────
+      - name: Install dependencies
+        if: steps.changed.outputs.added_files != ''
+        run: npm ci
+
+      # ── 5. Run pipeline for each new post ────────────────────────────────────
+      - name: Run publish pipeline
+        if: steps.changed.outputs.added_files != ''
+        env:
+          DEVTO_API_KEY:           ${{ secrets.DEVTO_API_KEY }}
+          HASHNODE_API_KEY:        ${{ secrets.HASHNODE_API_KEY }}
+          HASHNODE_PUBLICATION_ID: ${{ secrets.HASHNODE_PUBLICATION_ID }}
+          DISCORD_WEBHOOK_ARTICLES: ${{ secrets.DISCORD_WEBHOOK_ARTICLES }}
+          NTFY_TOPIC:              ${{ secrets.NTFY_TOPIC }}
+          INDEXNOW_KEY:            ${{ secrets.INDEXNOW_KEY }}
+          WORKER_URL:              ${{ secrets.WORKER_URL }}
+          CMS_API_KEY:             ${{ secrets.CMS_API_KEY }}
+          GIT_SHA:                 ${{ github.sha }}
+          GIT_REPO:                ${{ github.repository }}
+        run: |
+          EXIT_CODE=0
+          for file in ${{ steps.changed.outputs.added_files }}; do
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Processing: $file"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            node .github/scripts/pipeline.mjs "$file" || EXIT_CODE=$?
+          done
+          exit $EXIT_CODE
+
+      # ── 6. Summary (always runs, shows what happened) ────────────────────────
+      - name: Pipeline summary
+        if: always()
+        run: |
+          if [ -z "${{ steps.changed.outputs.added_files }}" ]; then
+            echo "## No new posts in this push" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## Publish Pipeline Complete" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Files processed:**" >> $GITHUB_STEP_SUMMARY
+            for file in ${{ steps.changed.outputs.added_files }}; do
+              echo "- \`$file\`" >> $GITHUB_STEP_SUMMARY
+            done
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
