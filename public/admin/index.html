@@ -372,7 +372,7 @@
     const res = await fetch(GH_API + endpoint, {
       method:      method || 'GET',
       credentials: 'include',   // sends HttpOnly session cookie
-      headers:     { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+      headers:     { 'Content-Type': 'application/json' },
       body:        body ? JSON.stringify(body) : null,
     });
     if (res.status === 401) { doLogout(); throw new Error('Session expired — please log in again'); }
@@ -491,15 +491,9 @@
   }
 
   async function getStatus() {
-    // Fetch via current commit SHA — bypasses GitHub CDN cache (~60s)
-    try {
-      const ref = await gh('/repos/' + REPO + '/git/ref/heads/main');
-      const sha = ref?.object?.sha;
-      if (!sha) return { runs: [] };
-      const d = await gh('/repos/' + REPO + '/contents/src/data/status.json?ref=' + sha);
-      if (!d || d.message) return { runs: [] };
-      return JSON.parse(atob(d.content.replace(/\n/g,'')));
-    } catch(_) { return { runs: [] }; }
+    const f = await ghFile('src/data/status.json').catch(() => null);
+    if (!f) return { runs: [] };
+    try { return JSON.parse(f.content); } catch(_) { return { runs: [] }; }
   }
 
   // ── Overview ──────────────────────────────────────────────────────────────
@@ -569,42 +563,6 @@
   }
 
   // ── Series ────────────────────────────────────────────────────────────────
-  const SERIES_META_PATH = 'src/data/series-meta.json';
-
-  async function getSeriesMeta() {
-    try {
-      const ref = await gh('/repos/' + REPO + '/git/ref/heads/main');
-      const sha = ref?.object?.sha;
-      if (!sha) return { meta: {}, sha: null };
-      const d = await gh('/repos/' + REPO + '/contents/' + SERIES_META_PATH + '?ref=' + sha);
-      if (!d || d.message) return { meta: {}, sha: null };
-      return { meta: JSON.parse(atob(d.content.replace(/\n/g,''))), sha: d.sha };
-    } catch(_) { return { meta: {}, sha: null }; }
-  }
-
-  async function toggleSeriesComplete(name) {
-    const btn = document.getElementById('sc-' + name);
-    if (btn) { btn.disabled = true; btn.textContent = '…'; }
-    try {
-      const { meta, sha } = await getSeriesMeta();
-      if (!meta[name]) meta[name] = {};
-      meta[name].complete = !meta[name].complete;
-      const isNowComplete = meta[name].complete;
-      const content = btoa(unescape(encodeURIComponent(JSON.stringify(meta, null, 2))));
-      await gh('/repos/' + REPO + '/contents/' + SERIES_META_PATH, 'PUT', {
-        message: 'chore: mark ' + name + (isNowComplete ? ' complete' : ' active') + ' [skip ci]',
-        content,
-        ...(sha ? { sha } : {}),
-      });
-      toast(name.replace(/-/g,' ') + ' marked ' + (isNowComplete ? 'complete ✓' : 'active'), 'ok');
-      treeCache = null;
-      loadSeries();
-    } catch(e) {
-      toast('Failed: ' + e.message, 'fail');
-      if (btn) { btn.disabled = false; btn.textContent = btn.dataset.orig || 'Toggle'; }
-    }
-  }
-
   async function loadSeries() {
     document.getElementById('series-wrap').innerHTML = '<div class="d-empty"><span class="spin"></span></div>';
     const tree  = await getTree();
@@ -618,37 +576,19 @@
       if (fn.startsWith('profile')) ser[s].pr.push(num); else ser[s].ep.push(num);
     });
     if (!Object.keys(ser).length) { document.getElementById('series-wrap').innerHTML = '<div class="d-empty">No series</div>'; return; }
-    const { meta } = await getSeriesMeta();
     const cards = Object.entries(ser).map(([name,d]) => {
-      const eps        = d.ep.filter(Boolean).sort((a,b)=>a-b);
-      const pros       = d.pr.filter(Boolean).sort((a,b)=>a-b);
-      const isComplete = !!(meta[name]?.complete);
-      const gaps       = [];
-      if (!isComplete) for (let i=1;i<eps.length;i++) for (let g=eps[i-1]+1;g<eps[i];g++) gaps.push(g);
-      const next    = eps.length ? Math.max(...eps)+1 : 1;
-      const pct     = isComplete ? 100 : Math.min(100, Math.round((eps.length%10||(eps.length>0?10:0))/10*100));
-      const badge   = isComplete ? '<span class="series-badge complete">complete</span>' : '<span class="series-badge active">active</span>';
-      const btnTxt  = isComplete ? 'Mark active' : 'Mark complete';
-      const btnClr  = isComplete ? 'color:var(--green);border-color:#1a5a28;background:#0a2a10;' : 'color:var(--dim);border-color:var(--border);background:var(--card2);';
-      return '<div class="series">' +
-        '<div class="series-top">' +
-          '<div class="series-name">' + name.replace(/-/g,' ') + '</div>' +
-          '<div style="display:flex;align-items:center;gap:8px">' + badge +
-            '<button id="sc-' + name + '" data-orig="' + btnTxt + '" onclick="toggleSeriesComplete(' + JSON.stringify(name) + ')" ' +
-              'style="font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:20px;cursor:pointer;border:1px solid;' + btnClr + '">' +
-              btnTxt + '</button>' +
-          '</div>' +
-        '</div>' +
-        '<div class="d-prog"><div class="d-prog-fill" style="width:' + pct + '%;' + (isComplete?'background:var(--green)':'') + '"></div></div>' +
-        '<div class="series-stats">' +
-          '<span>' + eps.length + ' ep</span>' +
-          (pros.length ? '<span>' + pros.length + ' profiles</span>' : '') +
-          (!isComplete
-            ? '<span class="next">next: #' + next + '</span>'
-            : '<span style="color:var(--green)">✓ finished at ep #' + (eps.length ? Math.max(...eps) : '?') + '</span>') +
-          (gaps.length ? '<span class="gap">gaps: ' + gaps.slice(0,5).join(', ') + (gaps.length>5?' …':'') + '</span>' : '') +
-        '</div>' +
-      '</div>';
+      const eps  = d.ep.filter(Boolean).sort((a,b)=>a-b);
+      const pros = d.pr.filter(Boolean).sort((a,b)=>a-b);
+      const gaps = []; for (let i=1;i<eps.length;i++) for (let g=eps[i-1]+1;g<eps[i];g++) gaps.push(g);
+      const next = eps.length ? Math.max(...eps)+1 : 1;
+      const pct  = Math.min(100, Math.round((eps.length%10||(eps.length>0?10:0))/10*100));
+      return '<div class="series"><div class="series-top"><div class="series-name">' + name.replace(/-/g,' ') + '</div><span class="series-badge active">active</span></div>' +
+        '<div class="d-prog"><div class="d-prog-fill" style="width:' + pct + '%"></div></div>' +
+        '<div class="series-stats"><span>' + eps.length + ' ep</span>' +
+        (pros.length ? '<span>' + pros.length + ' profiles</span>' : '') +
+        '<span class="next">next: #' + next + '</span>' +
+        (gaps.length ? '<span class="gap">gaps: ' + gaps.join(', ') + '</span>' : '') +
+        '</div></div>';
     });
     document.getElementById('series-wrap').innerHTML = '<div class="series-list">' + cards.join('') + '</div>';
   }
