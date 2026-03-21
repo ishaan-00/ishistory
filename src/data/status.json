@@ -1,6 +1,36 @@
 {
-  "updated_at": "2026-03-21T14:49:22.971Z",
+  "updated_at": "2026-03-21T14:59:37.493Z",
   "runs": [
+    {
+      "file": "src/content/ai-history/episode-02.md",
+      "commit": "c4d3978",
+      "ran_at": "2026-03-21T14:59:37.493Z",
+      "discord": {
+        "ok": true,
+        "skipped": false,
+        "err": null
+      },
+      "devto": {
+        "ok": true,
+        "skipped": false,
+        "err": null
+      },
+      "hashnode": {
+        "ok": true,
+        "skipped": false,
+        "err": null
+      },
+      "ntfy": {
+        "ok": true,
+        "skipped": false,
+        "err": null
+      },
+      "indexnow": {
+        "ok": true,
+        "skipped": false,
+        "err": null
+      }
+    },
     {
       "file": "src/content/ai-history/episode-02.md",
       "commit": "37edca4",
