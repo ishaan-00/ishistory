@@ -458,7 +458,7 @@ async function main() {
 
   printResults(results);
   writeStepSummary(fm, body, results, url);
-  await reportToWorker(relPath, results);
+  await updateStatusJson(relPath, results, ENV.GIT_SHA);
 
   // Fail only if every configured (non-skipped) platform failed
   const active    = Object.values(results).filter(r => !r.skipped);
@@ -466,6 +466,63 @@ async function main() {
   if (allFailed) {
     log.fail('All configured platforms failed.');
     process.exit(1);
+  }
+}
+
+// ─── Write results to src/data/status.json in repo ───────────────────────────
+// Uses the automatic GITHUB_TOKEN available in Actions (no extra secret needed).
+// Commit message contains [skip ci] so it never re-triggers the pipeline.
+async function updateStatusJson(filePath, results, commitSha) {
+  const token = process.env.GITHUB_TOKEN;
+  const repo  = ENV.GIT_REPO;
+  if (!token || !repo) { log.warn('GITHUB_TOKEN or GIT_REPO missing — skipping status.json update'); return; }
+
+  const apiBase = `https://api.github.com/repos/${repo}/contents/src/data/status.json`;
+  const headers = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
+
+  // Read current file (may not exist yet)
+  let current = { updated_at: null, runs: [] };
+  let existingSha = null;
+  try {
+    const res = await fetch(apiBase, { headers });
+    if (res.ok) {
+      const data = await res.json();
+      existingSha = data.sha;
+      current = JSON.parse(Buffer.from(data.content.replace(/\n/g, ''), 'base64').toString('utf8'));
+    }
+  } catch (_) {}
+
+  // Prepend new run entry, keep last 50
+  const newRun = {
+    file:     filePath,
+    commit:   commitSha || 'unknown',
+    ran_at:   new Date().toISOString(),
+    discord:  { ok: results.discord.ok,  skipped: !!results.discord.skipped,  err: results.discord.err  || null },
+    devto:    { ok: results.devto.ok,    skipped: !!results.devto.skipped,    err: results.devto.err    || null },
+    hashnode: { ok: results.hashnode.ok, skipped: !!results.hashnode.skipped, err: results.hashnode.err || null },
+    ntfy:     { ok: results.ntfy.ok,     skipped: !!results.ntfy.skipped,     err: results.ntfy.err     || null },
+    indexnow: { ok: results.indexnow.ok, skipped: !!results.indexnow.skipped, err: results.indexnow.err || null },
+  };
+
+  current.updated_at = new Date().toISOString();
+  current.runs = [newRun, ...(current.runs || [])].slice(0, 50);
+
+  // Commit back with [skip ci] to prevent pipeline re-trigger
+  const body = {
+    message: `chore: update pipeline status [skip ci]`,
+    content: Buffer.from(JSON.stringify(current, null, 2)).toString('base64'),
+    ...(existingSha ? { sha: existingSha } : {}),
+  };
+
+  try {
+    const res = await fetch(apiBase, { method: 'PUT', headers, body: JSON.stringify(body) });
+    if (res.ok) log.ok('status.json updated in repo');
+    else {
+      const err = await res.json().catch(() => ({}));
+      log.warn(`status.json update failed: ${err.message || res.status}`);
+    }
+  } catch (e) {
+    log.warn(`status.json update error: ${e.message}`);
   }
 }
 
