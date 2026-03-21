@@ -285,15 +285,50 @@
 <script>
   const REPO     = 'ishaan-00/ishistory';
   const AUTH_URL = 'https://sveltia-cms-auth.aadityadarpan5.workers.dev';
-  // All GitHub API calls go through our proxy — raw token never touches the browser
   const GH_API   = AUTH_URL + '/api/github';
 
   let isOpen = false, activeTab = 'overview', treeCache = null;
-  let SESSION_LOGIN = null; // GitHub username, set after session verify
+  let SESSION_LOGIN = null;
+
+  // ── XSS-safe escaping ────────────────────────────────────────────────────
+  const _escEl = document.createElement('span');
+  function esc(s) {
+    _escEl.textContent = String(s == null ? '' : s);
+    return _escEl.innerHTML;
+  }
+  function escAttr(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  // ── UTF-8-safe base64 ────────────────────────────────────────────────────
+  function utf8ToBase64(str) {
+    const bytes = new TextEncoder().encode(str);
+    let binary = '';
+    for (const b of bytes) binary += String.fromCharCode(b);
+    return btoa(binary);
+  }
+  function base64ToUtf8(b64) {
+    const binary = atob(b64);
+    const bytes  = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+
+  // ── Loading guard — prevents duplicate concurrent API calls ───────────────
+  const _loading = {};
+  async function guardedLoad(key, fn) {
+    if (_loading[key]) return;
+    _loading[key] = true;
+    try { await fn(); }
+    finally { _loading[key] = false; }
+  }
 
   // ── Auth ──────────────────────────────────────────────────────────────────
-  // Uses HttpOnly session cookie set by sveltia-cms-auth Worker.
-  // The raw GitHub token never reaches the browser.
   const SITE_ID = location.host || 'ishistory.pages.dev';
 
   function doOAuth() {
@@ -303,14 +338,12 @@
     const left = Math.max(0, (screen.width  - w) / 2);
     const top  = Math.max(0, (screen.height - h) / 2);
     const popup = window.open(
-      AUTH_URL + '/auth?provider=github&site_id=' + SITE_ID,
+      AUTH_URL + '/auth?provider=github&site_id=' + encodeURIComponent(SITE_ID),
       'gh-oauth',
       'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top
     );
     if (!popup) { status.textContent = 'Popup blocked — please allow popups for this page'; return; }
 
-    // Listen for Sveltia's postMessage — this confirms OAuth completed.
-    // The session cookie is already set by the Worker at this point.
     const onMsg = async (e) => {
       if (typeof e.data !== 'string') return;
       if (!e.data.startsWith('authorization:github:success:')) return;
@@ -318,7 +351,6 @@
       clearInterval(checkClosed);
       popup.close();
       status.textContent = 'Verifying session…';
-      // Verify the session cookie was set correctly
       await verifySession();
     };
     window.addEventListener('message', onMsg);
@@ -358,24 +390,29 @@
     dClose();
   }
 
+  function handleSessionExpiry() {
+    toast('Session expired — please log in again', 'err');
+    SESSION_LOGIN = null;
+    document.getElementById('d-user').style.display = 'none';
+    document.getElementById('d-login').classList.add('show');
+    dClose();
+  }
+
   function setUser(login) {
     const el = document.getElementById('d-user');
-    el.textContent = '@' + login;
+    el.textContent = '@' + esc(login);
     el.style.display = 'block';
   }
 
   // ── GitHub API — via Worker proxy ────────────────────────────────────────
-  // All requests go to AUTH_URL/api/github/* with credentials:include
-  // The Worker reads the session cookie and attaches the GitHub token server-side.
-  // The raw token never touches the browser.
   async function gh(endpoint, method, body) {
     const res = await fetch(GH_API + endpoint, {
       method:      method || 'GET',
-      credentials: 'include',   // sends HttpOnly session cookie
+      credentials: 'include',
       headers:     { 'Content-Type': 'application/json' },
       body:        body ? JSON.stringify(body) : null,
     });
-    if (res.status === 401) { doLogout(); throw new Error('Session expired — please log in again'); }
+    if (res.status === 401) { handleSessionExpiry(); throw new Error('Session expired — please log in again'); }
     if (res.status === 204) return null;
     const d = await res.json();
     if (!res.ok) throw new Error(d.message || 'HTTP ' + res.status);
@@ -383,15 +420,21 @@
   }
 
   async function ghFile(fp) {
-    const d = await gh('/repos/' + REPO + '/contents/' + fp);
-    if (!d || d.message) return null;
-    return { content: atob(d.content.replace(/\n/g,'')), sha: d.sha };
+    try {
+      const d = await gh('/repos/' + REPO + '/contents/' + fp);
+      if (!d || d.message) return null;
+      const raw = (d.content || '').replace(/\n/g, '');
+      return { content: base64ToUtf8(raw), sha: d.sha };
+    } catch (e) {
+      console.warn('[ghFile] failed for', fp, e.message);
+      return null;
+    }
   }
 
   async function ghWrite(fp, content, msg, sha) {
     return gh('/repos/' + REPO + '/contents/' + fp, 'PUT', {
       message: msg,
-      content: btoa(unescape(encodeURIComponent(content))),
+      content: utf8ToBase64(content),
       ...(sha ? { sha } : {})
     });
   }
@@ -425,10 +468,10 @@
   function buildPlatRow(run) {
     return ['discord','devto','hashnode','ntfy','indexnow'].map(p => {
       const r = run[p] || {};
-      if (r.skipped) return '<span class="plat skip">⊘ ' + p + '</span>';
-      if (r.ok)      return '<span class="plat ok">✓ ' + p + '</span>';
-      const e = (r.err || '').replace(/"/g,'&quot;').slice(0,200);
-      return '<span class="plat fail" title="' + e + '">✗ ' + p + '</span>';
+      if (r.skipped) return '<span class="plat skip">⊘ ' + esc(p) + '</span>';
+      if (r.ok)      return '<span class="plat ok">✓ ' + esc(p) + '</span>';
+      const e = escAttr((r.err || '').slice(0, 200));
+      return '<span class="plat fail" title="' + e + '">✗ ' + esc(p) + '</span>';
     }).join('');
   }
 
@@ -441,11 +484,11 @@
   function buildRunHTML(r) {
     const errs = ['discord','devto','hashnode','ntfy','indexnow']
       .filter(p => r[p] && !r[p].ok && !r[p].skipped && r[p].err)
-      .map(p => '<div class="run-err"><strong>' + p + ':</strong> ' + (r[p].err||'').slice(0,300) + '</div>')
+      .map(p => '<div class="run-err"><strong>' + esc(p) + ':</strong> ' + esc((r[p].err||'').slice(0,300)) + '</div>')
       .join('');
     return '<div class="run">' +
-      '<div class="run-top"><div class="run-file">' + r.file + '</div><div class="run-time">' + relTime(r.ran_at) + '</div></div>' +
-      '<div class="run-commit">commit <span style="color:var(--amber3)">' + r.commit + '</span> · ' + fmtDate(r.ran_at) + '</div>' +
+      '<div class="run-top"><div class="run-file">' + esc(r.file) + '</div><div class="run-time">' + esc(relTime(r.ran_at)) + '</div></div>' +
+      '<div class="run-commit">commit <span style="color:var(--amber3)">' + esc(r.commit) + '</span> · ' + esc(fmtDate(r.ran_at)) + '</div>' +
       '<div class="run-plats">' + buildPlatRow(r) + '</div>' +
       buildAIBadge(r) +
       errs +
@@ -498,52 +541,60 @@
 
   // ── Overview ──────────────────────────────────────────────────────────────
   async function loadOverview() {
-    const [status, tree, commits] = await Promise.all([
-      getStatus(),
-      getTree(),
-      gh('/repos/' + REPO + '/commits?per_page=5').catch(() => []),
-    ]);
+    return guardedLoad('overview', async () => {
+      const [status, tree, commits] = await Promise.all([
+        getStatus(),
+        getTree(),
+        gh('/repos/' + REPO + '/commits?per_page=5').catch(() => []),
+      ]);
 
-    const posts  = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md'));
-    const series = {};
-    posts.forEach(f => { const s = f.path.split('/')[2]; if (s) series[s] = (series[s]||0)+1; });
+      const posts  = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md'));
+      const series = {};
+      posts.forEach(f => { const s = f.path.split('/')[2]; if (s) series[s] = (series[s]||0)+1; });
 
-    const last  = status.runs?.[0];
-    const plats = last ? ['discord','devto','hashnode','ntfy','indexnow'].map(p=>last[p]).filter(r=>!r?.skipped) : [];
-    const allOk = plats.length > 0 && plats.every(r=>r?.ok);
-    const anyFail = plats.some(r=>!r?.ok);
+      const last  = status.runs?.[0];
+      const plats = last ? ['discord','devto','hashnode','ntfy','indexnow'].map(p=>last[p]).filter(r=>!r?.skipped) : [];
+      const allOk = plats.length > 0 && plats.every(r=>r?.ok);
+      const anyFail = plats.some(r=>!r?.ok);
 
-    document.getElementById('d-fab-dot').className = allOk ? 'green' : anyFail ? 'red' : 'amber';
+      document.getElementById('d-fab-dot').className = allOk ? 'green' : anyFail ? 'red' : 'amber';
 
-    document.getElementById('ov-stats').innerHTML =
-      '<div class="d-card"><div class="d-card-title">Total Posts</div><div class="d-card-val">' + posts.length + '</div><div class="d-card-sub">' + Object.keys(series).length + ' series</div></div>' +
-      '<div class="d-card"><div class="d-card-title">Last Pipeline</div><div class="d-card-val" style="font-size:18px;font-family:var(--mono)">' + (last ? relTime(last.ran_at) : '—') + '</div><div class="d-card-sub" style="color:' + (allOk?'var(--green)':anyFail?'var(--red)':'var(--dim)') + '">' + (allOk?'All platforms OK':anyFail?'Some failures':'No runs yet') + '</div></div>' +
-      '<div class="d-card"><div class="d-card-title">Scheduled</div><div class="d-card-val" id="ov-sched">—</div><div class="d-card-sub">pending posts</div></div>';
+      const lastTimeStr = last ? esc(relTime(last.ran_at)) : '—';
+      const statusColor = allOk ? 'var(--green)' : anyFail ? 'var(--red)' : 'var(--dim)';
+      const statusText  = allOk ? 'All platforms OK' : anyFail ? 'Some failures' : 'No runs yet';
 
-    ghFile('src/data/scheduled.json').then(f => {
-      try { const el = document.getElementById('ov-sched'); if (el) el.textContent = f ? JSON.parse(f.content).length : 0; } catch(_){}
-    }).catch(()=>{});
+      document.getElementById('ov-stats').innerHTML =
+        '<div class="d-card"><div class="d-card-title">Total Posts</div><div class="d-card-val">' + esc(posts.length) + '</div><div class="d-card-sub">' + esc(Object.keys(series).length) + ' series</div></div>' +
+        '<div class="d-card"><div class="d-card-title">Last Pipeline</div><div class="d-card-val" style="font-size:18px;font-family:var(--mono)">' + lastTimeStr + '</div><div class="d-card-sub" style="color:' + statusColor + '">' + esc(statusText) + '</div></div>' +
+        '<div class="d-card"><div class="d-card-title">Scheduled</div><div class="d-card-val" id="ov-sched">—</div><div class="d-card-sub">pending posts</div></div>';
 
-    document.getElementById('ov-run').innerHTML = last ? buildRunHTML(last) : '<div class="d-empty">No pipeline runs yet</div>';
+      ghFile('src/data/scheduled.json').then(f => {
+        try { const el = document.getElementById('ov-sched'); if (el) el.textContent = f ? JSON.parse(f.content).length : 0; } catch(_){}
+      }).catch(()=>{});
 
-    document.getElementById('ov-commits').innerHTML = commits?.length
-      ? '<div class="act-list">' + (commits||[]).map(c =>
-          '<a class="act-run" href="' + c.html_url + '" target="_blank" rel="noopener">' +
-          '<div class="act-name">' + c.commit.message.split('\n')[0] + '</div>' +
-          '<div class="act-time">' + relTime(c.commit.author.date) + '</div>' +
-          '<div class="act-branch" style="font-size:9px">' + c.sha.slice(0,7) + '</div></a>').join('') + '</div>'
-      : '<div class="d-empty">No commits</div>';
+      document.getElementById('ov-run').innerHTML = last ? buildRunHTML(last) : '<div class="d-empty">No pipeline runs yet</div>';
 
-    document.getElementById('d-updated').textContent = 'updated ' + relTime(new Date().toISOString());
+      document.getElementById('ov-commits').innerHTML = commits?.length
+        ? '<div class="act-list">' + (commits||[]).map(c =>
+            '<a class="act-run" href="' + escAttr(c.html_url) + '" target="_blank" rel="noopener">' +
+            '<div class="act-name">' + esc(c.commit.message.split('\n')[0]) + '</div>' +
+            '<div class="act-time">' + esc(relTime(c.commit.author.date)) + '</div>' +
+            '<div class="act-branch" style="font-size:9px">' + esc(c.sha.slice(0,7)) + '</div></a>').join('') + '</div>'
+        : '<div class="d-empty">No commits</div>';
+
+      document.getElementById('d-updated').textContent = 'updated ' + relTime(new Date().toISOString());
+    });
   }
 
   // ── Pipeline ──────────────────────────────────────────────────────────────
   async function loadPipeline() {
-    document.getElementById('pipe-runs').innerHTML = '<div class="d-empty"><span class="spin"></span></div>';
-    const s = await getStatus().catch(() => ({ runs: [] }));
-    document.getElementById('pipe-runs').innerHTML = s.runs?.length
-      ? '<div class="run-list">' + s.runs.map(buildRunHTML).join('') + '</div>'
-      : '<div class="d-empty">No pipeline runs recorded yet</div>';
+    return guardedLoad('pipeline', async () => {
+      document.getElementById('pipe-runs').innerHTML = '<div class="d-empty"><span class="spin"></span></div>';
+      const s = await getStatus().catch(() => ({ runs: [] }));
+      document.getElementById('pipe-runs').innerHTML = s.runs?.length
+        ? '<div class="run-list">' + s.runs.map(buildRunHTML).join('') + '</div>'
+        : '<div class="d-empty">No pipeline runs recorded yet</div>';
+    });
   }
 
   function toggleTrigger() {
@@ -564,42 +615,46 @@
 
   // ── Series ────────────────────────────────────────────────────────────────
   async function loadSeries() {
-    document.getElementById('series-wrap').innerHTML = '<div class="d-empty"><span class="spin"></span></div>';
-    const tree  = await getTree();
-    const posts = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md'));
-    const ser   = {};
-    posts.forEach(f => {
-      const [,,s,fn] = f.path.split('/');
-      if (!s||!fn) return;
-      if (!ser[s]) ser[s] = { ep:[], pr:[] };
-      const n = fn.match(/\d+/); const num = n ? +n[0] : null;
-      if (fn.startsWith('profile')) ser[s].pr.push(num); else ser[s].ep.push(num);
+    return guardedLoad('series', async () => {
+      document.getElementById('series-wrap').innerHTML = '<div class="d-empty"><span class="spin"></span></div>';
+      const tree  = await getTree();
+      const posts = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md'));
+      const ser   = {};
+      posts.forEach(f => {
+        const [,,s,fname] = f.path.split('/');
+        if (!s||!fname) return;
+        if (!ser[s]) ser[s] = { ep:[], pr:[] };
+        const n = fname.match(/\d+/); const num = n ? +n[0] : null;
+        if (fname.startsWith('profile')) ser[s].pr.push(num); else ser[s].ep.push(num);
+      });
+      if (!Object.keys(ser).length) { document.getElementById('series-wrap').innerHTML = '<div class="d-empty">No series</div>'; return; }
+      const cards = Object.entries(ser).map(([name,d]) => {
+        const eps  = d.ep.filter(Boolean).sort((a,b)=>a-b);
+        const pros = d.pr.filter(Boolean).sort((a,b)=>a-b);
+        const gaps = []; for (let i=1;i<eps.length;i++) for (let g=eps[i-1]+1;g<eps[i];g++) gaps.push(g);
+        const next = eps.length ? Math.max(...eps)+1 : 1;
+        const pct  = Math.min(100, Math.round((eps.length%10||(eps.length>0?10:0))/10*100));
+        return '<div class="series"><div class="series-top"><div class="series-name">' + esc(name.replace(/-/g,' ')) + '</div><span class="series-badge active">active</span></div>' +
+          '<div class="d-prog"><div class="d-prog-fill" style="width:' + pct + '%"></div></div>' +
+          '<div class="series-stats"><span>' + esc(eps.length) + ' ep</span>' +
+          (pros.length ? '<span>' + esc(pros.length) + ' profiles</span>' : '') +
+          '<span class="next">next: #' + esc(next) + '</span>' +
+          (gaps.length ? '<span class="gap">gaps: ' + esc(gaps.join(', ')) + '</span>' : '') +
+          '</div></div>';
+      });
+      document.getElementById('series-wrap').innerHTML = '<div class="series-list">' + cards.join('') + '</div>';
     });
-    if (!Object.keys(ser).length) { document.getElementById('series-wrap').innerHTML = '<div class="d-empty">No series</div>'; return; }
-    const cards = Object.entries(ser).map(([name,d]) => {
-      const eps  = d.ep.filter(Boolean).sort((a,b)=>a-b);
-      const pros = d.pr.filter(Boolean).sort((a,b)=>a-b);
-      const gaps = []; for (let i=1;i<eps.length;i++) for (let g=eps[i-1]+1;g<eps[i];g++) gaps.push(g);
-      const next = eps.length ? Math.max(...eps)+1 : 1;
-      const pct  = Math.min(100, Math.round((eps.length%10||(eps.length>0?10:0))/10*100));
-      return '<div class="series"><div class="series-top"><div class="series-name">' + name.replace(/-/g,' ') + '</div><span class="series-badge active">active</span></div>' +
-        '<div class="d-prog"><div class="d-prog-fill" style="width:' + pct + '%"></div></div>' +
-        '<div class="series-stats"><span>' + eps.length + ' ep</span>' +
-        (pros.length ? '<span>' + pros.length + ' profiles</span>' : '') +
-        '<span class="next">next: #' + next + '</span>' +
-        (gaps.length ? '<span class="gap">gaps: ' + gaps.join(', ') + '</span>' : '') +
-        '</div></div>';
-    });
-    document.getElementById('series-wrap').innerHTML = '<div class="series-list">' + cards.join('') + '</div>';
   }
 
   // ── Schedule ──────────────────────────────────────────────────────────────
   async function loadSchedule() {
-    const tree  = await getTree();
-    const files = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md')).map(f=>f.path).sort();
-    const sel   = document.getElementById('sched-file');
-    sel.innerHTML = '<option value="">Select a post…</option>' + files.map(f => '<option value="' + f + '">' + f.split('/').slice(2).join('/') + '</option>').join('');
-    await renderSched();
+    return guardedLoad('schedule', async () => {
+      const tree  = await getTree();
+      const files = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md')).map(f=>f.path).sort();
+      const sel   = document.getElementById('sched-file');
+      sel.innerHTML = '<option value="">Select a post…</option>' + files.map(f => '<option value="' + escAttr(f) + '">' + esc(f.split('/').slice(2).join('/')) + '</option>').join('');
+      await renderSched();
+    });
   }
 
   async function renderSched() {
@@ -609,11 +664,17 @@
     if (!items.length) { document.getElementById('sched-list').innerHTML = '<div class="d-empty">No scheduled posts</div>'; return; }
     items.sort((a,b) => new Date(a.publish_at) - new Date(b.publish_at));
     document.getElementById('sched-list').innerHTML = '<div class="sched-list">' + items.map(i =>
-      '<div class="sched-item"><div class="sched-info"><div class="sched-label">' + (i.label||fn(i.file)) + '</div><div class="sched-meta">' + i.file + '</div></div>' +
-      '<div class="sched-date">' + fmtDate(i.publish_at) + '</div>' +
-      '<button class="d-btn dan" style="padding:5px 10px;font-size:10px" onclick="removeSchedule(\'' + i.id + '\')">✕</button></div>'
+      '<div class="sched-item"><div class="sched-info"><div class="sched-label">' + esc(i.label||fn(i.file)) + '</div><div class="sched-meta">' + esc(i.file) + '</div></div>' +
+      '<div class="sched-date">' + esc(fmtDate(i.publish_at)) + '</div>' +
+      '<button class="d-btn dan sched-remove" data-id="' + escAttr(i.id) + '" style="padding:5px 10px;font-size:10px">✕</button></div>'
     ).join('') + '</div>';
   }
+
+  // Event delegation for schedule remove buttons — avoids inline onclick with user data
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.sched-remove');
+    if (btn && btn.dataset.id) removeSchedule(btn.dataset.id);
+  });
 
   async function addSchedule() {
     const file = document.getElementById('sched-file').value;
@@ -621,9 +682,13 @@
     const lbl  = document.getElementById('sched-lbl').value.trim();
     if (!file) { toast('Select a file', 'err'); return; }
     if (!dt)   { toast('Pick a date', 'err');   return; }
+
+    const publishDate = new Date(dt + ':00Z');
+    if (isNaN(publishDate.getTime())) { toast('Invalid date/time', 'err'); return; }
+
     const f = await ghFile('src/data/scheduled.json').catch(() => null);
     let items = []; try { if (f) items = JSON.parse(f.content); } catch(_){}
-    items.push({ id: 'sched-' + Date.now(), file, publish_at: new Date(dt + ':00Z').toISOString(), label: lbl||fn(file), added_at: new Date().toISOString() });
+    items.push({ id: 'sched-' + Date.now(), file, publish_at: publishDate.toISOString(), label: lbl||fn(file), added_at: new Date().toISOString() });
     await ghWrite('src/data/scheduled.json', JSON.stringify(items, null, 2), 'chore: schedule ' + fn(file) + ' [skip ci]', f?.sha);
     toast('Scheduled ✓', 'ok');
     document.getElementById('sched-lbl').value = '';
@@ -643,19 +708,36 @@
 
   // ── Actions ───────────────────────────────────────────────────────────────
   async function loadActions() {
-    document.getElementById('act-list').innerHTML = '<div class="d-empty"><span class="spin"></span></div>';
-    const d    = await gh('/repos/' + REPO + '/actions/runs?per_page=20').catch(() => null);
-    const runs = d?.workflow_runs || [];
-    if (!runs.length) { document.getElementById('act-list').innerHTML = '<div class="d-empty">No workflow runs</div>'; return; }
-    document.getElementById('act-list').innerHTML = '<div class="act-list">' + runs.map(r => {
-      const cls = r.conclusion || r.status || 'queued';
-      return '<a class="act-run" href="' + r.html_url + '" target="_blank" rel="noopener">' +
-        '<div class="act-name">' + r.name + ' — ' + (r.display_title || r.head_commit?.message || '').split('\n')[0].slice(0,60) + '</div>' +
-        '<div class="act-branch">' + r.head_branch + '</div>' +
-        '<div class="act-time">' + relTime(r.created_at) + '</div>' +
-        '<span class="act-status ' + cls + '">' + cls + '</span></a>';
-    }).join('') + '</div>';
+    return guardedLoad('actions', async () => {
+      document.getElementById('act-list').innerHTML = '<div class="d-empty"><span class="spin"></span></div>';
+      const d    = await gh('/repos/' + REPO + '/actions/runs?per_page=20').catch(() => null);
+      const runs = d?.workflow_runs || [];
+      if (!runs.length) { document.getElementById('act-list').innerHTML = '<div class="d-empty">No workflow runs</div>'; return; }
+      document.getElementById('act-list').innerHTML = '<div class="act-list">' + runs.map(r => {
+        const cls = escAttr(r.conclusion || r.status || 'queued');
+        const title = esc(r.name + ' — ' + ((r.display_title || r.head_commit?.message || '').split('\n')[0] || '').slice(0,60));
+        return '<a class="act-run" href="' + escAttr(r.html_url) + '" target="_blank" rel="noopener">' +
+          '<div class="act-name">' + title + '</div>' +
+          '<div class="act-branch">' + esc(r.head_branch) + '</div>' +
+          '<div class="act-time">' + esc(relTime(r.created_at)) + '</div>' +
+          '<span class="act-status ' + cls + '">' + esc(r.conclusion || r.status || 'queued') + '</span></a>';
+      }).join('') + '</div>';
+    });
   }
+
+  // ── Periodic FAB dot refresh (every 5 minutes) ───────────────────────────
+  setInterval(async () => {
+    if (!SESSION_LOGIN) return;
+    try {
+      const s = await getStatus();
+      const last = s.runs?.[0];
+      if (!last) return;
+      const plats = ['discord','devto','hashnode','ntfy','indexnow']
+        .map(p => last[p]).filter(r => !r?.skipped);
+      document.getElementById('d-fab-dot').className =
+        plats.length > 0 && plats.every(r => r?.ok) ? 'green' : 'red';
+    } catch (_) {}
+  }, 5 * 60 * 1000);
 
   // ── Init ──────────────────────────────────────────────────────────────────
   async function dInit() {
@@ -676,3 +758,4 @@
 </script>
 </body>
 </html>
+
