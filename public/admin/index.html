@@ -334,7 +334,7 @@
     });
   }
 
-    // 2. Manual Login flow fallback
+  /// 2. Manual Login flow fallback
   function doOAuth() {
     const status = document.getElementById('login-status');
     status.textContent = 'Opening GitHub login…';
@@ -349,8 +349,20 @@
     if (!popup) { status.textContent = 'Popup blocked — allow popups for this page'; return; }
 
     const onMsg = async (e) => {
+      // === THE FIX: HANDSHAKE ECHO ===
+      // The worker pauses on a white screen until we echo 'authorizing:github' back to it.
+      if (e.data === 'authorizing:github' || (e.data && e.data.type === 'authorizing:github')) {
+        if (e.source) {
+          e.source.postMessage(e.data, e.origin);
+        } else if (popup) {
+          popup.postMessage(e.data, e.origin);
+        }
+        return; // Don't proceed yet, wait for the next message with the token
+      }
+
       let token = null;
 
+      // === TOKEN EXTRACTION ===
       // Handle both string and JSON object payloads robustly
       if (typeof e.data === 'string' && e.data.startsWith('authorization:github:success:')) {
         try {
@@ -639,7 +651,7 @@
     document.getElementById('series-wrap').innerHTML = '<div class="series-list">' + cards.join('') + '</div>';
   }
 
-    // ── Schedule ──────────────────────────────────────────────────────────────
+  // ── Schedule ──────────────────────────────────────────────────────────────
   async function loadSchedule() {
     const tree  = await getTree();
     const files = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md')).map(f=>f.path).sort();
