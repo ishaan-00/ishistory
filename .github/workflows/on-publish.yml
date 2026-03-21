@@ -32,7 +32,6 @@ jobs:
         uses: tj-actions/changed-files@v44
         with:
           files: 'src/content/**/*.md'
-          # Only trigger pipeline for brand-new posts, not edits
           since_last_remote_commit: true
 
       - name: Log detected files
@@ -43,33 +42,32 @@ jobs:
             echo "No new posts detected — only edits or non-content files changed."
           fi
 
-      # ── 3. Setup Node (only if there are new posts to process) ──────────────
+      # ── 3. Setup Node ────────────────────────────────────────────────────────
       - name: Setup Node.js
         if: steps.changed.outputs.added_files != ''
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
-      # ── 4. Install deps (gray-matter added to root package.json) ────────────
+      # ── 4. Install deps (no lockfile needed — installs from package.json) ────
       - name: Install dependencies
         if: steps.changed.outputs.added_files != ''
-        run: npm ci
+        run: npm install --no-save gray-matter
 
       # ── 5. Run pipeline for each new post ────────────────────────────────────
       - name: Run publish pipeline
         if: steps.changed.outputs.added_files != ''
         env:
-          DEVTO_API_KEY:           ${{ secrets.DEVTO_API_KEY }}
-          HASHNODE_API_KEY:        ${{ secrets.HASHNODE_API_KEY }}
-          HASHNODE_PUBLICATION_ID: ${{ secrets.HASHNODE_PUBLICATION_ID }}
+          DEVTO_API_KEY:            ${{ secrets.DEVTO_API_KEY }}
+          HASHNODE_API_KEY:         ${{ secrets.HASHNODE_API_KEY }}
+          HASHNODE_PUBLICATION_ID:  ${{ secrets.HASHNODE_PUBLICATION_ID }}
           DISCORD_WEBHOOK_ARTICLES: ${{ secrets.DISCORD_WEBHOOK_ARTICLES }}
-          NTFY_TOPIC:              ${{ secrets.NTFY_TOPIC }}
-          INDEXNOW_KEY:            ${{ secrets.INDEXNOW_KEY }}
-          WORKER_URL:              ${{ secrets.WORKER_URL }}
-          CMS_API_KEY:             ${{ secrets.CMS_API_KEY }}
-          GIT_SHA:                 ${{ github.sha }}
-          GIT_REPO:                ${{ github.repository }}
+          NTFY_TOPIC:               ${{ secrets.NTFY_TOPIC }}
+          INDEXNOW_KEY:             ${{ secrets.INDEXNOW_KEY }}
+          WORKER_URL:               ${{ secrets.WORKER_URL }}
+          CMS_API_KEY:              ${{ secrets.CMS_API_KEY }}
+          GIT_SHA:                  ${{ github.sha }}
+          GIT_REPO:                 ${{ github.repository }}
         run: |
           EXIT_CODE=0
           for file in ${{ steps.changed.outputs.added_files }}; do
@@ -80,7 +78,7 @@ jobs:
           done
           exit $EXIT_CODE
 
-      # ── 6. Summary (always runs, shows what happened) ────────────────────────
+      # ── 6. Summary (always runs) ─────────────────────────────────────────────
       - name: Pipeline summary
         if: always()
         run: |
@@ -93,6 +91,5 @@ jobs:
             for file in ${{ steps.changed.outputs.added_files }}; do
               echo "- \`$file\`" >> $GITHUB_STEP_SUMMARY
             done
-            echo "" >> $GITHUB_STEP_SUMMARY
             echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           fi
