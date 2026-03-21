@@ -196,9 +196,15 @@ async function hfGenerate(prompt, maxTokens = 1024) {
 // Community platform — scannable, sectioned, developer-friendly tone.
 // Cached in fm.devto_content frontmatter — only calls API on first publish.
 async function generateDevtoContent(fm) {
-  if (fm.devto_content && typeof fm.devto_content === 'string' && wc(fm.devto_content) > 200) {
+  const descWords = wc(fm.description || '');
+  const cached    = fm.devto_content && typeof fm.devto_content === 'string';
+  const cacheOk   = cached && wc(fm.devto_content) > Math.max(200, descWords + 50);
+  if (cacheOk) {
     log.info(`Dev.to: using cached content (${wc(fm.devto_content)} words)`);
     return fm.devto_content.trim();
+  }
+  if (cached && !cacheOk) {
+    log.warn(`Dev.to: cached content too short (${wc(fm.devto_content)} words) — regenerating`);
   }
   log.info('Dev.to: generating via Mistral-7B…');
   const seriesName = (fm.series || '').replace(/-/g, ' ');
@@ -226,9 +232,15 @@ Begin writing now: [/INST]`;
 // Editorial blog audience — narrative-driven, authoritative, long-form journalism.
 // Cached in fm.hashnode_content frontmatter — only calls API on first publish.
 async function generateHashnodeContent(fm) {
-  if (fm.hashnode_content && typeof fm.hashnode_content === 'string' && wc(fm.hashnode_content) > 200) {
+  const descWords = wc(fm.description || '');
+  const cached    = fm.hashnode_content && typeof fm.hashnode_content === 'string';
+  const cacheOk   = cached && wc(fm.hashnode_content) > Math.max(200, descWords + 50);
+  if (cacheOk) {
     log.info(`Hashnode: using cached content (${wc(fm.hashnode_content)} words)`);
     return fm.hashnode_content.trim();
+  }
+  if (cached && !cacheOk) {
+    log.warn(`Hashnode: cached content too short (${wc(fm.hashnode_content)} words) — regenerating`);
   }
   log.info('Hashnode: generating via Mistral-7B…');
   const seriesName = (fm.series || '').replace(/-/g, ' ');
