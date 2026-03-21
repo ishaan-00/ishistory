@@ -21,8 +21,8 @@ const REPO_ROOT = path.resolve(__dir, '../..');
 const SITE_URL  = 'https://ishistory.pages.dev';
 
 // ─── Retry config ─────────────────────────────────────────────────────────────
-const MAX_RETRIES    = 4;
-const RETRY_DELAY_MS = 10000;
+const MAX_RETRIES    = 2;
+const RETRY_DELAY_MS = 1500;
 
 // ─── Environment ──────────────────────────────────────────────────────────────
 const ENV = {
@@ -131,35 +131,65 @@ function validateFm(fm) {
 // ─── HF Inference API ────────────────────────────────────────────────────────
 // Single function for both generation calls.
 // Returns generated text or throws so withRetry can handle transient errors.
+const HF_MODEL   = 'mistralai/Mistral-7B-Instruct-v0.3';
+const HF_MAX_WAIT = 60; // max seconds to wait for model cold start
+
 async function hfGenerate(prompt, maxTokens = 1024) {
   if (!ENV.HF_TOKEN) throw new Error('HF_TOKEN not configured');
-  const res = await fetch(
-    'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3',
-    {
-      method:  'POST',
-      headers: { Authorization: `Bearer ${ENV.HF_TOKEN}`, 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        inputs:     prompt,
-        parameters: {
-          max_new_tokens:   maxTokens,
-          temperature:      0.7,
-          top_p:            0.9,
-          do_sample:        true,
-          return_full_text: false,   // return only generated text, not prompt
-        },
-      }),
+
+  // Retry loop handles 503 model-loading responses with HF's estimated_time
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    const controller = new AbortController();
+    const timeout    = setTimeout(() => controller.abort(), 60_000); // 60s per call
+
+    let res;
+    try {
+      res = await fetch(
+        `https://api-inference.huggingface.co/models/${HF_MODEL}`,
+        {
+          method:  'POST',
+          signal:  controller.signal,
+          headers: { Authorization: `Bearer ${ENV.HF_TOKEN}`, 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            inputs:     prompt,
+            parameters: {
+              max_new_tokens:   maxTokens,
+              temperature:      0.7,
+              top_p:            0.9,
+              do_sample:        true,
+              return_full_text: false,
+            },
+          }),
+        }
+      );
+    } catch (e) {
+      clearTimeout(timeout);
+      if (e.name === 'AbortError') throw new Error(`HF API timed out after 60s (attempt ${attempt})`);
+      throw e;
     }
-  );
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    // 503 = model loading — worth retrying
-    throw new Error(err.error || `HF API HTTP ${res.status}`);
+    clearTimeout(timeout);
+
+    // 503 = model still loading — HF tells us how long to wait
+    if (res.status === 503) {
+      const body        = await res.json().catch(() => ({}));
+      const waitSeconds = Math.min(body.estimated_time || 20, HF_MAX_WAIT);
+      log.warn(`HF model loading — waiting ${waitSeconds}s (attempt ${attempt}/5)...`);
+      await new Promise(r => setTimeout(r, waitSeconds * 1000));
+      continue;
+    }
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || err.message || `HF API HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    const text = Array.isArray(data) ? data[0]?.generated_text : data?.generated_text;
+    if (!text) throw new Error('HF API returned empty response');
+    return text.trim();
   }
-  const data = await res.json();
-  // HF returns [{ generated_text: '...' }]
-  const text = Array.isArray(data) ? data[0]?.generated_text : data?.generated_text;
-  if (!text) throw new Error('HF API returned empty response');
-  return text.trim();
+
+  throw new Error('HF model did not load after 5 attempts — try again later');
 }
 
 // ─── Generate Dev.to content (1,200–1,300 words) ─────────────────────────────
@@ -513,7 +543,6 @@ async function pingIndexNow(url) {
   });
 }
 
-
 // ─── Report results → Worker ──────────────────────────────────────────────────
 async function reportToWorker(filePath, results) {
   if (!ENV.WORKER_URL || !ENV.CMS_API_KEY) {
@@ -630,10 +659,8 @@ async function main() {
   log.info(`Dev.to:   ${wc(devtoRaw)} words generated`);
   log.info(`Hashnode: ${wc(hashnodeRaw)} words generated`);
 
-  // Cache generated content back to .md frontmatter (blocking to avoid race condition)
-  await cacheGeneratedContent(relPath, devtoRaw, hashnodeRaw).catch(e => {
-    log.warn(`Failed to cache generated content: ${e.message}`);
-  });
+  // Cache generated content back to .md frontmatter (non-blocking)
+  cacheGeneratedContent(relPath, devtoRaw, hashnodeRaw).catch(() => {});
 
   const devtoContent    = formatForDevto(fm, devtoRaw, url);
   const hashnodeContent = formatForHashnode(fm, hashnodeRaw, url);
@@ -727,4 +754,3 @@ async function updateStatusJson(filePath, results, commitSha) {
 }
 
 main();
-           
