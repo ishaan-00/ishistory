@@ -1,21 +1,16 @@
 name: Publish Pipeline
+
 on:
   push:
     branches: [main]
     paths:
       - 'src/content/**/*.md'
-  workflow_dispatch:
+  workflow_dispatch:                          # ← ADDED: enables manual trigger
     inputs:
       file:
-        description: 'File path to process (e.g. src/content/ai-history/episode-01.md)'
+        description: 'File to process (e.g. src/content/ai-history/episode-01.md)'
         required: true
-on:
-  push:
-    branches: [main]
-    paths:
-      - 'src/content/**/*.md'
 
-# Never cancel a running pipeline — always finish what was started
 concurrency:
   group: publish-pipeline
   cancel-in-progress: false
@@ -29,13 +24,11 @@ jobs:
       contents: read
 
     steps:
-      # ── 1. Checkout with enough depth to diff against previous commit ────────
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
-      # ── 2. Detect which .md files were ADDED (not modified) in this push ────
       - name: Detect new content files
         id: changed
         uses: tj-actions/changed-files@v44
@@ -51,21 +44,18 @@ jobs:
             echo "No new posts detected — only edits or non-content files changed."
           fi
 
-      # ── 3. Setup Node ────────────────────────────────────────────────────────
       - name: Setup Node.js
-        if: steps.changed.outputs.added_files != ''
+        if: steps.changed.outputs.added_files != '' || github.event_name == 'workflow_dispatch'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # ── 4. Install deps (no lockfile needed — installs from package.json) ────
       - name: Install dependencies
-        if: steps.changed.outputs.added_files != ''
+        if: steps.changed.outputs.added_files != '' || github.event_name == 'workflow_dispatch'
         run: npm install --no-save gray-matter
 
-      # ── 5. Run pipeline for each new post ────────────────────────────────────
       - name: Run publish pipeline
-        if: steps.changed.outputs.added_files != ''
+        if: steps.changed.outputs.added_files != '' || github.event_name == 'workflow_dispatch'
         env:
           DEVTO_API_KEY:            ${{ secrets.DEVTO_API_KEY }}
           HASHNODE_API_KEY:         ${{ secrets.HASHNODE_API_KEY }}
@@ -77,9 +67,12 @@ jobs:
           CMS_API_KEY:              ${{ secrets.CMS_API_KEY }}
           GIT_SHA:                  ${{ github.sha }}
           GIT_REPO:                 ${{ github.repository }}
-        run: |
+        run: |                                # ← CHANGED: handles both auto and manual
+          FILE="${{ github.event.inputs.file || '' }}"
+          ADDED="${{ steps.changed.outputs.added_files || '' }}"
+          FILES="${FILE:-$ADDED}"
           EXIT_CODE=0
-          for file in ${{ steps.changed.outputs.added_files }}; do
+          for file in $FILES; do
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo "Processing: $file"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -87,18 +80,13 @@ jobs:
           done
           exit $EXIT_CODE
 
-      # ── 6. Summary (always runs) ─────────────────────────────────────────────
       - name: Pipeline summary
         if: always()
         run: |
-          if [ -z "${{ steps.changed.outputs.added_files }}" ]; then
+          if [ -z "${{ steps.changed.outputs.added_files }}" ] && [ -z "${{ github.event.inputs.file }}" ]; then
             echo "## No new posts in this push" >> $GITHUB_STEP_SUMMARY
           else
             echo "## Publish Pipeline Complete" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Files processed:**" >> $GITHUB_STEP_SUMMARY
-            for file in ${{ steps.changed.outputs.added_files }}; do
-              echo "- \`$file\`" >> $GITHUB_STEP_SUMMARY
-            done
             echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           fi
