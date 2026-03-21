@@ -65,8 +65,8 @@ async function postTodayInHistory() {
   if (!ENV.DISCORD_TODAY) { log.warn('DISCORD_WEBHOOK_TODAY not set — skipping'); return; }
 
   const now   = new Date();
-  const month = now.getUTCMonth() + 1;
-  const day   = now.getUTCDate();
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const day   = String(now.getUTCDate()).padStart(2, '0');
   const date  = now.toISOString().slice(0, 10);
 
   try {
@@ -188,5 +188,3 @@ async function main() {
 }
 
 main().catch(e => { console.error(e); process.exit(1); });
-
-    
