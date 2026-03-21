@@ -36,6 +36,8 @@ const ENV = {
   CMS_API_KEY:      process.env.CMS_API_KEY              || '',
   GIT_SHA:          (process.env.GIT_SHA || '').slice(0, 7),
   GIT_REPO:         process.env.GIT_REPO || 'ishaan-00/ishistory',
+  HF_TOKEN:         process.env.HF_TOKEN || '',
+  GITHUB_TOKEN:     process.env.GITHUB_TOKEN || '',
 };
 
 // ─── Logger ───────────────────────────────────────────────────────────────────
@@ -126,46 +128,164 @@ function validateFm(fm) {
   return issues;
 }
 
-// ─── Teaser builder ───────────────────────────────────────────────────────────
-// ─── Core excerpt builder (shared base) ──────────────────────────────────────
-// Uses `teaser` frontmatter if present, otherwise auto-generates from body.
-function buildExcerpt(fm, body) {
-  if (fm.teaser && typeof fm.teaser === 'string' && wc(fm.teaser) > 50) {
-    log.info(`Using custom teaser — ${wc(fm.teaser)} words`);
-    return fm.teaser.trim();
+// ─── HF Inference API ────────────────────────────────────────────────────────
+// Single function for both generation calls.
+// Returns generated text or throws so withRetry can handle transient errors.
+async function hfGenerate(prompt, maxTokens = 1024) {
+  if (!ENV.HF_TOKEN) throw new Error('HF_TOKEN not configured');
+  const res = await fetch(
+    'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3',
+    {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${ENV.HF_TOKEN}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        inputs:     prompt,
+        parameters: {
+          max_new_tokens:   maxTokens,
+          temperature:      0.7,
+          top_p:            0.9,
+          do_sample:        true,
+          return_full_text: false,   // return only generated text, not prompt
+        },
+      }),
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    // 503 = model loading — worth retrying
+    throw new Error(err.error || `HF API HTTP ${res.status}`);
   }
-  log.warn('No custom teaser — auto-generating excerpt');
-  const sections  = body.split(/^(?=## )/m);
-  const introRaw  = sections[0].replace(/^#[^\n]*\n+/, '').trim();
-  const introPara = introRaw.split(/\n{2,}/)[0].trim();
-  let excerpt = '';
-  if (fm.description)                            excerpt += fm.description + '\n\n';
-  if (introPara && introPara !== fm.description) excerpt += introPara + '\n\n';
-  for (let i = 1; i < sections.length && wc(excerpt) < 900; i++) {
-    const lines     = sections[i].split('\n');
-    const heading   = lines[0].trim();
-    const sBody     = lines.slice(1).join('\n').trim();
-    const firstPara = sBody.split(/\n{2,}/)[0].trim();
-    if (firstPara) excerpt += `## ${heading}\n\n${firstPara}\n\n`;
-  }
-  log.info(`Auto-excerpt — ${wc(excerpt.trim())} words`);
-  return excerpt.trim();
+  const data = await res.json();
+  // HF returns [{ generated_text: '...' }]
+  const text = Array.isArray(data) ? data[0]?.generated_text : data?.generated_text;
+  if (!text) throw new Error('HF API returned empty response');
+  return text.trim();
 }
 
-// ─── Dev.to formatter ─────────────────────────────────────────────────────────
-// Community platform — readers scan fast. Opens with a canonical note (Dev.to
-// norm), uses a community-style CTA, keeps series context light.
-function formatForDevto(fm, body, url) {
-  const excerpt    = buildExcerpt(fm, body);
-  const totalWords = wc(body);
+// ─── Generate Dev.to content (1,200–1,300 words) ─────────────────────────────
+// Community platform — scannable, sectioned, developer-friendly tone.
+// Cached in fm.devto_content frontmatter — only calls API on first publish.
+async function generateDevtoContent(fm) {
+  if (fm.devto_content && typeof fm.devto_content === 'string' && wc(fm.devto_content) > 200) {
+    log.info(`Dev.to: using cached content (${wc(fm.devto_content)} words)`);
+    return fm.devto_content.trim();
+  }
+  log.info('Dev.to: generating via Mistral-7B…');
+  const seriesName = (fm.series || '').replace(/-/g, ' ');
+  const epNum      = fm.episode_number ? `, Episode ${fm.episode_number}` : '';
+  const prompt = `<s>[INST] Write a 1,200-1,300 word article for the Dev.to developer and tech community.
+
+Title: "${fm.title}"
+Subtitle: "${fm.description || ''}"
+Series: ${seriesName}${epNum}
+
+Requirements:
+- Engaging, informative tone suited to a curious technical audience
+- Use clear H2 section headings to break up the article
+- Include historical context, key figures, and why this matters today
+- Each section should be 150-200 words
+- End with a paragraph noting this is part of the ${seriesName} series on ishistory.pages.dev
+- Write only the article body in markdown — no title, no preamble, no commentary
+
+Begin writing now: [/INST]`;
+
+  return withRetry('HF Dev.to', () => hfGenerate(prompt, 1400));
+}
+
+// ─── Generate Hashnode content (1,500–2,000 words) ───────────────────────────
+// Editorial blog audience — narrative-driven, authoritative, long-form journalism.
+// Cached in fm.hashnode_content frontmatter — only calls API on first publish.
+async function generateHashnodeContent(fm) {
+  if (fm.hashnode_content && typeof fm.hashnode_content === 'string' && wc(fm.hashnode_content) > 200) {
+    log.info(`Hashnode: using cached content (${wc(fm.hashnode_content)} words)`);
+    return fm.hashnode_content.trim();
+  }
+  log.info('Hashnode: generating via Mistral-7B…');
+  const seriesName = (fm.series || '').replace(/-/g, ' ');
+  const epNum      = fm.episode_number ? `, Episode ${fm.episode_number}` : '';
+  const prompt = `<s>[INST] Write a 1,500-2,000 word editorial article for a history and ideas blog.
+
+Title: "${fm.title}"
+Subtitle: "${fm.description || ''}"
+Series: ${seriesName}${epNum}
+
+Requirements:
+- Authoritative, richly written, narrative-driven long-form journalism style
+- Single flowing argument — avoid bullet points, favour dense paragraphs
+- Historically rich with specific names, dates, and primary details
+- Build towards a conclusion about why this history matters now
+- End with a paragraph noting this is part of the ${seriesName} series on ishistory.pages.dev
+- Write only the article body in markdown — no title, no preamble, no commentary
+
+Begin writing now: [/INST]`;
+
+  return withRetry('HF Hashnode', () => hfGenerate(prompt, 1900));
+}
+
+// ─── Write generated content back to .md frontmatter ─────────────────────────
+// Commits devto_content and hashnode_content into the file so future runs
+// read from cache instead of calling the API again. Uses [skip ci] to
+// prevent re-triggering the pipeline. Falls back silently if commit fails.
+async function cacheGeneratedContent(relPath, devtoRaw, hashnodeRaw) {
+  const token = ENV.GITHUB_TOKEN;
+  const repo  = ENV.GIT_REPO;
+  if (!token || !repo) return;
+
+  const apiBase = `https://api.github.com/repos/${repo}/contents/${relPath}`;
+  const headers = {
+    Authorization:  `Bearer ${token}`,
+    Accept:         'application/vnd.github.v3+json',
+    'Content-Type': 'application/json',
+  };
+
+  try {
+    const res  = await fetch(apiBase, { headers });
+    if (!res.ok) return;
+    const data = await res.json();
+    const raw  = Buffer.from(data.content.replace(/\n/g, ''), 'base64').toString('utf8');
+
+    // Inject both fields into frontmatter after the closing ---
+    // Only inject if not already present
+    let updated = raw;
+    if (!updated.includes('devto_content:')) {
+      const devtoBlock    = 'devto_content: |\n' + devtoRaw.split('\n').map(l => '  ' + l).join('\n');
+      const hashnodeBlock = 'hashnode_content: |\n' + hashnodeRaw.split('\n').map(l => '  ' + l).join('\n');
+      // Insert before the closing --- of frontmatter
+      updated = updated.replace(/^(---[\s\S]*?)(---)/m, `$1${devtoBlock}
+${hashnodeBlock}
+$2`);
+    }
+
+    if (updated === raw) return; // nothing to write
+
+    await fetch(apiBase, {
+      method: 'PUT', headers,
+      body:   JSON.stringify({
+        message: `chore: cache generated content for ${relPath.split('/').pop()} [skip ci]`,
+        content: Buffer.from(updated).toString('base64'),
+        sha:     data.sha,
+      }),
+    });
+    log.ok('Generated content cached in frontmatter');
+  } catch (e) {
+    log.warn(`Cache write-back failed (non-fatal): ${e.message}`);
+  }
+}
+
+// ─── Formatters — inject generated content into platform structure ─────────────
+
+// Dev.to: community header + generated body + community CTA
+function formatForDevto(fm, generatedBody, url) {
+  const totalWords = wc(generatedBody);
   const approx     = `~${(Math.round(totalWords / 100) * 100).toLocaleString()}`;
   const seriesName = (fm.series || '').replace(/-/g, ' ');
   const epNum      = fm.episode_number ? ` — Episode ${fm.episode_number}` : '';
   const partLabel  = fm.part_label ? ` · ${fm.part_label}` : '';
+  const fullApprox = `~${(Math.round(wc(fm._body || '') / 100) * 100).toLocaleString()}`;
 
   const header = [
     `> 📖 *Originally published on [ishistory.pages.dev](${url})*`,
-    `> *${approx} word deep-dive · ${seriesName}${epNum}${partLabel}*`,
+    `> *${fullApprox} word deep-dive · ${seriesName}${epNum}${partLabel}*`,
     '',
   ].join('\n');
 
@@ -175,24 +295,20 @@ function formatForDevto(fm, body, url) {
     '',
     '## Continue Reading',
     '',
-    `This post is part of the **${seriesName}** series on [ishistory.pages.dev](https://ishistory.pages.dev).`,
-    `The full article (${approx} words) covers this topic in complete depth.`,
+    `This is part of the **${seriesName}** series on [ishistory.pages.dev](https://ishistory.pages.dev).`,
+    `The full article (${fullApprox} words) covers this topic in complete depth with primary sources.`,
     '',
-    `👉 **[Read the full article on ishistory.pages.dev](${url})**`,
+    `👉 **[Read the full article](${url})**`,
     '',
     `*Follow the series — new episodes cover AI history, internet history, and robotics.*`,
   ].join('\n');
 
-  return `${header}\n${excerpt}${cta}`;
+  return `${header}\n${generatedBody}\n${cta}`;
 }
 
-// ─── Hashnode formatter ───────────────────────────────────────────────────────
-// Editorial/blog audience — expects context, series info, polished structure.
-// Opens with an episode metadata block, uses richer markdown, editorial CTA.
-function formatForHashnode(fm, body, url) {
-  const excerpt    = buildExcerpt(fm, body);
-  const totalWords = wc(body);
-  const approx     = `~${(Math.round(totalWords / 100) * 100).toLocaleString()}`;
+// Hashnode: episode metadata block + generated body + editorial CTA
+function formatForHashnode(fm, generatedBody, url) {
+  const fullApprox = `~${(Math.round(wc(fm._body || '') / 100) * 100).toLocaleString()}`;
   const seriesName = (fm.series || '').replace(/-/g, ' ');
   const metaParts  = [
     fm.episode_number ? `Episode ${fm.episode_number}` : null,
@@ -212,16 +328,14 @@ function formatForHashnode(fm, body, url) {
     '',
     '---',
     '',
-    `### Full Article`,
+    `### Read the Full Article`,
     '',
-    `*This is an excerpt from a ${approx}-word article in the **${seriesName}** series.*`,
-    '',
-    `The complete piece — with full historical context, primary sources, and detailed analysis — is on [ishistory.pages.dev](https://ishistory.pages.dev).`,
+    `*This piece is part of the **${seriesName}** series. The complete article (${fullApprox} words) — with full historical context, primary sources, and extended analysis — is published on ishistory.pages.dev.*`,
     '',
     `**[→ Read the complete article](${url})**`,
   ].join('\n');
 
-  return `${header}\n${excerpt}${cta}`;
+  return `${header}\n${generatedBody}\n${cta}`;
 }
 
 // ─── Tag sanitisers ───────────────────────────────────────────────────────────
@@ -490,9 +604,8 @@ async function main() {
 
   const raw          = fs.readFileSync(absPath, 'utf8');
   const { fm, body } = parseFrontmatter(raw);
+  fm._body           = body; // pass article body to formatters for word count
   const url          = canonical(relPath);
-  const devtoContent    = formatForDevto(fm, body, url);
-  const hashnodeContent = formatForHashnode(fm, body, url);
 
   log.section(`Processing: ${path.basename(relPath)}`);
   log.info(`Title:    ${fm.title || '(missing)'}`);
@@ -500,8 +613,27 @@ async function main() {
   log.info(`URL:      ${url}`);
   log.info(`Commit:   ${ENV.GIT_SHA || '(local)'}`);
   log.info(`Article:  ${wc(body)} words`);
-  log.info(`Dev.to:   ${wc(devtoContent)} words`);
-  log.info(`Hashnode: ${wc(hashnodeContent)} words`);
+
+  // Generate platform-specific content via HF API (2 calls total)
+  // Falls back to description if HF_TOKEN not set — never blocks the pipeline
+  log.section('Generating platform content');
+  const [devtoRaw, hashnodeRaw] = await Promise.all([
+    ENV.HF_TOKEN
+      ? generateDevtoContent(fm).catch(e => { log.warn(`Dev.to gen failed: ${e.message} — using description`); return fm.description || fm.title; })
+      : Promise.resolve(fm.description || fm.title),
+    ENV.HF_TOKEN
+      ? generateHashnodeContent(fm).catch(e => { log.warn(`Hashnode gen failed: ${e.message} — using description`); return fm.description || fm.title; })
+      : Promise.resolve(fm.description || fm.title),
+  ]);
+
+  log.info(`Dev.to:   ${wc(devtoRaw)} words generated`);
+  log.info(`Hashnode: ${wc(hashnodeRaw)} words generated`);
+
+  // Cache generated content back to .md frontmatter (non-blocking)
+  cacheGeneratedContent(relPath, devtoRaw, hashnodeRaw).catch(() => {});
+
+  const devtoContent    = formatForDevto(fm, devtoRaw, url);
+  const hashnodeContent = formatForHashnode(fm, hashnodeRaw, url);
 
   const issues = validateFm(fm);
   if (issues.length) {
