@@ -185,6 +185,7 @@
 </head>
 <body>
 
+<!-- Load Sveltia CMS normally -->
 <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js" type="module" data-cfasync="false"></script>
 
 <!-- Login screen -->
@@ -289,10 +290,51 @@
 
   let TOKEN = null, isOpen = false, activeTab = 'overview', treeCache = null;
 
-  // ── Auth ──────────────────────────────────────────────────────────────────
+  // ── Auth & SSO ────────────────────────────────────────────────────────────
   const AUTH_WORKER = 'https://sveltia-cms-auth.aadityadarpan5.workers.dev';
   const SITE_ID     = location.host || 'ishistory.pages.dev';
 
+  // 1. Fetch token from Sveltia CMS IndexedDB quietly
+  async function getSveltiaToken() {
+    return new Promise((resolve) => {
+      // Sveltia CMS uses localforage which defaults to 'sveltia-cms' DB
+      const dbName = 'sveltia-cms'; 
+      const storeName = 'keyvaluepairs';
+      const keyName = 'sveltia-cms.user';
+
+      const req = indexedDB.open(dbName);
+      
+      req.onerror = () => resolve(null);
+      req.onsuccess = (event) => {
+        const db = event.target.result;
+        
+        // Safely check if the store exists
+        if (!db.objectStoreNames.contains(storeName)) {
+          return resolve(null);
+        }
+        
+        try {
+          const tx = db.transaction(storeName, 'readonly');
+          const store = tx.objectStore(storeName);
+          const userReq = store.get(keyName);
+          
+          userReq.onsuccess = () => {
+            const user = userReq.result;
+            if (user && user.token) {
+              resolve(user.token);
+            } else {
+              resolve(null);
+            }
+          };
+          userReq.onerror = () => resolve(null);
+        } catch (e) {
+          resolve(null);
+        }
+      };
+    });
+  }
+
+    // 2. Manual Login flow fallback
   function doOAuth() {
     const status = document.getElementById('login-status');
     status.textContent = 'Opening GitHub login…';
@@ -307,22 +349,39 @@
     if (!popup) { status.textContent = 'Popup blocked — allow popups for this page'; return; }
 
     const onMsg = async (e) => {
-      // sveltia-cms-auth sends: "authorization:github:success:{...}"
-      if (typeof e.data !== 'string') return;
-      if (!e.data.startsWith('authorization:github:success:')) return;
+      let token = null;
+
+      // Handle both string and JSON object payloads robustly
+      if (typeof e.data === 'string' && e.data.startsWith('authorization:github:success:')) {
+        try {
+          const payloadStr = e.data.substring('authorization:github:success:'.length);
+          const payload = JSON.parse(payloadStr);
+          token = payload.token || payload.access_token;
+        } catch (err) {
+          console.error("Failed to parse auth string", err);
+        }
+      } else if (e.data && e.data.type === 'authorization:github:success' && e.data.payload) {
+        token = e.data.payload.token || e.data.payload.access_token;
+      }
+
+      // Ignore unrelated messages
+      if (!token) return;
+
       window.removeEventListener('message', onMsg);
+      
       try {
-        const payload = JSON.parse(e.data.replace('authorization:github:success:', ''));
-        const tok = payload.token;
-        if (!tok) { status.textContent = 'No token in response'; return; }
-        // Verify token
-        const u = await ghRaw('/user', 'GET', null, tok);
-        localStorage.setItem(TOK_KEY, tok);
-        TOKEN = tok;
+        status.textContent = 'Verifying with GitHub...';
+        const u = await ghRaw('/user', 'GET', null, token);
+        localStorage.setItem(TOK_KEY, token);
+        TOKEN = token;
         setUser(u.login);
+        
         document.getElementById('d-login').classList.remove('show');
         status.textContent = '';
-        popup.close();
+        if (!popup.closed) popup.close();
+        
+        // Re-initialize UI
+        dInit();
       } catch(e2) {
         status.textContent = 'Auth failed: ' + e2.message;
       }
@@ -580,7 +639,7 @@
     document.getElementById('series-wrap').innerHTML = '<div class="series-list">' + cards.join('') + '</div>';
   }
 
-  // ── Schedule ──────────────────────────────────────────────────────────────
+    // ── Schedule ──────────────────────────────────────────────────────────────
   async function loadSchedule() {
     const tree  = await getTree();
     const files = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md')).map(f=>f.path).sort();
@@ -646,8 +705,26 @@
 
   // ── Init ──────────────────────────────────────────────────────────────────
   async function dInit() {
+    // 1. Check local storage
     TOKEN = localStorage.getItem(TOK_KEY);
-    if (!TOKEN) { document.getElementById('d-login').classList.add('show'); return; }
+
+    // 2. If no token, attempt to sync silently from Sveltia CMS IndexedDB
+    if (!TOKEN) {
+      const sveltiaToken = await getSveltiaToken();
+      if (sveltiaToken) {
+        TOKEN = sveltiaToken;
+        localStorage.setItem(TOK_KEY, TOKEN);
+        toast('Synced login from CMS ✓', 'ok');
+      }
+    }
+
+    // 3. If STILL no token, show the login screen and exit setup
+    if (!TOKEN) { 
+      document.getElementById('d-login').classList.add('show'); 
+      return; 
+    }
+    
+    // 4. Verify token and set user
     try {
       const u = await gh('/user');
       setUser(u.login);
@@ -655,6 +732,7 @@
       document.getElementById('d-login').classList.add('show');
       return;
     }
+
     // Pre-fetch status for FAB dot colour
     getStatus().then(s => {
       const last  = s.runs?.[0];
@@ -664,7 +742,6 @@
     }).catch(()=>{});
   }
 
-  // OAuth flow — no PAT input needed
   dInit();
 </script>
 </body>
