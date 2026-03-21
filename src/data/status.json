@@ -1,6 +1,36 @@
 {
-  "updated_at": "2026-03-21T14:59:37.493Z",
+  "updated_at": "2026-03-21T15:31:09.033Z",
   "runs": [
+    {
+      "file": "src/content/ai-history/episode-02.md",
+      "commit": "e13fb5d",
+      "ran_at": "2026-03-21T15:31:09.033Z",
+      "discord": {
+        "ok": true,
+        "skipped": false,
+        "err": null
+      },
+      "devto": {
+        "ok": false,
+        "skipped": false,
+        "err": "Canonical url has already been taken. Email support@dev.to for further details."
+      },
+      "hashnode": {
+        "ok": true,
+        "skipped": false,
+        "err": null
+      },
+      "ntfy": {
+        "ok": true,
+        "skipped": false,
+        "err": null
+      },
+      "indexnow": {
+        "ok": true,
+        "skipped": false,
+        "err": null
+      }
+    },
     {
       "file": "src/content/ai-history/episode-02.md",
       "commit": "c4d3978",
