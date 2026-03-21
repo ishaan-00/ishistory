@@ -46,12 +46,6 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install pipeline dependencies
-        if: steps.changed.outputs.added_files != ''
-        run: |
-          cd .github/scripts
-          npm install
-
       - name: Run publish pipeline
         if: steps.changed.outputs.added_files != ''
         env:
@@ -69,11 +63,14 @@ jobs:
           GIT_REPO:                 ${{ github.repository }}
         run: |
           EXIT_CODE=0
-          for file in ${{ steps.changed.outputs.added_files }}; do
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "Processing: $file"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            node .github/scripts/pipeline.mjs "$file" || EXIT_CODE=$?
+          # Use a while-read loop to safely handle filenames with spaces
+          echo "${{ steps.changed.outputs.added_files }}" | tr ' ' '\n' | while read -r file; do
+            if [ -n "$file" ]; then
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "Processing: $file"
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              node .github/scripts/pipeline.mjs "$file" || EXIT_CODE=$?
+            fi
           done
           exit $EXIT_CODE
 
@@ -86,8 +83,12 @@ jobs:
             echo "## Publish Pipeline Complete" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**Files processed:**" >> $GITHUB_STEP_SUMMARY
-            for file in ${{ steps.changed.outputs.added_files }}; do
-              echo "- \`$file\`" >> $GITHUB_STEP_SUMMARY
+            # Safe loop for summary too
+            echo "${{ steps.changed.outputs.added_files }}" | tr ' ' '\n' | while read -r file; do
+              if [ -n "$file" ]; then
+                echo "- \`$file\`" >> $GITHUB_STEP_SUMMARY
+              fi
             done
             echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           fi
+
