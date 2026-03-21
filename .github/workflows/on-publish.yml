@@ -1,5 +1,14 @@
 name: Publish Pipeline
-
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/content/**/*.md'
+  workflow_dispatch:
+    inputs:
+      file:
+        description: 'File path to process (e.g. src/content/ai-history/episode-01.md)'
+        required: true
 on:
   push:
     branches: [main]
