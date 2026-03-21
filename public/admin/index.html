@@ -298,32 +298,27 @@
 
   function doOAuth() {
     const status = document.getElementById('login-status');
-    const authUrl = AUTH_URL + '/auth?provider=github&site_id=' + SITE_ID;
     status.textContent = 'Opening GitHub login…';
-
-    // Try popup first (desktop). If blocked, fall back to same-tab redirect.
     const w = 600, h = 700;
     const left = Math.max(0, (screen.width  - w) / 2);
     const top  = Math.max(0, (screen.height - h) / 2);
-    const popup = window.open(authUrl, 'gh-oauth',
-      'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top);
+    const popup = window.open(
+      AUTH_URL + '/auth?provider=github&site_id=' + SITE_ID,
+      'gh-oauth',
+      'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top
+    );
+    if (!popup) { status.textContent = 'Popup blocked — please allow popups for this page'; return; }
 
-    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-      // Popup blocked (common on mobile) — navigate current tab to auth
-      // Worker callback will set session cookie then redirect back here
-      status.textContent = 'Redirecting to GitHub…';
-      window.location.href = authUrl;
-      return;
-    }
-
-    // Popup opened — listen for postMessage (desktop flow)
+    // Listen for Sveltia's postMessage — this confirms OAuth completed.
+    // The session cookie is already set by the Worker at this point.
     const onMsg = async (e) => {
       if (typeof e.data !== 'string') return;
       if (!e.data.startsWith('authorization:github:success:')) return;
       window.removeEventListener('message', onMsg);
       clearInterval(checkClosed);
-      try { popup.close(); } catch(_) {}
+      popup.close();
       status.textContent = 'Verifying session…';
+      // Verify the session cookie was set correctly
       await verifySession();
     };
     window.addEventListener('message', onMsg);
@@ -332,14 +327,8 @@
       if (popup.closed) {
         clearInterval(checkClosed);
         window.removeEventListener('message', onMsg);
-        // Popup was closed — check if session was set anyway (user completed auth)
         const s = document.getElementById('login-status');
-        if (s && s.textContent.startsWith('Opening')) {
-          s.textContent = 'Checking session…';
-          verifySession().then(ok => {
-            if (!ok && s) s.textContent = '';
-          });
-        }
+        if (s && s.textContent.startsWith('Opening')) s.textContent = '';
       }
     }, 500);
   }
@@ -502,9 +491,15 @@
   }
 
   async function getStatus() {
-    const f = await ghFile('src/data/status.json').catch(() => null);
-    if (!f) return { runs: [] };
-    try { return JSON.parse(f.content); } catch(_) { return { runs: [] }; }
+    // Fetch via current commit SHA — bypasses GitHub CDN cache (~60s)
+    try {
+      const ref = await gh('/repos/' + REPO + '/git/ref/heads/main');
+      const sha = ref?.object?.sha;
+      if (!sha) return { runs: [] };
+      const d = await gh('/repos/' + REPO + '/contents/src/data/status.json?ref=' + sha);
+      if (!d || d.message) return { runs: [] };
+      return JSON.parse(atob(d.content.replace(/\n/g,'')));
+    } catch(_) { return { runs: [] }; }
   }
 
   // ── Overview ──────────────────────────────────────────────────────────────
@@ -578,9 +573,12 @@
 
   async function getSeriesMeta() {
     try {
-      const f = await ghFile(SERIES_META_PATH);
-      if (!f) return { meta: {}, sha: null };
-      return { meta: JSON.parse(f.content), sha: f.sha };
+      const ref = await gh('/repos/' + REPO + '/git/ref/heads/main');
+      const sha = ref?.object?.sha;
+      if (!sha) return { meta: {}, sha: null };
+      const d = await gh('/repos/' + REPO + '/contents/' + SERIES_META_PATH + '?ref=' + sha);
+      if (!d || d.message) return { meta: {}, sha: null };
+      return { meta: JSON.parse(atob(d.content.replace(/\n/g,''))), sha: d.sha };
     } catch(_) { return { meta: {}, sha: null }; }
   }
 
@@ -592,11 +590,12 @@
       if (!meta[name]) meta[name] = {};
       meta[name].complete = !meta[name].complete;
       const isNowComplete = meta[name].complete;
-      await ghWrite(SERIES_META_PATH,
-        JSON.stringify(meta, null, 2),
-        'chore: mark ' + name + (isNowComplete ? ' complete' : ' active') + ' [skip ci]',
-        sha
-      );
+      const content = btoa(unescape(encodeURIComponent(JSON.stringify(meta, null, 2))));
+      await gh('/repos/' + REPO + '/contents/' + SERIES_META_PATH, 'PUT', {
+        message: 'chore: mark ' + name + (isNowComplete ? ' complete' : ' active') + ' [skip ci]',
+        content,
+        ...(sha ? { sha } : {}),
+      });
       toast(name.replace(/-/g,' ') + ' marked ' + (isNowComplete ? 'complete ✓' : 'active'), 'ok');
       treeCache = null;
       loadSeries();
@@ -640,7 +639,7 @@
               btnTxt + '</button>' +
           '</div>' +
         '</div>' +
-        '<div class="d-prog"><div class="d-prog-fill" style="width:' + pct + '%;' + (isComplete ? 'background:var(--green)' : '') + '"></div></div>' +
+        '<div class="d-prog"><div class="d-prog-fill" style="width:' + pct + '%;' + (isComplete?'background:var(--green)':'') + '"></div></div>' +
         '<div class="series-stats">' +
           '<span>' + eps.length + ' ep</span>' +
           (pros.length ? '<span>' + pros.length + ' profiles</span>' : '') +
@@ -734,14 +733,6 @@
   }
 
   dInit();
-
-  // Handle mobile OAuth redirect (?auth=success — no window.opener on Android)
-  if (new URLSearchParams(location.search).get('auth') === 'success') {
-    history.replaceState({}, '', location.pathname); // clean URL
-    // Session cookie already set by Worker — open dashboard immediately
-    const ok = await verifySession();
-    if (ok) { dOpen(); }
-  }
 </script>
 </body>
 </html>
