@@ -69,7 +69,8 @@ jobs:
       needs.validate.outputs.passed == 'true' &&
       (needs.validate.outputs.has_new_files == 'true' || github.event_name == 'workflow_dispatch')
     permissions:
-      contents: write
+      contents: write   # commits status.json
+      models: read      # GitHub Models API for article generation
 
     steps:
       - name: Checkout
@@ -91,7 +92,6 @@ jobs:
           NTFY_TOPIC:               ${{ secrets.NTFY_TOPIC }}
           INDEXNOW_KEY:             ${{ secrets.INDEXNOW_KEY }}
           GITHUB_TOKEN:             ${{ secrets.GITHUB_TOKEN }}
-          HF_TOKEN:                 ${{ secrets.HF_TOKEN }}
           GIT_SHA:                  ${{ github.sha }}
           GIT_REPO:                 ${{ github.repository }}
         run: |
