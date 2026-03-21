@@ -1,474 +1,836 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex" />
   <title>ishistory CMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    #ih-fab {
-      position: fixed; right: 6px; top: 50%;
-      transform: translateY(-50%);
-      width: 48px; height: 48px; border-radius: 50%;
-      background: #080e1a; border: 1.5px solid #1e293b;
-      cursor: pointer; z-index: 99998;
-      display: flex; align-items: center; justify-content: center;
-      touch-action: manipulation; user-select: none;
-      transition: right 0.2s ease, left 0.2s ease, background 0.2s;
-      box-shadow: 0 2px 12px #00000066;
+    :root {
+      --bg:      #040810;
+      --surface: #080f1c;
+      --card:    #0c1624;
+      --border:  #152035;
+      --border2: #1a2a42;
+      --amber:   #b45309;
+      --amber2:  #d97706;
+      --amber3:  #f59e0b;
+      --green:   #22c55e;
+      --red:     #ef4444;
+      --blue:    #3b82f6;
+      --yellow:  #eab308;
+      --text:    #94a3b8;
+      --text2:   #cbd5e1;
+      --text3:   #e2e8f0;
+      --dim:     #334155;
+      --dimmer:  #1e3a5f33;
+      --mono:    'JetBrains Mono', ui-monospace, monospace;
+      --sans:    'DM Sans', system-ui, sans-serif;
+      --serif:   'Playfair Display', Georgia, serif;
     }
-    #ih-fab:active { background: #0f172a; }
-    #ih-fab.left-side { right: auto; left: 6px; }
-    #ih-fab-dot {
-      width: 10px; height: 10px; border-radius: 50%;
-      background: #334155; flex-shrink: 0;
-      transition: background 0.4s, box-shadow 0.4s;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+    /* ── FAB ── */
+    #d-fab {
+      position: fixed; right: 10px; top: 50%; transform: translateY(-50%);
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--surface); border: 1px solid var(--border2);
+      cursor: pointer; z-index: 99990; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 24px #00000088; transition: all .2s; user-select: none;
+      font-family: var(--mono); font-size: 11px; color: var(--dim);
     }
-    #ih-fab-dot.green  { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
-    #ih-fab-dot.yellow { background: #eab308; box-shadow: 0 0 6px #eab30888; }
-    #ih-fab-dot.red    { background: #ef4444; box-shadow: 0 0 6px #ef444488; }
-    #ih-fab-dot.pulse  { animation: ih-pulse 2s ease-in-out infinite; }
-    @keyframes ih-pulse { 0%,100%{opacity:1} 50%{opacity:.2} }
-    #ih-fab.loading #ih-fab-dot {
-      animation: ih-spin 0.8s linear infinite;
-      width: 8px; height: 8px; background: transparent;
-      border: 1.5px solid #334155; border-top-color: #3b82f6; border-radius: 50%;
+    #d-fab:hover { border-color: var(--amber); color: var(--amber2); background: var(--card); }
+    #d-fab-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--dim);
+      transition: background .4s, box-shadow .4s;
     }
-    @keyframes ih-spin { to { transform: rotate(360deg); } }
-    #ih-fab-badge {
-      position: absolute; top: 4px; right: 4px;
-      min-width: 14px; height: 14px; border-radius: 7px;
-      font-size: 8px; font-weight: 700; color: #fff;
-      display: none; align-items: center; justify-content: center;
-      padding: 0 3px; font-family: 'SF Mono', ui-monospace, monospace; line-height: 1;
+    #d-fab-dot.green  { background: var(--green);  box-shadow: 0 0 8px #22c55e66; }
+    #d-fab-dot.amber  { background: var(--amber2); box-shadow: 0 0 8px #d9770666; }
+    #d-fab-dot.red    { background: var(--red);    box-shadow: 0 0 8px #ef444466; }
+    #d-fab-dot.pulse  { animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.2} }
+
+    /* ── Overlay ── */
+    #d-overlay {
+      position: fixed; inset: 0; background: #00000099; z-index: 99991;
+      opacity: 0; pointer-events: none; transition: opacity .25s;
     }
-    #ih-fab-badge.visible { display: flex; }
-    #ih-fab-hint {
-      position: fixed; bottom: 100px; right: 60px;
-      background: #0f172a; color: #64748b; font-size: 9px;
-      font-family: 'SF Mono', ui-monospace, monospace;
-      padding: 4px 8px; border-radius: 4px; border: 1px solid #1e293b;
-      opacity: 0; pointer-events: none; transition: opacity 0.3s;
-      z-index: 99997; white-space: nowrap;
-    }
-    #ih-fab-hint.show { opacity: 1; }
-    #ih-backdrop {
-      position: fixed; inset: 0; background: #00000088;
-      z-index: 99998; opacity: 0; pointer-events: none; transition: opacity 0.25s;
-    }
-    #ih-backdrop.open { opacity: 1; pointer-events: all; }
-    #ih-panel {
-      position: fixed; bottom: 0; left: 50%;
-      transform: translateX(-50%) translateY(100%);
-      width: min(480px, 100vw); max-height: 88vh;
-      background: #05090f; border: 1px solid #1e293b; border-bottom: none;
-      border-radius: 14px 14px 0 0; z-index: 99999;
+    #d-overlay.open { opacity: 1; pointer-events: all; }
+
+    /* ── Dashboard Panel ── */
+    #d-panel {
+      position: fixed; inset: 0; z-index: 99992;
       display: flex; flex-direction: column;
-      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
-      font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
-      font-size: 11px; line-height: 1.4;
+      transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1);
+      background: var(--bg);
     }
-    #ih-panel.open { transform: translateX(-50%) translateY(0); }
-    #ih-drag-handle { width: 36px; height: 4px; border-radius: 2px; background: #1e293b; margin: 8px auto 0; flex-shrink: 0; }
-    #ih-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 8px; border-bottom: 1px solid #0f172a; flex-shrink: 0; }
-    #ih-panel-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #334155; }
-    #ih-panel-meta  { font-size: 9px; color: #1e293b; }
-    #ih-panel-close { background: none; border: none; cursor: pointer; color: #334155; font-size: 14px; padding: 0 2px; line-height: 1; font-family: inherit; transition: color 0.15s; }
-    #ih-panel-close:hover { color: #ef4444; }
-    #ih-panel-inner { flex: 1; overflow-y: auto; padding: 0 0 20px; scrollbar-width: thin; scrollbar-color: #1e293b transparent; }
-    .ih-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; transition: background 0.4s, box-shadow 0.4s; }
-    .ih-dot.green  { background: #22c55e; box-shadow: 0 0 5px #22c55e66; }
-    .ih-dot.yellow { background: #eab308; box-shadow: 0 0 5px #eab30866; }
-    .ih-dot.red    { background: #ef4444; box-shadow: 0 0 5px #ef444466; }
-    .ih-dot.blue   { background: #3b82f6; box-shadow: 0 0 5px #3b82f666; }
-    .ih-dot.grey   { background: #2d3f55; box-shadow: none; }
-    .ih-section { padding: 10px 14px 8px; border-bottom: 1px solid #080d16; }
-    .ih-section:last-child { border-bottom: none; }
-    .ih-section-title { font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; color: #2d3f55; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
-    .ih-section-title span { color: #1a2435; font-size: 9px; }
-    .ih-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 0; }
-    .ih-row { display: flex; align-items: center; gap: 7px; padding: 5px 0; border-bottom: 1px solid #080d16; }
-    .ih-row:last-child { border-bottom: none; }
-    .ih-row-label { color: #2d3f55; width: 54px; flex-shrink: 0; font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; }
-    .ih-row-val { color: #7a8fa8; flex: 1; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ih-row-val.good { color: #4ade80; }
-    .ih-row-val.bad  { color: #f87171; }
-    .ih-actions { display: flex; gap: 6px; flex-wrap: wrap; padding: 6px 0 2px; }
-    .ih-btn { background: #0a1120; color: #4a5f78; border: 1px solid #162032; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-family: inherit; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-    .ih-btn:hover:not(:disabled) { background: #162032; color: #cbd5e1; border-color: #2d3f55; }
-    .ih-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-    .ih-btn.warn:hover:not(:disabled) { background: #2d0808; color: #fca5a5; border-color: #7f1d1d; }
-    .ih-btn.ok   { color: #4ade80 !important; border-color: #166534 !important; }
-    .ih-btn.fail { color: #f87171 !important; border-color: #7f1d1d !important; }
-    .ih-staged-list { display: flex; flex-direction: column; gap: 3px; }
-    .ih-staged-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; background: #080e1a; border-radius: 4px; border: 1px solid #0f2a4a; }
-    .ih-staged-path { color: #7dd3fc; font-size: 10px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .ih-staged-size { color: #2d3f55; font-size: 9.5px; flex-shrink: 0; }
-    .ih-staged-discard { background: none; border: none; cursor: pointer; color: #2d3f55; font-size: 10px; padding: 0 2px; font-family: inherit; transition: color 0.15s; flex-shrink: 0; line-height: 1; }
-    .ih-staged-discard:hover { color: #ef4444; }
-    .ih-series-list { display: flex; flex-direction: column; gap: 5px; }
-    .ih-series-card { padding: 9px 10px; border-radius: 5px; border: 1px solid #0f172a; background: #060b14; }
-    .ih-series-card.complete { border-color: #052e16; background: #030d07; }
-    .ih-series-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-    .ih-series-name { font-size: 11px; color: #7dd3fc; text-transform: capitalize; }
-    .ih-series-card.complete .ih-series-name { color: #4ade80; }
-    .ih-series-badge { font-size: 9px; padding: 1px 7px; border-radius: 10px; font-weight: 600; letter-spacing: 0.05em; }
-    .ih-series-badge.active   { background: #0f2040; color: #38bdf8; }
-    .ih-series-badge.complete { background: #052e16; color: #4ade80; }
-    .ih-progress-bar { height: 2px; background: #0f172a; border-radius: 1px; overflow: hidden; margin-bottom: 6px; }
-    .ih-progress-fill { height: 100%; border-radius: 1px; transition: width 0.5s ease; }
-    .ih-progress-fill.active   { background: linear-gradient(90deg, #1d4ed8, #38bdf8); }
-    .ih-progress-fill.complete { background: linear-gradient(90deg, #166534, #4ade80); }
-    .ih-series-stats { display: flex; align-items: center; gap: 10px; font-size: 10px; color: #3a4f66; margin-bottom: 6px; }
-    .ih-series-next { color: #22c55e; }
-    .ih-series-gap  { color: #f59e0b; }
-    .ih-series-done { color: #4ade80; }
-    .ih-series-actions { display: flex; gap: 5px; align-items: center; }
-    .ih-series-btn { font-size: 9px; padding: 2px 8px; border-radius: 3px; border: 1px solid #162032; background: #0a1120; color: #3a4f66; cursor: pointer; font-family: inherit; transition: all 0.15s; }
-    .ih-series-btn:hover { background: #162032; color: #7a8fa8; border-color: #2d3f55; }
-    .ih-series-btn.complete-btn:hover { background: #052e16; color: #4ade80; border-color: #166534; }
-    .ih-series-btn.active-btn:hover   { background: #0f2040; color: #38bdf8; border-color: #1d4ed8; }
-    .ih-completed-at { font-size: 9px; color: #1a2435; margin-left: auto; }
-    .ih-cron-list { display: flex; flex-direction: column; gap: 2px; }
-    .ih-cron-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: #060b14; border-radius: 3px; }
-    .ih-cron-time  { color: #2d3f55; font-size: 10px; width: 56px; flex-shrink: 0; }
-    .ih-cron-stats { display: flex; gap: 8px; flex: 1; }
-    .ih-cron-stat.pub  { color: #22c55e; font-size: 10px; }
-    .ih-cron-stat.del  { color: #f59e0b; font-size: 10px; }
-    .ih-cron-stat.fail { color: #ef4444; font-size: 10px; }
-    .ih-cron-stat.idle { color: #1a2435; font-size: 10px; }
-    .ih-cron-files { font-size: 9.5px; color: #2d3f55; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .ih-activity-list { display: flex; flex-direction: column; gap: 2px; }
-    .ih-activity-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: #060b14; border-radius: 3px; }
-    .ih-activity-action { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; width: 72px; flex-shrink: 0; font-weight: 600; }
-    .ih-activity-path { color: #3a4f66; font-size: 10px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .ih-activity-time { color: #1a2435; font-size: 9.5px; flex-shrink: 0; }
-    .ih-empty { color: #1a2435; font-size: 10px; padding: 4px 8px; }
+    #d-panel.open { transform: translateY(0); }
+
+    /* ── Header ── */
+    #d-header {
+      display: flex; align-items: center; gap: 16px;
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
+      background: var(--surface); flex-shrink: 0;
+    }
+    #d-title { font-family: var(--serif); font-size: 18px; color: var(--text3); letter-spacing: .02em; }
+    #d-title span { color: var(--amber2); }
+    #d-last-updated { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-left: auto; }
+    #d-close {
+      background: none; border: none; color: var(--dim); cursor: pointer;
+      font-size: 18px; line-height: 1; padding: 4px; transition: color .15s;
+    }
+    #d-close:hover { color: var(--red); }
+
+    /* ── Tabs ── */
+    #d-tabs {
+      display: flex; gap: 2px; padding: 10px 20px 0;
+      border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0;
+      overflow-x: auto; scrollbar-width: none;
+    }
+    #d-tabs::-webkit-scrollbar { display: none; }
+    .d-tab {
+      font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--dim); background: none; border: none; cursor: pointer;
+      padding: 8px 14px; border-bottom: 2px solid transparent; white-space: nowrap;
+      transition: all .15s;
+    }
+    .d-tab:hover { color: var(--text2); }
+    .d-tab.active { color: var(--amber2); border-bottom-color: var(--amber2); }
+
+    /* ── Body ── */
+    #d-body { flex: 1; overflow-y: auto; padding: 20px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+    .d-view { display: none; }
+    .d-view.active { display: block; }
+
+    /* ── Cards ── */
+    .d-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .d-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 16px; position: relative; overflow: hidden;
+    }
+    .d-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--amber) 0%, transparent 100%);
+    }
+    .d-card-title {
+      font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+      letter-spacing: .12em; color: var(--dim); margin-bottom: 12px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .d-card-val { font-family: var(--serif); font-size: 28px; color: var(--text3); line-height: 1; }
+    .d-card-sub { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 4px; }
+
+    /* ── Section headings ── */
+    .d-section-title {
+      font-family: var(--mono); font-size: 10px; text-transform: uppercase;
+      letter-spacing: .1em; color: var(--dim); margin: 20px 0 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .d-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* ── Status dots ── */
+    .d-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .d-dot.green  { background: var(--green);  box-shadow: 0 0 5px #22c55e55; }
+    .d-dot.red    { background: var(--red);    box-shadow: 0 0 5px #ef444455; }
+    .d-dot.amber  { background: var(--amber2); box-shadow: 0 0 5px #d9770655; }
+    .d-dot.grey   { background: var(--dim); }
+    .d-dot.blue   { background: var(--blue);   box-shadow: 0 0 5px #3b82f655; }
+    .d-dot.skip   { background: var(--dim); }
+
+    /* ── Platform row ── */
+    .d-platform-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+    .d-platform {
+      display: flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 10px; color: var(--text);
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 5px 10px; border-radius: 6px;
+    }
+    .d-platform.ok     { border-color: #052e16; color: var(--green); }
+    .d-platform.fail   { border-color: #450a0a; color: var(--red); }
+    .d-platform.skip   { color: var(--dim); }
+
+    /* ── Run rows ── */
+    .d-run-list { display: flex; flex-direction: column; gap: 8px; }
+    .d-run {
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .d-run-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .d-run-file { font-family: var(--mono); font-size: 11px; color: var(--amber3); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .d-run-time { font-family: var(--mono); font-size: 10px; color: var(--dim); flex-shrink: 0; }
+    .d-run-commit { font-family: var(--mono); font-size: 10px; color: var(--dim); }
+    .d-run-err { font-family: var(--mono); font-size: 10px; color: var(--red); margin-top: 6px; padding: 4px 8px; background: #450a0a22; border-radius: 4px; word-break: break-all; }
+
+    /* ── Series cards ── */
+    .d-series-list { display: flex; flex-direction: column; gap: 10px; }
+    .d-series {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px;
+    }
+    .d-series-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .d-series-name { font-family: var(--serif); font-size: 16px; color: var(--text3); text-transform: capitalize; }
+    .d-series-badge {
+      font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 20px; font-weight: 500;
+    }
+    .d-series-badge.active   { background: #0c1e3a; color: var(--blue); border: 1px solid #1d3a6a; }
+    .d-series-badge.complete { background: #052010; color: var(--green); border: 1px solid #145228; }
+    .d-progress { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 10px; }
+    .d-progress-fill { height: 100%; border-radius: 2px; transition: width .6s ease; }
+    .d-progress-fill.active   { background: linear-gradient(90deg, var(--blue), var(--amber2)); }
+    .d-progress-fill.complete { background: linear-gradient(90deg, var(--green), var(--amber3)); }
+    .d-series-stats { font-family: var(--mono); font-size: 11px; color: var(--dim); display: flex; gap: 16px; flex-wrap: wrap; }
+    .d-series-stats .next { color: var(--green); }
+    .d-series-stats .gap  { color: var(--yellow); }
+
+    /* ── Action runs ── */
+    .d-action-list { display: flex; flex-direction: column; gap: 6px; }
+    .d-action-run {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px 14px; cursor: pointer; transition: border-color .15s; text-decoration: none;
+    }
+    .d-action-run:hover { border-color: var(--border2); }
+    .d-action-name { font-family: var(--sans); font-size: 12px; color: var(--text2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .d-action-branch { font-family: var(--mono); font-size: 10px; color: var(--dim); }
+    .d-action-time { font-family: var(--mono); font-size: 10px; color: var(--dim); flex-shrink: 0; }
+    .d-action-status {
+      font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .06em;
+      padding: 3px 8px; border-radius: 4px; flex-shrink: 0;
+    }
+    .d-action-status.success   { background: #052e16; color: var(--green); }
+    .d-action-status.failure   { background: #450a0a; color: var(--red); }
+    .d-action-status.in_progress { background: #1c3a0a; color: var(--yellow); }
+    .d-action-status.queued    { background: var(--card); color: var(--dim); }
+    .d-action-status.skipped   { background: var(--card); color: var(--dim); }
+
+    /* ── Buttons ── */
+    .d-btn {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .04em;
+      background: var(--surface); color: var(--dim); border: 1px solid var(--border2);
+      padding: 7px 14px; border-radius: 6px; cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+    .d-btn:hover:not(:disabled) { background: var(--card); color: var(--text2); border-color: var(--dim); }
+    .d-btn:disabled { opacity: .35; cursor: not-allowed; }
+    .d-btn.primary { background: var(--amber); color: #fff; border-color: var(--amber); }
+    .d-btn.primary:hover:not(:disabled) { background: var(--amber2); border-color: var(--amber2); }
+    .d-btn.danger:hover:not(:disabled) { background: #450a0a; color: var(--red); border-color: var(--red); }
+    .d-btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+
+    /* ── Schedule form ── */
+    .d-form { background: var(--card); border: 1px solid var(--border2); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    .d-form-title { font-family: var(--serif); font-size: 15px; color: var(--text3); margin-bottom: 14px; }
+    .d-field { margin-bottom: 12px; }
+    .d-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); display: block; margin-bottom: 5px; }
+    .d-input, .d-select {
+      width: 100%; background: var(--surface); border: 1px solid var(--border2); color: var(--text2);
+      padding: 9px 12px; border-radius: 6px; font-family: var(--mono); font-size: 12px;
+      transition: border-color .15s; outline: none;
+    }
+    .d-input:focus, .d-select:focus { border-color: var(--amber); }
+    .d-select option { background: var(--surface); }
+
+    /* ── Schedule list ── */
+    .d-sched-list { display: flex; flex-direction: column; gap: 8px; }
+    .d-sched-item {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;
+    }
+    .d-sched-info { flex: 1; min-width: 0; }
+    .d-sched-label { font-family: var(--sans); font-size: 13px; color: var(--text2); margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .d-sched-meta  { font-family: var(--mono); font-size: 10px; color: var(--dim); }
+    .d-sched-date  { font-family: var(--mono); font-size: 11px; color: var(--amber2); flex-shrink: 0; }
+
+    /* ── Login screen ── */
+    #d-login {
+      position: fixed; inset: 0; z-index: 99993;
+      background: var(--bg); display: flex; align-items: center; justify-content: center;
+    }
+    .d-login-box { text-align: center; max-width: 320px; padding: 32px; }
+    .d-login-logo { font-family: var(--serif); font-size: 32px; color: var(--amber2); margin-bottom: 8px; }
+    .d-login-sub  { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-bottom: 28px; }
+    .d-login-note { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 16px; line-height: 1.6; }
+
+    /* ── Toast ── */
+    #d-toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: var(--card); border: 1px solid var(--border2); color: var(--text2);
+      font-family: var(--mono); font-size: 11px; padding: 10px 20px; border-radius: 8px;
+      z-index: 99999; transition: transform .3s; pointer-events: none; white-space: nowrap;
+    }
+    #d-toast.show { transform: translateX(-50%) translateY(0); }
+    #d-toast.ok   { border-color: var(--green); color: var(--green); }
+    #d-toast.err  { border-color: var(--red);   color: var(--red);   }
+
+    /* ── Empty states ── */
+    .d-empty { font-family: var(--mono); font-size: 11px; color: var(--dim); padding: 20px; text-align: center; }
+
+    /* ── Loading ── */
+    .d-loading {
+      display: inline-block; width: 12px; height: 12px; border-radius: 50%;
+      border: 2px solid var(--border2); border-top-color: var(--amber2);
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
   </style>
 </head>
 <body>
+  <!-- Sveltia CMS -->
   <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js" type="module" data-cfasync="false"></script>
-  <div id="ih-fab-hint">Hold to switch sides</div>
-  <div id="ih-fab" title="Status">
-    <div id="ih-fab-dot"></div>
-    <div id="ih-fab-badge"></div>
-  </div>
-  <div id="ih-backdrop" onclick="ihClose()"></div>
-  <div id="ih-panel">
-    <div id="ih-drag-handle"></div>
-    <div id="ih-panel-header">
-      <span id="ih-panel-title">ishistory CMS</span>
-      <span id="ih-panel-meta"></span>
-      <button id="ih-panel-close" onclick="ihClose()">&#10005;</button>
-    </div>
-    <div id="ih-panel-inner">
-      <div class="ih-section">
-        <div class="ih-section-title">System Status <span id="ih-refresh-time"></span></div>
-        <div class="ih-grid">
-          <div class="ih-row"><span class="ih-row-label">Worker</span><span class="ih-dot grey" id="p-worker-dot"></span><span class="ih-row-val" id="p-worker-val">&#8212;</span></div>
-          <div class="ih-row"><span class="ih-row-label">GitHub</span><span class="ih-dot grey" id="p-github-dot"></span><span class="ih-row-val" id="p-github-val">&#8212;</span></div>
-          <div class="ih-row"><span class="ih-row-label">D1</span><span class="ih-dot grey" id="p-d1-dot"></span><span class="ih-row-val" id="p-d1-val">&#8212;</span></div>
-          <div class="ih-row"><span class="ih-row-label">Claude</span><span class="ih-dot grey" id="p-claude-dot"></span><span class="ih-row-val" id="p-claude-val">&#8212;</span></div>
-          <div class="ih-row"><span class="ih-row-label">Queue</span><span class="ih-dot grey" id="p-queue-dot"></span><span class="ih-row-val" id="p-queue-val">&#8212;</span></div>
-          <div class="ih-row"><span class="ih-row-label">Cron</span><span class="ih-dot grey" id="p-cron-dot"></span><span class="ih-row-val" id="p-cron-val">&#8212;</span></div>
-          <div class="ih-row"><span class="ih-row-label">Dead</span><span class="ih-dot grey" id="p-dead-dot"></span><span class="ih-row-val" id="p-dead-val">&#8212;</span></div>
-          <div class="ih-row"><span class="ih-row-label">Webhook</span><span class="ih-dot grey" id="p-webhook-dot"></span><span class="ih-row-val" id="p-webhook-val">&#8212;</span></div>
-        </div>
-      </div>
-      <div class="ih-section">
-        <div class="ih-section-title">Actions</div>
-        <div class="ih-actions">
-          <button class="ih-btn" onclick="ihAction('trigger-cron',this)">&#9654; Run Cron</button>
-          <button class="ih-btn" onclick="ihAction('process-staged',this)">&#11014; Publish Staged (<span id="btn-staged-count">0</span>)</button>
-          <button class="ih-btn warn" onclick="ihAction('clear-dead-letter',this)">&#10005; Clear Failed</button>
-        </div>
-      </div>
-      <div class="ih-section" id="section-staged" style="display:none">
-        <div class="ih-section-title">Staged Drafts <span id="staged-count-label"></span></div>
-        <div class="ih-staged-list" id="staged-list"></div>
-      </div>
-      <div class="ih-section">
-        <div class="ih-section-title">Series <span id="series-summary"></span></div>
-        <div class="ih-series-list" id="series-list"><div class="ih-empty">Loading...</div></div>
-      </div>
-      <div class="ih-section">
-        <div class="ih-section-title">Cron Log <span>last 5 runs</span></div>
-        <div class="ih-cron-list" id="cron-list"><div class="ih-empty">No runs yet</div></div>
-      </div>
-      <div class="ih-section">
-        <div class="ih-section-title">Activity <span>last 10 events</span></div>
-        <div class="ih-activity-list" id="activity-list"><div class="ih-empty">No activity yet</div></div>
-      </div>
+
+  <!-- Login screen (shown when not authenticated) -->
+  <div id="d-login" style="display:none">
+    <div class="d-login-box">
+      <div class="d-login-logo">ishistory</div>
+      <div class="d-login-sub">COMMAND CENTRE</div>
+      <button class="d-btn primary" style="width:100%;font-size:13px;padding:12px" onclick="dLogin()">Login with GitHub</button>
+      <div class="d-login-note">Uses the same OAuth session as the CMS.<br>One login for both.</div>
     </div>
   </div>
-  <script>
-    var WORKER  = 'https://claude.aadityadarpan5.workers.dev';
-    var BASE_MS = 60000;
-    var MAX_MS  = 300000;
-    var TIMEOUT = 5000;
-    var PEEK    = 6;
-    var isOpen = false, failCount = 0, pollTimer = null, d1Bookmark = null;
-    var fab  = document.getElementById('ih-fab');
-    var hint = document.getElementById('ih-fab-hint');
-    var onLeft = false, fabY = 50, dragging = false;
-    var longPressTimer = null, dragStartY = 0, fabStartY = 0, hasDragged = false;
+
+  <!-- FAB -->
+  <div id="d-fab" onclick="dToggle()" title="Dashboard">
+    <div id="d-fab-dot"></div>
+  </div>
+
+  <!-- Overlay backdrop -->
+  <div id="d-overlay" onclick="dClose()"></div>
+
+  <!-- Dashboard panel -->
+  <div id="d-panel">
+    <div id="d-header">
+      <div id="d-title">is<span>history</span> · command centre</div>
+      <div id="d-last-updated">—</div>
+      <button id="d-close" onclick="dClose()">✕</button>
+    </div>
+    <div id="d-tabs">
+      <button class="d-tab active" onclick="dTab('overview',this)">Overview</button>
+      <button class="d-tab" onclick="dTab('pipeline',this)">Pipeline</button>
+      <button class="d-tab" onclick="dTab('series',this)">Series</button>
+      <button class="d-tab" onclick="dTab('schedule',this)">Schedule</button>
+      <button class="d-tab" onclick="dTab('actions',this)">Actions</button>
+    </div>
+    <div id="d-body">
+
+      <!-- OVERVIEW -->
+      <div id="view-overview" class="d-view active">
+        <div class="d-grid" id="ov-stats"></div>
+        <div class="d-section-title">Last Pipeline Run</div>
+        <div id="ov-last-run"><div class="d-empty"><span class="d-loading"></span></div></div>
+        <div class="d-section-title">Recent Commits</div>
+        <div id="ov-commits"><div class="d-empty"><span class="d-loading"></span></div></div>
+      </div>
+
+      <!-- PIPELINE -->
+      <div id="view-pipeline" class="d-view">
+        <div class="d-btn-row">
+          <button class="d-btn primary" onclick="dTriggerPipeline()">▶ Run Pipeline</button>
+          <button class="d-btn" onclick="loadPipeline()">↺ Refresh</button>
+        </div>
+        <div id="pipe-trigger-form" style="display:none;margin-bottom:12px">
+          <input class="d-input" id="pipe-file-input" placeholder="src/content/ai-history/episode-01.md" style="margin-bottom:8px" />
+          <div class="d-btn-row">
+            <button class="d-btn primary" onclick="dDoTrigger()">Trigger</button>
+            <button class="d-btn" onclick="document.getElementById('pipe-trigger-form').style.display='none'">Cancel</button>
+          </div>
+        </div>
+        <div class="d-section-title">Run History</div>
+        <div id="pipe-runs"><div class="d-empty"><span class="d-loading"></span></div></div>
+      </div>
+
+      <!-- SERIES -->
+      <div id="view-series" class="d-view">
+        <div id="series-list"><div class="d-empty"><span class="d-loading"></span></div></div>
+      </div>
+
+      <!-- SCHEDULE -->
+      <div id="view-schedule" class="d-view">
+        <div class="d-form">
+          <div class="d-form-title">Schedule a Post</div>
+          <div class="d-field">
+            <label class="d-label">File</label>
+            <select class="d-select" id="sched-file"><option value="">Loading posts…</option></select>
+          </div>
+          <div class="d-field">
+            <label class="d-label">Publish Date & Time (UTC)</label>
+            <input class="d-input" type="datetime-local" id="sched-date" />
+          </div>
+          <div class="d-field">
+            <label class="d-label">Label (optional)</label>
+            <input class="d-input" type="text" id="sched-label" placeholder="e.g. AI History Episode 26" />
+          </div>
+          <button class="d-btn primary" onclick="dAddSchedule()">Schedule Post</button>
+        </div>
+        <div class="d-section-title">Scheduled Posts</div>
+        <div id="sched-list"><div class="d-empty"><span class="d-loading"></span></div></div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div id="view-actions" class="d-view">
+        <div class="d-btn-row">
+          <button class="d-btn" onclick="loadActions()">↺ Refresh</button>
+        </div>
+        <div class="d-section-title">Workflow Runs</div>
+        <div id="actions-list"><div class="d-empty"><span class="d-loading"></span></div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="d-toast"></div>
+
+<script>
+  const REPO    = 'ishaan-00/ishistory';
+  const SITE    = 'https://ishistory.pages.dev';
+  const GH_API  = 'https://api.github.com';
+  let TOKEN     = null;
+  let isOpen    = false;
+  let fileCache = null;
+  let statusCache = null;
+
+  // ── Auth ───────────────────────────────────────────────────────────────────
+  function getToken() {
     try {
-      var saved = JSON.parse(localStorage.getItem('ih-fab-pos') || '{}');
-      if (saved.left !== undefined) onLeft = saved.left;
-      if (saved.y    !== undefined) fabY   = saved.y;
-    } catch(e) {}
-    function applyFabPos(animate) {
-      if (!animate) fab.style.transition = 'none';
-      fab.style.top = fabY + '%';
-      fab.style.transform = 'none';
-      if (onLeft) { fab.style.left = PEEK + 'px'; fab.style.right = 'auto'; }
-      else        { fab.style.right = PEEK + 'px'; fab.style.left = 'auto'; }
-      if (!animate) requestAnimationFrame(function() { fab.style.transition = ''; });
-    }
-    applyFabPos(false);
-    function saveFabPos() {
-      try { localStorage.setItem('ih-fab-pos', JSON.stringify({ left: onLeft, y: fabY })); } catch(e) {}
-    }
-    function switchSide() {
-      onLeft = !onLeft;
-      applyFabPos(true);
-      saveFabPos();
-      hint.style.right = onLeft ? 'auto' : '60px';
-      hint.style.left  = onLeft ? '60px' : 'auto';
-      hint.classList.add('show');
-      setTimeout(function() { hint.classList.remove('show'); }, 1500);
-    }
-    fab.addEventListener('click', function() {
-      if (!dragging) ihToggle();
-    });
-    fab.addEventListener('pointerdown', function(e) {
-      dragging = false; hasDragged = false;
-      dragStartY = e.clientY;
-      fabStartY  = parseFloat(fab.style.top) || fabY;
-      longPressTimer = setTimeout(function() {
-        if (!hasDragged && !dragging) switchSide();
-      }, 600);
-    });
-    fab.addEventListener('pointermove', function(e) {
-      if (!e.buttons) return;
-      var dy      = e.clientY - dragStartY;
-      var winH    = window.innerHeight;
-      var newYpct = Math.max(8, Math.min(92, ((fabStartY / 100) * winH + dy) / winH * 100));
-      if (Math.abs(dy) > 14) { hasDragged = true; dragging = true; clearTimeout(longPressTimer); }
-      if (dragging) { fab.style.top = newYpct + '%'; fabY = newYpct; }
-    });
-    fab.addEventListener('pointerup', function() {
-      clearTimeout(longPressTimer);
-      if (dragging) { saveFabPos(); dragging = false; }
-    });
-    document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && isOpen) ihClose(); });
-    function ihOpen()   { isOpen = true;  document.getElementById('ih-panel').classList.add('open');    document.getElementById('ih-backdrop').classList.add('open'); }
-    function ihClose()  { isOpen = false; document.getElementById('ih-panel').classList.remove('open'); document.getElementById('ih-backdrop').classList.remove('open'); }
-    function ihToggle() { isOpen ? ihClose() : ihOpen(); }
-    function $dot(id,c)   { var el=document.getElementById(id); if(el) el.className='ih-dot '+c; }
-    function $set(id,t)   { var el=document.getElementById(id); if(el) el.textContent=t; }
-    function $html(id,mk) { var el=document.getElementById(id); if(el) el.innerHTML=mk; }
-    function $show(id)    { var el=document.getElementById(id); if(el) el.style.display='block'; }
-    function $hide(id)    { var el=document.getElementById(id); if(el) el.style.display='none'; }
-    function $cls(el,c)   { if(el) el.className='ih-row-val '+(c||''); }
-    function fileName(p)  { return p ? p.split('/').pop() : ''; }
-    function setFabDot(color) { document.getElementById('ih-fab-dot').className = color; }
-    function relTime(s) {
-      if (!s) return 'never';
-      var ms = new Date(s.replace(' ','T')+(s.indexOf('T')>=0?'':'Z')).getTime();
-      if (isNaN(ms)) return '--';
-      var d = Math.floor((Date.now()-ms)/1000);
-      if (d<5) return 'just now';
-      if (d<60) return d+'s ago';
-      if (d<3600) return Math.floor(d/60)+'m ago';
-      if (d<86400) return Math.floor(d/3600)+'h ago';
-      return Math.floor(d/86400)+'d ago';
-    }
-    function connStatus(c) {
-      if (!c||c.status==='never') return {color:'grey',  text:'never connected'};
-      if (c.status==='active')    return {color:'green', text:'active '+relTime(c.last_seen)};
-      if (c.status==='idle')      return {color:'yellow',text:'idle '+relTime(c.last_seen)};
-      return                             {color:'red',   text:'offline '+relTime(c.last_seen)};
-    }
-    async function fetchT(url,opts) {
-      opts=opts||{};
-      var ctrl=new AbortController();
-      var id=setTimeout(function(){ctrl.abort();},TIMEOUT);
-      try{var r=await fetch(url,Object.assign({},opts,{signal:ctrl.signal}));clearTimeout(id);return r;}
-      catch(e){clearTimeout(id);throw e;}
-    }
-    async function ihAction(type,btn) {
-      btn.disabled=true;var orig=btn.innerHTML;btn.textContent='...';
-      try{
-        var hdr={'Content-Type':'application/json'};
-        if(d1Bookmark) hdr['X-D1-Bookmark']=d1Bookmark;
-        var res=await fetchT(WORKER+'/claude/action',{method:'POST',headers:hdr,body:JSON.stringify({action:type})});
-        if(!res.ok) throw new Error('failed');
-        var bm=res.headers.get('x-d1-bookmark');if(bm) d1Bookmark=bm;
-        btn.classList.add('ok');btn.textContent='Done';
-        setTimeout(function(){ihRefresh();},600);
-      }catch(e){btn.classList.add('fail');btn.textContent='Error';}
-      finally{setTimeout(function(){btn.disabled=false;btn.classList.remove('ok','fail');btn.innerHTML=orig;},2000);}
-    }
-    async function discardDraft(path,btn) {
-      btn.disabled=true;
-      try{
-        var hdr={};if(d1Bookmark) hdr['X-D1-Bookmark']=d1Bookmark;
-        var res=await fetchT(WORKER+'/claude/discard?path='+encodeURIComponent(path),{headers:hdr});
-        if(!res.ok) throw new Error('failed');
-        var bm=res.headers.get('x-d1-bookmark');if(bm) d1Bookmark=bm;
-        btn.closest('.ih-staged-row').style.opacity='0.3';
-        setTimeout(function(){ihRefresh();},400);
-      }catch(e){btn.disabled=false;}
-    }
-    async function toggleSeries(name,newStatus,btn) {
-      btn.disabled=true;var orig=btn.textContent;btn.textContent='...';
-      try{
-        var hdr={'Content-Type':'application/json'};if(d1Bookmark) hdr['X-D1-Bookmark']=d1Bookmark;
-        var action=newStatus==='complete'?'mark-complete':'mark-active';
-        var res=await fetchT(WORKER+'/claude/action',{method:'POST',headers:hdr,body:JSON.stringify({action:action,series:name})});
-        if(!res.ok) throw new Error('failed');
-        var bm=res.headers.get('x-d1-bookmark');if(bm) d1Bookmark=bm;
-        setTimeout(function(){ihRefresh();},300);
-      }catch(e){btn.disabled=false;btn.textContent=orig;}
-    }
-    function renderStaged(staged) {
-      if(!staged||!staged.length){$hide('section-staged');return;}
-      $show('section-staged');$set('staged-count-label',staged.length);
-      var rows=staged.map(function(d){
-        var sp=d.path.replace(/'/g,"\\'");
-        return '<div class="ih-staged-row">'
-          +'<span class="ih-staged-path" title="'+d.path+'">'+fileName(d.path)+'</span>'
-          +'<span class="ih-staged-size">'+(d.size/1024).toFixed(1)+'kb</span>'
-          +'<button class="ih-staged-discard" onclick="discardDraft(\''+sp+'\',this)">&#10005;</button>'
-          +'</div>';
-      });
-      $html('staged-list',rows.join(''));
-    }
-    function renderSeries(stats) {
-      if(!stats||!Object.keys(stats).length){$html('series-list','<div class="ih-empty">No series found</div>');return;}
-      var entries=Object.entries(stats);
-      var completed=entries.filter(function(e){return e[1].status==='complete';}).length;
-      $set('series-summary',completed+'/'+entries.length+' complete');
-      entries.sort(function(a,b){if(a[1].status===b[1].status)return 0;return a[1].status==='active'?-1:1;});
-      var cards=entries.map(function(entry){
-        var name=entry[0],d=entry[1];
-        var isC=d.status==='complete';
-        var eps=d.episodes||0;
-        var pct=isC?100:Math.round(((eps%10)||(eps>0?10:0))/10*100);
-        var cardCls=isC?'ih-series-card complete':'ih-series-card';
-        var badgeCls=isC?'ih-series-badge complete':'ih-series-badge active';
-        var badgeTxt=isC?'COMPLETE':'ACTIVE';
-        var fillCls=isC?'ih-progress-fill complete':'ih-progress-fill active';
-        var statParts=['<span>'+eps+' ep'+(eps!==1?'s':'')+'</span>'];
-        if(d.profiles>0) statParts.push('<span>'+d.profiles+' profiles</span>');
-        if(isC) statParts.push('<span class="ih-series-done">complete</span>');
-        else if(d.episode_gaps&&d.episode_gaps.length) statParts.push('<span class="ih-series-gap">gap '+d.episode_gaps.join(', ')+'</span>');
-        else statParts.push('<span class="ih-series-next">next: #'+d.next_episode+'</span>');
-        var tog=isC
-          ?'<button class="ih-series-btn active-btn" onclick="toggleSeries(\''+name+'\',\'active\',this)">Mark Active</button>'
-          :'<button class="ih-series-btn complete-btn" onclick="toggleSeries(\''+name+'\',\'complete\',this)">Mark Complete</button>';
-        var ca=(isC&&d.completed_at)?'<span class="ih-completed-at">'+relTime(d.completed_at)+'</span>':'';
-        return '<div class="'+cardCls+'">'
-          +'<div class="ih-series-card-top">'
-          +'<span class="ih-series-name">'+name.replace(/-/g,' ')+'</span>'
-          +'<span class="'+badgeCls+'">'+badgeTxt+'</span>'
-          +'</div>'
-          +'<div class="ih-progress-bar"><div class="'+fillCls+'" style="width:'+pct+'%"></div></div>'
-          +'<div class="ih-series-stats">'+statParts.join('')+'</div>'
-          +'<div class="ih-series-actions">'+tog+ca+'</div>'
-          +'</div>';
-      });
-      $html('series-list',cards.join(''));
-    }
-    function renderCronLog(log) {
-      if(!log||!log.length){$html('cron-list','<div class="ih-empty">No runs yet</div>');return;}
-      var rows=log.map(function(r){
-        var pubCls=r.published>0?'pub':'idle';
-        var delCls=r.deleted>0?'del':'idle';
-        var pub='<span class="ih-cron-stat '+pubCls+'">+'+r.published+'</span>';
-        var del='<span class="ih-cron-stat '+delCls+'">'+(r.deleted>0?'-':'·')+r.deleted+'</span>';
-        var fail=r.failed>0?'<span class="ih-cron-stat fail">x'+r.failed+'</span>':'';
-        var details=r.details||[];
-        var files=details.filter(function(d){return d.success;}).map(function(d){return fileName(d.path);}).filter(Boolean).join(', ');
-        var fs=files?'<span class="ih-cron-files" title="'+files+'">'+files+'</span>':'';
-        return '<div class="ih-cron-row">'
-          +'<span class="ih-cron-time">'+relTime(r.ran_at)+'</span>'
-          +'<div class="ih-cron-stats">'+pub+del+fail+'</div>'
-          +fs+'</div>';
-      });
-      $html('cron-list',rows.join(''));
-    }
-    function renderActivity(activity) {
-      if(!activity||!activity.length){$html('activity-list','<div class="ih-empty">No activity yet</div>');return;}
-      var styles={publish:{color:'#22c55e',label:'publish'},delete:{color:'#ef4444',label:'delete'},rollback:{color:'#f59e0b',label:'rollback'},webhook_sync:{color:'#3b82f6',label:'webhook'}};
-      var rows=activity.map(function(r){
-        var s=styles[r.action]||{color:'#475569',label:r.action};
-        return '<div class="ih-activity-row">'
-          +'<span class="ih-activity-action" style="color:'+s.color+'">'+s.label+'</span>'
-          +'<span class="ih-activity-path" title="'+r.path+'">'+(fileName(r.path)||r.path)+'</span>'
-          +'<span class="ih-activity-time">'+relTime(r.happened_at)+'</span>'
-          +'</div>';
-      });
-      $html('activity-list',rows.join(''));
-    }
-    async function ihRefresh() {
-      clearTimeout(pollTimer);
-      fab.classList.add('loading');
-      try{
-        var hdr={};if(d1Bookmark) hdr['X-D1-Bookmark']=d1Bookmark;
-        var res=await fetchT(WORKER+'/claude/heartbeat',{headers:hdr});
-        if(!res.ok) throw new Error('HTTP '+res.status);
-        var bm=res.headers.get('x-d1-bookmark');if(bm) d1Bookmark=bm;
-        var data=await res.json();
-        var health=data.health,connections=data.connections,stats=data.stats;
-        var cron_log=data.cron_log,staged=data.staged,activity=data.activity;
-        failCount=0;
-        fab.classList.remove('loading');
-        $set('ih-refresh-time',relTime(new Date().toISOString()));
-        $set('ih-panel-meta',relTime(new Date().toISOString()));
-        var workerOk=health.status==='ok'||health.status==='warning';
-        setFabDot(!workerOk?'red':health.status==='warning'?'yellow':'green');
-        var badge=document.getElementById('ih-fab-badge');
-        var totalDraft=health.drafts||0,deadN=health.dead_letter||0;
-        if(deadN>0){badge.textContent=deadN;badge.className='visible';badge.style.background='#ef4444';}
-        else if(totalDraft>0){badge.textContent=totalDraft;badge.className='visible';badge.style.background='#3b82f6';}
-        else{badge.className='';}
-        var wEl=document.getElementById('p-worker-val');
-        $dot('p-worker-dot',workerOk?'green':'red');
-        wEl.textContent=workerOk?'Online':'Offline';
-        $cls(wEl,workerOk?'good':'bad');
-        $dot('p-github-dot',health.github_user?'green':'red');
-        $set('p-github-val',health.github_user||'Not connected');
-        $dot('p-d1-dot',health.d1==='connected'?'green':'red');
-        $set('p-d1-val',health.d1||'--');
-        var connMap={};
-        (connections||[]).forEach(function(c){connMap[c.name]=c;});
-        var cs=connStatus(connMap['claude']);
-        $dot('p-claude-dot',cs.color);$set('p-claude-val',cs.text);
-        $dot('p-queue-dot',totalDraft>0?'blue':'grey');
-        $set('p-queue-val',totalDraft>0?totalDraft+' draft'+(totalDraft!==1?'s':''):'Empty');
-        document.getElementById('btn-staged-count').textContent=totalDraft;
-        if(health.last_cron){$dot('p-cron-dot','green');$set('p-cron-val',relTime(health.last_cron.ran_at));}
-        else{$dot('p-cron-dot','grey');$set('p-cron-val','Never run');}
-        var dEl=document.getElementById('p-dead-val');
-        $dot('p-dead-dot',deadN>0?'red':'grey');
-        dEl.textContent=deadN>0?deadN+' failed':'None';
-        $cls(dEl,deadN>0?'bad':'');
-        var lastWH=(activity||[]).find(function(a){return a.action==='webhook_sync';});
-        $dot('p-webhook-dot',lastWH?'green':'grey');
-        $set('p-webhook-val',lastWH?relTime(lastWH.happened_at):'No syncs yet');
-        renderStaged(staged);renderSeries(stats);renderCronLog(cron_log);renderActivity(activity);
-      }catch(e){
-        failCount++;fab.classList.remove('loading');
-        setFabDot('red');
-        document.getElementById('ih-fab-dot').classList.add('pulse');
-      }finally{
-        pollTimer=setTimeout(function(){ihRefresh();},Math.min(BASE_MS*Math.pow(1.5,failCount),MAX_MS));
+      // Sveltia CMS stores: { login, name, email, token, ... }
+      const u = JSON.parse(localStorage.getItem('sveltia-cms.user') || 'null');
+      if (u?.token) return u.token;
+    } catch (_) {}
+    // Fallback: standalone token
+    return localStorage.getItem('d-gh-token');
+  }
+
+  function dLogin() {
+    // Use same OAuth flow as Sveltia CMS
+    const authWorker = 'https://sveltia-cms-auth.aadityadarpan5.workers.dev';
+    const popup = window.open(`${authWorker}/auth?provider=github&site_id=${location.host}`, 'login', 'width=600,height=700');
+    window.addEventListener('message', function onMsg(e) {
+      if (e.data?.startsWith?.('authorization:github:success:')) {
+        try {
+          const payload = JSON.parse(e.data.replace('authorization:github:success:', ''));
+          if (payload.token) {
+            localStorage.setItem('d-gh-token', payload.token);
+            TOKEN = payload.token;
+            document.getElementById('d-login').style.display = 'none';
+            dInit();
+          }
+        } catch (_) {}
+        window.removeEventListener('message', onMsg);
       }
+    });
+  }
+
+  // ── GitHub API ─────────────────────────────────────────────────────────────
+  async function gh(endpoint, method = 'GET', body = null) {
+    const res = await fetch(`${GH_API}${endpoint}`, {
+      method,
+      headers: {
+        Authorization:  `Bearer ${TOKEN}`,
+        Accept:         'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+      },
+      body: body ? JSON.stringify(body) : null,
+    });
+    if (res.status === 204) return null;
+    return res.json();
+  }
+
+  async function ghFile(path) {
+    const d = await gh(`/repos/${REPO}/contents/${path}`);
+    if (!d || d.message) return null;
+    return { content: atob(d.content.replace(/\n/g, '')), sha: d.sha };
+  }
+
+  async function ghWrite(path, content, message, sha = null) {
+    const body = { message, content: btoa(unescape(encodeURIComponent(content))), ...(sha ? { sha } : {}) };
+    return gh(`/repos/${REPO}/contents/${path}`, 'PUT', body);
+  }
+
+  // ── UI helpers ─────────────────────────────────────────────────────────────
+  function relTime(s) {
+    if (!s) return '—';
+    const ms = new Date(s).getTime();
+    if (isNaN(ms)) return '—';
+    const d = Math.floor((Date.now() - ms) / 1000);
+    if (d < 5) return 'just now';
+    if (d < 60) return d + 's ago';
+    if (d < 3600) return Math.floor(d / 60) + 'm ago';
+    if (d < 86400) return Math.floor(d / 3600) + 'h ago';
+    return Math.floor(d / 86400) + 'd ago';
+  }
+
+  function fmtDate(s) {
+    if (!s) return '—';
+    return new Date(s).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short' });
+  }
+
+  function fileName(p) { return p ? p.split('/').pop() : p; }
+
+  let toastTimer;
+  function toast(msg, type = '') {
+    const el = document.getElementById('d-toast');
+    el.textContent = msg; el.className = type + ' show';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.className = '', 3000);
+  }
+
+  function platDot(r) {
+    if (r.skipped) return `<span class="d-platform skip">⊘ skipped</span>`;
+    if (r.ok) return `<span class="d-platform ok">✓</span>`;
+    return `<span class="d-platform fail" title="${r.err || ''}">✗</span>`;
+  }
+
+  function platRow(results) {
+    const platforms = ['discord', 'devto', 'hashnode', 'ntfy', 'indexnow'];
+    return `<div class="d-platform-grid">${platforms.map(p => {
+      const r = results[p] || {};
+      const cls = r.skipped ? 'skip' : r.ok ? 'ok' : 'fail';
+      const icon = r.skipped ? '⊘' : r.ok ? '✓' : '✗';
+      const title = r.err ? ` title="${r.err.slice(0, 120)}"` : '';
+      return `<span class="d-platform ${cls}"${title}>${icon} ${p}</span>`;
+    }).join('')}</div>`;
+  }
+
+  // ── Toggle & tabs ──────────────────────────────────────────────────────────
+  function dToggle() { isOpen ? dClose() : dOpen(); }
+  function dOpen() {
+    isOpen = true;
+    document.getElementById('d-panel').classList.add('open');
+    document.getElementById('d-overlay').classList.add('open');
+    dRefresh();
+  }
+  function dClose() {
+    isOpen = false;
+    document.getElementById('d-panel').classList.remove('open');
+    document.getElementById('d-overlay').classList.remove('open');
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen) dClose(); });
+
+  let activeTab = 'overview';
+  function dTab(name, btn) {
+    activeTab = name;
+    document.querySelectorAll('.d-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.d-view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + name).classList.add('active');
+    if (name === 'overview') loadOverview();
+    if (name === 'pipeline') loadPipeline();
+    if (name === 'series')   loadSeries();
+    if (name === 'schedule') loadSchedule();
+    if (name === 'actions')  loadActions();
+  }
+
+  // ── Status.json ────────────────────────────────────────────────────────────
+  async function fetchStatus() {
+    const f = await ghFile('src/data/status.json').catch(() => null);
+    if (!f) return { runs: [] };
+    try { return JSON.parse(f.content); }
+    catch (_) { return { runs: [] }; }
+  }
+
+  // ── File tree ──────────────────────────────────────────────────────────────
+  async function fetchFileTree() {
+    if (fileCache) return fileCache;
+    const data = await gh(`/repos/${REPO}/git/trees/main?recursive=1`);
+    fileCache = (data?.tree || []).filter(f => f.type === 'blob');
+    return fileCache;
+  }
+
+  // ── Overview ───────────────────────────────────────────────────────────────
+  async function loadOverview() {
+    const [status, tree, commits] = await Promise.all([
+      fetchStatus(),
+      fetchFileTree(),
+      gh(`/repos/${REPO}/commits?per_page=5`).catch(() => []),
+    ]);
+
+    // Stats cards
+    const posts = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md'));
+    const series = {};
+    for (const f of posts) {
+      const s = f.path.split('/')[2];
+      if (s) series[s] = (series[s] || 0) + 1;
     }
-    ihRefresh();
-  </script>
+    const lastRun = status.runs?.[0];
+    const allOk = lastRun ? Object.values({discord:lastRun.discord,devto:lastRun.devto,hashnode:lastRun.hashnode,ntfy:lastRun.ntfy,indexnow:lastRun.indexnow}).filter(r=>!r.skipped).every(r=>r.ok) : null;
+
+    document.getElementById('ov-stats').innerHTML = `
+      <div class="d-card">
+        <div class="d-card-title">Total Posts</div>
+        <div class="d-card-val">${posts.length}</div>
+        <div class="d-card-sub">${Object.keys(series).length} series</div>
+      </div>
+      <div class="d-card">
+        <div class="d-card-title">Last Pipeline</div>
+        <div class="d-card-val" style="font-size:18px;font-family:var(--mono)">${lastRun ? relTime(lastRun.ran_at) : '—'}</div>
+        <div class="d-card-sub" style="color:${allOk===true?'var(--green)':allOk===false?'var(--red)':'var(--dim)'}">${allOk===true?'All platforms OK':allOk===false?'Some failures':'No runs yet'}</div>
+      </div>
+      <div class="d-card">
+        <div class="d-card-title">Scheduled</div>
+        <div class="d-card-val" id="ov-sched-count">—</div>
+        <div class="d-card-sub">pending posts</div>
+      </div>`;
+
+    // Load scheduled count
+    ghFile('src/data/scheduled.json').then(f => {
+      try {
+        const n = f ? JSON.parse(f.content).length : 0;
+        const el = document.getElementById('ov-sched-count');
+        if (el) el.textContent = n;
+      } catch(_) {}
+    }).catch(() => {});
+
+    // Fab dot
+    const dot = document.getElementById('d-fab-dot');
+    dot.className = allOk === false ? 'red' : allOk === true ? 'green' : 'amber';
+
+    // Last run
+    if (lastRun) {
+      document.getElementById('ov-last-run').innerHTML = `
+        <div class="d-run">
+          <div class="d-run-top">
+            <div class="d-run-file">${lastRun.file}</div>
+            <div class="d-run-time">${relTime(lastRun.ran_at)}</div>
+          </div>
+          ${platRow(lastRun)}
+          ${['discord','devto','hashnode','ntfy','indexnow'].filter(p=>lastRun[p]?.err).map(p=>`<div class="d-run-err">${p}: ${lastRun[p].err.slice(0,200)}</div>`).join('')}
+        </div>`;
+    } else {
+      document.getElementById('ov-last-run').innerHTML = '<div class="d-empty">No pipeline runs yet</div>';
+    }
+
+    // Commits
+    if (commits?.length) {
+      document.getElementById('ov-commits').innerHTML = `<div class="d-action-list">${(commits||[]).map(c => `
+        <a class="d-action-run" href="${c.html_url}" target="_blank" rel="noopener">
+          <div class="d-action-name">${c.commit.message.split('\n')[0]}</div>
+          <div class="d-action-time">${relTime(c.commit.author.date)}</div>
+          <div class="d-action-branch" style="font-size:9px;color:var(--dim)">${c.sha.slice(0,7)}</div>
+        </a>`).join('')}</div>`;
+    } else {
+      document.getElementById('ov-commits').innerHTML = '<div class="d-empty">No commits</div>';
+    }
+
+    document.getElementById('d-last-updated').textContent = 'updated ' + relTime(new Date().toISOString());
+  }
+
+  // ── Pipeline ───────────────────────────────────────────────────────────────
+  async function loadPipeline() {
+    document.getElementById('pipe-runs').innerHTML = '<div class="d-empty"><span class="d-loading"></span></div>';
+    const status = await fetchStatus();
+    const runs = status.runs || [];
+    if (!runs.length) {
+      document.getElementById('pipe-runs').innerHTML = '<div class="d-empty">No pipeline runs recorded yet</div>';
+      return;
+    }
+    document.getElementById('pipe-runs').innerHTML = `<div class="d-run-list">${runs.map(r => `
+      <div class="d-run">
+        <div class="d-run-top">
+          <div class="d-run-file">${r.file}</div>
+          <div class="d-run-time">${relTime(r.ran_at)}</div>
+        </div>
+        <div class="d-run-commit" style="margin-bottom:8px">commit <span style="color:var(--amber3)">${r.commit}</span></div>
+        ${platRow(r)}
+        ${['discord','devto','hashnode','ntfy','indexnow'].filter(p=>r[p]?.err).map(p=>`<div class="d-run-err">${p}: ${(r[p].err||'').slice(0,200)}</div>`).join('')}
+      </div>`).join('')}</div>`;
+  }
+
+  function dTriggerPipeline() {
+    const form = document.getElementById('pipe-trigger-form');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  }
+
+  async function dDoTrigger() {
+    const file = document.getElementById('pipe-file-input').value.trim();
+    if (!file) { toast('Enter a file path', 'err'); return; }
+    try {
+      await gh(`/repos/${REPO}/actions/workflows/on-publish.yml/dispatches`, 'POST', { ref: 'main', inputs: { file } });
+      toast('Pipeline triggered ✓', 'ok');
+      document.getElementById('pipe-trigger-form').style.display = 'none';
+      setTimeout(loadActions, 2000);
+    } catch(e) { toast('Failed: ' + e.message, 'err'); }
+  }
+
+  // ── Series ─────────────────────────────────────────────────────────────────
+  async function loadSeries() {
+    document.getElementById('series-list').innerHTML = '<div class="d-empty"><span class="d-loading"></span></div>';
+    const tree = await fetchFileTree();
+    const posts = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md'));
+    const series = {};
+    for (const f of posts) {
+      const [,, s, fn] = f.path.split('/');
+      if (!s || !fn) continue;
+      if (!series[s]) series[s] = { episodes: [], profiles: [] };
+      const num = fn.match(/\d+/);
+      const n = num ? parseInt(num[0]) : null;
+      if (fn.startsWith('profile')) series[s].profiles.push(n);
+      else series[s].episodes.push(n);
+    }
+
+    if (!Object.keys(series).length) {
+      document.getElementById('series-list').innerHTML = '<div class="d-empty">No series found</div>';
+      return;
+    }
+
+    const cards = Object.entries(series).map(([name, data]) => {
+      const eps  = data.episodes.filter(Boolean).sort((a,b)=>a-b);
+      const pros = data.profiles.filter(Boolean).sort((a,b)=>a-b);
+      const gaps = [];
+      for (let i = 1; i < eps.length; i++) for (let g = eps[i-1]+1; g < eps[i]; g++) gaps.push(g);
+      const next = eps.length ? Math.max(...eps) + 1 : 1;
+      const pct  = Math.min(100, Math.round((eps.length % 10 || (eps.length > 0 ? 10 : 0)) / 10 * 100));
+
+      return `<div class="d-series">
+        <div class="d-series-top">
+          <div class="d-series-name">${name.replace(/-/g,' ')}</div>
+          <span class="d-series-badge active">active</span>
+        </div>
+        <div class="d-progress"><div class="d-progress-fill active" style="width:${pct}%"></div></div>
+        <div class="d-series-stats">
+          <span>${eps.length} episode${eps.length!==1?'s':''}</span>
+          ${pros.length ? `<span>${pros.length} profile${pros.length!==1?'s':''}</span>` : ''}
+          <span class="next">next: #${next}</span>
+          ${gaps.length ? `<span class="gap">gaps: ${gaps.join(', ')}</span>` : ''}
+        </div>
+      </div>`;
+    });
+
+    document.getElementById('series-list').innerHTML = `<div class="d-series-list">${cards.join('')}</div>`;
+  }
+
+  // ── Schedule ───────────────────────────────────────────────────────────────
+  async function loadSchedule() {
+    // Populate file dropdown
+    const tree = await fetchFileTree();
+    const mdFiles = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md'))
+      .map(f => f.path).sort();
+    const sel = document.getElementById('sched-file');
+    sel.innerHTML = `<option value="">Select a post…</option>` +
+      mdFiles.map(f => `<option value="${f}">${f.split('/').slice(2).join('/')}</option>`).join('');
+
+    // Load scheduled.json
+    await renderScheduleList();
+  }
+
+  async function renderScheduleList() {
+    document.getElementById('sched-list').innerHTML = '<div class="d-empty"><span class="d-loading"></span></div>';
+    const f = await ghFile('src/data/scheduled.json').catch(() => null);
+    let items = [];
+    try { if (f) items = JSON.parse(f.content); } catch(_) {}
+
+    if (!items.length) {
+      document.getElementById('sched-list').innerHTML = '<div class="d-empty">No scheduled posts</div>';
+      return;
+    }
+
+    items.sort((a, b) => new Date(a.publish_at) - new Date(b.publish_at));
+    document.getElementById('sched-list').innerHTML = `<div class="d-sched-list">${items.map(item => `
+      <div class="d-sched-item">
+        <div class="d-sched-info">
+          <div class="d-sched-label">${item.label || fileName(item.file)}</div>
+          <div class="d-sched-meta">${item.file}</div>
+        </div>
+        <div class="d-sched-date">${fmtDate(item.publish_at)}</div>
+        <button class="d-btn danger" style="padding:5px 10px;font-size:10px" onclick="dRemoveSchedule('${item.id}')">✕</button>
+      </div>`).join('')}</div>`;
+  }
+
+  async function dAddSchedule() {
+    const file = document.getElementById('sched-file').value;
+    const date = document.getElementById('sched-date').value;
+    const label = document.getElementById('sched-label').value.trim();
+    if (!file) { toast('Select a file', 'err'); return; }
+    if (!date) { toast('Pick a date', 'err'); return; }
+
+    const f = await ghFile('src/data/scheduled.json').catch(() => null);
+    let items = [];
+    try { if (f) items = JSON.parse(f.content); } catch(_) {}
+
+    items.push({
+      id:         'sched-' + Date.now(),
+      file,
+      publish_at: new Date(date).toISOString(),
+      label:      label || fileName(file),
+      added_at:   new Date().toISOString(),
+    });
+
+    await ghWrite('src/data/scheduled.json', JSON.stringify(items, null, 2),
+      `chore: schedule ${fileName(file)} [skip ci]`, f?.sha || null);
+
+    toast('Scheduled ✓', 'ok');
+    document.getElementById('sched-label').value = '';
+    document.getElementById('sched-date').value = '';
+    document.getElementById('sched-file').value = '';
+    await renderScheduleList();
+  }
+
+  async function dRemoveSchedule(id) {
+    const f = await ghFile('src/data/scheduled.json').catch(() => null);
+    if (!f) return;
+    let items = [];
+    try { items = JSON.parse(f.content); } catch(_) {}
+    const updated = items.filter(i => i.id !== id);
+    await ghWrite('src/data/scheduled.json', JSON.stringify(updated, null, 2),
+      `chore: remove scheduled post [skip ci]`, f.sha);
+    toast('Removed ✓', 'ok');
+    await renderScheduleList();
+  }
+
+  // ── Actions ────────────────────────────────────────────────────────────────
+  async function loadActions() {
+    document.getElementById('actions-list').innerHTML = '<div class="d-empty"><span class="d-loading"></span></div>';
+    const data = await gh(`/repos/${REPO}/actions/runs?per_page=15`).catch(() => null);
+    const runs = data?.workflow_runs || [];
+    if (!runs.length) {
+      document.getElementById('actions-list').innerHTML = '<div class="d-empty">No workflow runs</div>';
+      return;
+    }
+    document.getElementById('actions-list').innerHTML = `<div class="d-action-list">${runs.map(r => {
+      const cls = r.conclusion || r.status || 'queued';
+      const label = r.conclusion || r.status || 'queued';
+      return `<a class="d-action-run" href="${r.html_url}" target="_blank" rel="noopener">
+        <div class="d-action-name">${r.name} — ${r.display_title || r.head_commit?.message?.split('\n')[0] || ''}</div>
+        <div class="d-action-branch">${r.head_branch}</div>
+        <div class="d-action-time">${relTime(r.created_at)}</div>
+        <span class="d-action-status ${cls}">${label}</span>
+      </a>`;
+    }).join('')}</div>`;
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  function dRefresh() {
+    if (activeTab === 'overview')  loadOverview();
+    if (activeTab === 'pipeline')  loadPipeline();
+    if (activeTab === 'series')    loadSeries();
+    if (activeTab === 'schedule')  loadSchedule();
+    if (activeTab === 'actions')   loadActions();
+  }
+
+  async function dInit() {
+    TOKEN = getToken();
+    if (!TOKEN) {
+      document.getElementById('d-login').style.display = 'flex';
+      return;
+    }
+    // Prefetch status.json to set FAB dot colour immediately
+    fetchStatus().then(s => {
+      const last = s.runs?.[0];
+      if (!last) return;
+      const active = ['discord','devto','hashnode','ntfy','indexnow']
+        .map(p => last[p]).filter(r => !r?.skipped);
+      const allOk = active.every(r => r?.ok);
+      document.getElementById('d-fab-dot').className = allOk ? 'green' : 'red';
+    }).catch(() => {});
+  }
+
+  dInit();
+</script>
 </body>
 </html>
