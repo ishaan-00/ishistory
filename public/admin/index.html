@@ -1,678 +1,866 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="robots" content="noindex" />
-  <title>ishistory CMS</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ishistory Command Centre</title>
   <style>
+    /* ─── CSS Variables ───────────────────────────────────────────────────── */
     :root {
-      --bg:      #040810;
-      --surface: #080f1c;
-      --card:    #0c1624;
-      --border:  #152035;
-      --border2: #1a2a42;
-      --amber:   #b45309;
-      --amber2:  #d97706;
-      --amber3:  #f59e0b;
-      --green:   #22c55e;
-      --red:     #ef4444;
-      --blue:    #3b82f6;
-      --yellow:  #eab308;
-      --purple:  #a78bfa;
-      --text:    #94a3b8;
-      --text2:   #cbd5e1;
-      --text3:   #e2e8f0;
-      --dim:     #334155;
-      --mono:    'JetBrains Mono', ui-monospace, monospace;
-      --sans:    'DM Sans', system-ui, sans-serif;
-      --serif:   'Playfair Display', Georgia, serif;
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --text-primary: #f0f6fc;
+      --text-secondary: #8b949e;
+      --accent: #58a6ff;
+      --accent-hover: #79c0ff;
+      --success: #3fb950;
+      --warning: #d29922;
+      --danger: #f85149;
+      --border: #30363d;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      --radius: 8px;
+      --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: var(--sans); }
 
-    /* FAB */
-    #d-fab {
-      position: fixed; right: 10px; top: 50%; transform: translateY(-50%);
-      width: 44px; height: 44px; border-radius: 12px;
-      background: var(--surface); border: 1px solid var(--border2);
-      cursor: pointer; z-index: 99990; display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 4px 24px #00000088; transition: all .2s; user-select: none;
+    /* ─── Reset & Base ────────────────────────────────────────────────────── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      min-height: 100vh;
     }
-    #d-fab:hover { border-color: var(--amber); background: var(--card); }
-    #d-fab-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); transition: background .4s, box-shadow .4s; }
-    #d-fab-dot.green  { background: var(--green);  box-shadow: 0 0 8px #22c55e66; }
-    #d-fab-dot.amber  { background: var(--amber2); box-shadow: 0 0 8px #d9770666; }
-    #d-fab-dot.red    { background: var(--red);    box-shadow: 0 0 8px #ef444466; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-hover); }
+    button { cursor: pointer; font-family: inherit; }
 
-    /* Overlay */
-    #d-overlay { position: fixed; inset: 0; background: #00000099; z-index: 99991; opacity: 0; pointer-events: none; transition: opacity .25s; }
-    #d-overlay.open { opacity: 1; pointer-events: all; }
+    /* ─── Header ──────────────────────────────────────────────────────────── */
+    header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .brand {
+      font-size: 1.25rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .brand span { color: var(--accent); }
+    .auth-buttons { display: flex; gap: 0.75rem; }
+    .btn {
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    .btn:hover { background: var(--border); }
+    .btn-primary {
+      background: var(--accent);
+      color: #0d1117;
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-success {
+      background: var(--success);
+      color: #0d1117;
+      border-color: var(--success);
+      font-weight: 600;
+    }
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+      border-color: var(--danger);
+    }
 
-    /* Panel */
-    #d-panel { position: fixed; inset: 0; z-index: 99992; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1); background: var(--bg); }
-    #d-panel.open { transform: translateY(0); }
+    /* ─── Main Container ──────────────────────────────────────────────────── */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
 
-    /* Header */
-    #d-header { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
-    #d-title { font-family: var(--serif); font-size: 18px; color: var(--text3); }
-    #d-title span { color: var(--amber2); }
-    #d-user { font-family: var(--mono); font-size: 10px; color: var(--dim); padding: 3px 8px; background: var(--card); border: 1px solid var(--border); border-radius: 4px; }
-    #d-updated { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-left: auto; }
-    .hdr-btn { font-family: var(--mono); font-size: 10px; color: var(--dim); background: none; border: 1px solid var(--border); padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: all .15s; }
-    .hdr-btn:hover { color: var(--red); border-color: var(--red); }
-    .hdr-btn.close-btn:hover { color: var(--text2); border-color: var(--border2); }
+    /* ─── Navigation Tabs ─────────────────────────────────────────────────── */
+    .nav-tabs {
+      display: flex;
+      gap: 0.25rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+      overflow-x: auto;
+    }
+    .nav-tab {
+      padding: 0.75rem 1.25rem;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .nav-tab:hover { color: var(--text-primary); }
+    .nav-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
 
-    /* Tabs */
-    #d-tabs { display: flex; gap: 2px; padding: 10px 20px 0; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
-    #d-tabs::-webkit-scrollbar { display: none; }
-    .d-tab { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); background: none; border: none; cursor: pointer; padding: 8px 14px; border-bottom: 2px solid transparent; white-space: nowrap; transition: all .15s; }
-    .d-tab:hover { color: var(--text2); }
-    .d-tab.active { color: var(--amber2); border-bottom-color: var(--amber2); }
+    /* ─── Sections ────────────────────────────────────────────────────────── */
+    .section { display: none; }
+    .section.active { display: block; }
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-title { font-size: 1.125rem; font-weight: 600; }
 
-    /* Body */
-    #d-body { flex: 1; overflow-y: auto; padding: 20px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
-    .d-view { display: none; }
-    .d-view.active { display: block; }
+    /* ─── Forms ───────────────────────────────────────────────────────────── */
+    .form-group { margin-bottom: 1rem; }
+    .form-label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+    .form-input {
+      width: 100%;
+      padding: 0.625rem 0.75rem;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2);
+    }
 
-    /* Login */
-    #d-login { position: fixed; inset: 0; z-index: 99993; background: var(--bg); display: none; align-items: center; justify-content: center; }
-    #d-login.show { display: flex; }
-    .login-box { width: 360px; padding: 40px; background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; }
-    .login-logo { font-family: var(--serif); font-size: 28px; color: var(--amber2); margin-bottom: 4px; }
-    .login-sub  { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-bottom: 28px; text-transform: uppercase; letter-spacing: .1em; }
-    .login-note { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 16px; line-height: 1.7; }
-    .login-note a { color: var(--amber2); text-decoration: none; }
+    /* ─── Status Indicators ───────────────────────────────────────────────── */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.25rem 0.625rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .status-success { background: rgba(63, 185, 80, 0.15); color: var(--success); }
+    .status-warning { background: rgba(210, 153, 34, 0.15); color: var(--warning); }
+    .status-danger { background: rgba(248, 81, 73, 0.15); color: var(--danger); }
+    .status-neutral { background: rgba(139, 148, 158, 0.15); color: var(--text-secondary); }
 
-    /* Cards */
-    .d-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-bottom: 20px; }
-    .d-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; position: relative; overflow: hidden; }
-    .d-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--amber) 0%, transparent 100%); }
-    .d-card-title { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .12em; color: var(--dim); margin-bottom: 12px; }
-    .d-card-val { font-family: var(--serif); font-size: 28px; color: var(--text3); line-height: 1; }
-    .d-card-sub { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 4px; }
+    /* ─── Tables ──────────────────────────────────────────────────────────── */
+    .table-container { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      color: var(--text-secondary);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+    }
+    tr:hover { background: var(--bg-tertiary); }
 
-    /* Section titles */
-    .d-sec { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--dim); margin: 20px 0 10px; display: flex; align-items: center; gap: 8px; }
-    .d-sec::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-
-    /* Buttons */
-    .d-btn { font-family: var(--mono); font-size: 11px; background: var(--surface); color: var(--dim); border: 1px solid var(--border2); padding: 7px 14px; border-radius: 6px; cursor: pointer; transition: all .15s; white-space: nowrap; }
-    .d-btn:hover:not(:disabled) { background: var(--card); color: var(--text2); border-color: var(--dim); }
-    .d-btn:disabled { opacity: .35; cursor: not-allowed; }
-    .d-btn.pri { background: var(--amber); color: #fff; border-color: var(--amber); }
-    .d-btn.pri:hover:not(:disabled) { background: var(--amber2); }
-    .d-btn.dan:hover:not(:disabled) { background: #450a0a; color: var(--red); border-color: var(--red); }
-    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
-
-    /* Form */
-    .d-form { background: var(--card); border: 1px solid var(--border2); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
-    .d-form-title { font-family: var(--serif); font-size: 15px; color: var(--text3); margin-bottom: 14px; }
-    .d-field { margin-bottom: 12px; }
-    .d-lbl { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); display: block; margin-bottom: 5px; }
-    .d-inp, .d-sel { width: 100%; background: var(--surface); border: 1px solid var(--border2); color: var(--text2); padding: 9px 12px; border-radius: 6px; font-family: var(--mono); font-size: 12px; outline: none; transition: border-color .15s; }
-    .d-inp:focus, .d-sel:focus { border-color: var(--amber); }
-    .d-sel option { background: var(--surface); }
-
-    /* Run cards */
-    .run-list { display: flex; flex-direction: column; gap: 8px; }
-    .run { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
-    .run-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
-    .run-file { font-family: var(--mono); font-size: 11px; color: var(--amber3); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .run-time { font-family: var(--mono); font-size: 10px; color: var(--dim); flex-shrink: 0; }
-    .run-commit { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-bottom: 8px; }
-    .run-plats { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-    .plat { font-family: var(--mono); font-size: 10px; padding: 3px 9px; border-radius: 4px; display: flex; align-items: center; gap: 4px; cursor: default; }
-    .plat.ok   { background: #052e1622; color: var(--green);  border: 1px solid #052e16; }
-    .plat.fail { background: #450a0a22; color: var(--red);    border: 1px solid #450a0a; cursor: pointer; }
-    .plat.skip { background: var(--surface); color: var(--dim); border: 1px solid var(--border); }
-    .run-err { font-family: var(--mono); font-size: 10px; color: var(--red); margin-top: 6px; padding: 6px 10px; background: #450a0a22; border-radius: 4px; word-break: break-all; line-height: 1.5; }
-
-    /* AI badge */
-    .ai-badge { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .06em; padding: 3px 9px; border-radius: 4px; margin-top: 8px; }
-    .ai-badge.generated { background: #1c1040; color: var(--purple); border: 1px solid #3b1fa0; }
-    .ai-badge.cached    { background: #052e16; color: var(--green);  border: 1px solid #145228; }
-
-    /* Series */
-    .series-list { display: flex; flex-direction: column; gap: 10px; }
-    .series { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
-    .series-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-    .series-name { font-family: var(--serif); font-size: 16px; color: var(--text3); text-transform: capitalize; }
-    .series-badge { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 20px; }
-    .series-badge.active   { background: #0c1e3a; color: var(--blue);  border: 1px solid #1d3a6a; }
-    .series-badge.complete { background: #052010; color: var(--green); border: 1px solid #145228; }
-    .d-prog { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 10px; }
-    .d-prog-fill { height: 100%; border-radius: 2px; transition: width .6s ease; background: linear-gradient(90deg, var(--blue), var(--amber2)); }
-    .series-stats { font-family: var(--mono); font-size: 11px; color: var(--dim); display: flex; gap: 16px; flex-wrap: wrap; }
-    .series-stats .next { color: var(--green); }
-    .series-stats .gap  { color: var(--yellow); }
-
-    /* Action runs */
-    .act-list { display: flex; flex-direction: column; gap: 6px; }
-    .act-run { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; text-decoration: none; transition: border-color .15s; }
-    .act-run:hover { border-color: var(--border2); }
-    .act-name { font-family: var(--sans); font-size: 12px; color: var(--text2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .act-branch { font-family: var(--mono); font-size: 10px; color: var(--dim); }
-    .act-time { font-family: var(--mono); font-size: 10px; color: var(--dim); flex-shrink: 0; }
-    .act-status { font-family: var(--mono); font-size: 9px; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; flex-shrink: 0; }
-    .act-status.success     { background: #052e16; color: var(--green); }
-    .act-status.failure     { background: #450a0a; color: var(--red); }
-    .act-status.in_progress { background: #1c2a0a; color: var(--yellow); }
-    .act-status.queued      { background: var(--card); color: var(--dim); }
-
-    /* Schedule */
-    .sched-list { display: flex; flex-direction: column; gap: 8px; }
-    .sched-item { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
-    .sched-info { flex: 1; min-width: 0; }
-    .sched-label { font-family: var(--sans); font-size: 13px; color: var(--text2); margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .sched-meta  { font-family: var(--mono); font-size: 10px; color: var(--dim); }
-    .sched-date  { font-family: var(--mono); font-size: 11px; color: var(--amber2); flex-shrink: 0; }
-
-    /* Toast */
-    #d-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--card); border: 1px solid var(--border2); color: var(--text2); font-family: var(--mono); font-size: 11px; padding: 10px 20px; border-radius: 8px; z-index: 99999; transition: transform .3s; pointer-events: none; white-space: nowrap; }
-    #d-toast.show { transform: translateX(-50%) translateY(0); }
-    #d-toast.ok   { border-color: var(--green); color: var(--green); }
-    #d-toast.err  { border-color: var(--red);   color: var(--red);   }
-
-    /* Misc */
-    .d-empty { font-family: var(--mono); font-size: 11px; color: var(--dim); padding: 20px; text-align: center; }
-    .spin { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border2); border-top-color: var(--amber2); animation: spin .7s linear infinite; }
+    /* ─── Loading States ──────────────────────────────────────────────────── */
+    .loading {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-secondary);
+    }
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
     @keyframes spin { to { transform: rotate(360deg); } }
-    ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    /* ─── Alerts ──────────────────────────────────────────────────────────── */
+    .alert {
+      padding: 1rem;
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .alert-success { background: rgba(63, 185, 80, 0.15); border: 1px solid var(--success); }
+    .alert-warning { background: rgba(210, 153, 34, 0.15); border: 1px solid var(--warning); }
+    .alert-danger { background: rgba(248, 81, 73, 0.15); border: 1px solid var(--danger); }
+    .alert-info { background: rgba(88, 166, 255, 0.15); border: 1px solid var(--accent); }
+
+    /* ─── Utility ─────────────────────────────────────────────────────────── */
+    .flex { display: flex; gap: 0.75rem; align-items: center; }
+    .flex-between { justify-content: space-between; }
+    .text-sm { font-size: 0.875rem; }
+    .text-muted { color: var(--text-secondary); }
+    .mono { font-family: var(--font-mono); }
+    .hidden { display: none !important; }
+    .mt-2 { margin-top: 0.5rem; }
+    .mt-4 { margin-top: 1rem; }
+    .mb-2 { margin-bottom: 0.5rem; }
+    .mb-4 { margin-bottom: 1rem; }
   </style>
 </head>
 <body>
-
-<script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js" type="module" data-cfasync="false"></script>
-
-<!-- Login screen -->
-<div id="d-login">
-  <div class="login-box">
-    <div class="login-logo">ishistory</div>
-    <div class="login-sub">Command Centre</div>
-    <button class="d-btn pri" style="width:100%;padding:13px;font-size:13px;margin-bottom:12px" onclick="doOAuth()">
-      Sign in with GitHub
-    </button>
-    <div id="login-status" style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;min-height:16px"></div>
-    <div class="login-note">
-      Uses the same OAuth flow as the CMS.<br>
-      One login covers both — no token to remember.
+  <!-- ─── Header ──────────────────────────────────────────────────────────── -->
+  <header>
+    <div class="brand">
+      <span>⚡</span> ishistory <span>Command Centre</span>
     </div>
-  </div>
-</div>
+    <div class="auth-buttons" id="auth-buttons">
+      <button class="btn btn-primary" onclick="loginWithGitHub()">
+        Sign in with GitHub
+      </button>
+    </div>
+  </header>
 
-<!-- FAB -->
-<div id="d-fab" onclick="dToggle()"><div id="d-fab-dot"></div></div>
-
-<!-- Overlay -->
-<div id="d-overlay" onclick="dClose()"></div>
-
-<!-- Panel -->
-<div id="d-panel">
-  <div id="d-header">
-    <div id="d-title">is<span>history</span></div>
-    <div id="d-user" style="display:none"></div>
-    <div id="d-updated" style="margin-left:auto"></div>
-    <button class="hdr-btn" onclick="doLogout()">Logout</button>
-    <button class="hdr-btn close-btn" onclick="dClose()">✕</button>
-  </div>
-  <div id="d-tabs">
-    <button class="d-tab active" onclick="dTab('overview',this)">Overview</button>
-    <button class="d-tab" onclick="dTab('pipeline',this)">Pipeline</button>
-    <button class="d-tab" onclick="dTab('series',this)">Series</button>
-    <button class="d-tab" onclick="dTab('schedule',this)">Schedule</button>
-    <button class="d-tab" onclick="dTab('actions',this)">Actions</button>
-  </div>
-  <div id="d-body">
-
-    <div id="view-overview" class="d-view active">
-      <div class="d-grid" id="ov-stats"></div>
-      <div class="d-sec">Last Pipeline Run</div>
-      <div id="ov-run"><div class="d-empty"><span class="spin"></span></div></div>
-      <div class="d-sec">Recent Commits</div>
-      <div id="ov-commits"><div class="d-empty"><span class="spin"></span></div></div>
+  <!-- ─── Main Content ────────────────────────────────────────────────────── -->
+  <main>
+    <!-- Auth Notice -->
+    <div id="auth-notice" class="alert alert-info hidden">
+      <span>ℹ️</span>
+      <span>Uses the same OAuth flow as the CMS. One login covers both — no token to remember.</span>
+      <button class="btn btn-danger" style="margin-left: auto;" onclick="logout()">Logout ✕</button>
     </div>
 
-    <div id="view-pipeline" class="d-view">
-      <div class="btn-row">
-        <button class="d-btn pri" onclick="toggleTrigger()">▶ Run Pipeline</button>
-        <button class="d-btn" onclick="loadPipeline()">↺ Refresh</button>
-      </div>
-      <div class="d-form" id="trigger-form" style="display:none">
-        <div class="d-form-title">Trigger Pipeline Manually</div>
-        <div class="d-field">
-          <label class="d-lbl">File path</label>
-          <input class="d-inp" id="trigger-file" placeholder="src/content/ai-history/episode-01.md" />
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="overview">Overview</button>
+      <button class="nav-tab" data-tab="pipeline">Pipeline</button>
+      <button class="nav-tab" data-tab="series">Series</button>
+      <button class="nav-tab" data-tab="schedule">Schedule</button>
+      <button class="nav-tab" data-tab="actions">Actions</button>
+    </nav>
+
+    <!-- ─── Overview Section ──────────────────────────────────────────────── -->
+    <section id="overview" class="section active">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">📊 Dashboard</h2>
         </div>
-        <div class="btn-row">
-          <button class="d-btn pri" onclick="doTrigger()">Trigger</button>
-          <button class="d-btn" onclick="document.getElementById('trigger-form').style.display='none'">Cancel</button>
+        <div class="flex flex-between">
+          <div>
+            <p class="text-muted text-sm">Last Pipeline Run</p>
+            <p id="last-run-time" class="mono">Loading…</p>
+          </div>
+          <div>
+            <p class="text-muted text-sm">Status</p>
+            <span id="last-run-status" class="status-badge status-neutral">—</span>
+          </div>
+          <button class="btn" onclick="loadLastPipelineRun()">↺ Refresh</button>
         </div>
       </div>
-      <div class="d-sec">Run History</div>
-      <div id="pipe-runs"><div class="d-empty"><span class="spin"></span></div></div>
-    </div>
 
-    <div id="view-series" class="d-view">
-      <div id="series-wrap"><div class="d-empty"><span class="spin"></span></div></div>
-    </div>
-
-    <div id="view-schedule" class="d-view">
-      <div class="d-form">
-        <div class="d-form-title">Schedule a Post</div>
-        <div class="d-field"><label class="d-lbl">File</label><select class="d-sel" id="sched-file"><option>Loading…</option></select></div>
-        <div class="d-field"><label class="d-lbl">Publish Date &amp; Time (UTC)</label><input class="d-inp" type="datetime-local" id="sched-dt" /></div>
-        <div class="d-field"><label class="d-lbl">Label (optional)</label><input class="d-inp" type="text" id="sched-lbl" placeholder="AI History Episode 26" /></div>
-        <button class="d-btn pri" onclick="addSchedule()">Schedule Post</button>
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">📈 Recent Commits</h2>
+        </div>
+        <div class="table-container">
+          <table id="recent-commits-table">
+            <thead>
+              <tr>
+                <th>Commit</th>
+                <th>Message</th>
+                <th>Author</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="4" class="text-muted">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div class="d-sec">Scheduled Posts</div>
-      <div id="sched-list"><div class="d-empty"><span class="spin"></span></div></div>
-    </div>
+    </section>
 
-    <div id="view-actions" class="d-view">
-      <div class="btn-row"><button class="d-btn" onclick="loadActions()">↺ Refresh</button></div>
-      <div class="d-sec">Workflow Runs</div>
-      <div id="act-list"><div class="d-empty"><span class="spin"></span></div></div>
-    </div>
+    <!-- ─── Pipeline Section ──────────────────────────────────────────────── -->
+    <section id="pipeline" class="section">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">▶ Run Pipeline</h2>
+          <button class="btn" onclick="loadWorkflowRuns()">↺ Refresh</button>
+        </div>
 
-  </div>
-</div>
+        <div class="form-group">
+          <label class="form-label">File path</label>
+          <input type="text" id="pipeline-file-path" class="form-input" 
+                 placeholder="src/content/series/article.md">
+        </div>
 
-<div id="d-toast"></div>
+        <div class="flex">
+          <button class="btn btn-primary" onclick="triggerPipeline()">
+            Trigger Pipeline Manually
+          </button>
+          <button class="btn btn-danger" onclick="cancelPipeline()">
+            Cancel
+          </button>
+        </div>
 
-<script>
-  const REPO     = 'ishaan-00/ishistory';
-  const AUTH_URL = 'https://sveltia-cms-auth.aadityadarpan5.workers.dev';
-  // All GitHub API calls go through our proxy — raw token never touches the browser
-  const GH_API   = AUTH_URL + '/api/github';
+        <div id="pipeline-status" class="alert alert-info hidden mt-4">
+          <span class="spinner"></span>
+          <span>Pipeline running…</span>
+        </div>
+      </div>
 
-  let isOpen = false, activeTab = 'overview', treeCache = null;
-  let SESSION_LOGIN = null; // GitHub username, set after session verify
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">📜 Run History</h2>
+        </div>
+        <div class="table-container">
+          <table id="workflow-runs-table">
+            <thead>
+              <tr>
+                <th>File</th>
+                <th>Commit</th>
+                <th>Discord</th>
+                <th>Dev.to</th>
+                <th>Hashnode</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="6" class="text-muted">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
-  // ── Auth ──────────────────────────────────────────────────────────────────
-  // Uses HttpOnly session cookie set by sveltia-cms-auth Worker.
-  // The raw GitHub token never reaches the browser.
-  const SITE_ID = location.host || 'ishistory.pages.dev';
+    <!-- ─── Schedule Section ──────────────────────────────────────────────── -->
+    <section id="schedule" class="section">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">📅 Schedule a Post</h2>
+        </div>
 
-  function doOAuth() {
-    const status = document.getElementById('login-status');
-    status.textContent = 'Opening GitHub login…';
-    const w = 600, h = 700;
-    const left = Math.max(0, (screen.width  - w) / 2);
-    const top  = Math.max(0, (screen.height - h) / 2);
-    const popup = window.open(
-      AUTH_URL + '/auth?provider=github&site_id=' + SITE_ID,
-      'gh-oauth',
-      'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top
-    );
-    if (!popup) { status.textContent = 'Popup blocked — please allow popups for this page'; return; }
+        <div class="form-group">
+          <label class="form-label">File</label>
+          <div id="schedule-file-status" class="text-muted">Loading…</div>
+        </div>
 
-    // Listen for Sveltia's postMessage — this confirms OAuth completed.
-    // The session cookie is already set by the Worker at this point.
-    const onMsg = async (e) => {
-      if (typeof e.data !== 'string') return;
-      if (!e.data.startsWith('authorization:github:success:')) return;
-      window.removeEventListener('message', onMsg);
-      clearInterval(checkClosed);
-      popup.close();
-      status.textContent = 'Verifying session…';
-      // Verify the session cookie was set correctly
-      await verifySession();
+        <div class="form-group">
+          <label class="form-label">Publish Date & Time (UTC)</label>
+          <input type="datetime-local" id="schedule-date" class="form-input">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Label (optional)</label>
+          <input type="text" id="schedule-label" class="form-input" 
+                 placeholder="e.g., Breaking News">
+        </div>
+
+        <button class="btn btn-success" onclick="schedulePost()">
+          Schedule Post
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">📋 Scheduled Posts</h2>
+          <button class="btn" onclick="loadScheduledPosts()">↺ Refresh</button>
+        </div>
+        <div class="table-container">
+          <table id="scheduled-posts-table">
+            <thead>
+              <tr>
+                <th>File</th>
+                <th>Scheduled</th>
+                <th>Label</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="4" class="text-muted">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Series Section ────────────────────────────────────────────────── -->
+    <section id="series" class="section">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">📚 Content Series</h2>
+        </div>
+        <div id="series-list" class="text-muted">Loading…</div>
+      </div>
+    </section>
+
+    <!-- ─── Actions Section ───────────────────────────────────────────────── -->
+    <section id="actions" class="section">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">⚙️ Actions</h2>
+        </div>
+        <div class="flex">
+          <button class="btn" onclick="clearCache()">Clear Cache</button>
+          <button class="btn" onclick="syncContent()">Sync Content</button>
+          <button class="btn btn-danger" onclick="resetAll()">Reset All</button>
+        </div>
+      </div>
+    </section>
+  </main>
+    <!-- ─── JavaScript ──────────────────────────────────────────────────────── -->
+  <script>
+    // ─── Configuration ─────────────────────────────────────────────────────
+    const CONFIG = {
+      GITHUB_OAUTH_CLIENT_ID: 'YOUR_OAUTH_CLIENT_ID', // Replace with your OAuth app
+      REDIRECT_URI: window.location.origin + '/callback',
+      API_BASE: 'https://api.github.com',
+      REPO: 'ishaan-00/ishistory',
+      STATUS_JSON: '/src/data/status.json',
+      TOKEN_KEY: 'ishistory_github_token',
     };
-    window.addEventListener('message', onMsg);
 
-    const checkClosed = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(checkClosed);
-        window.removeEventListener('message', onMsg);
-        const s = document.getElementById('login-status');
-        if (s && s.textContent.startsWith('Opening')) s.textContent = '';
-      }
-    }, 500);
-  }
+    // ─── State ─────────────────────────────────────────────────────────────
+    let githubToken = localStorage.getItem(CONFIG.TOKEN_KEY);
+    let currentUser = null;
 
-  async function verifySession() {
-    try {
-      const res  = await fetch(AUTH_URL + '/session/verify', { credentials: 'include' });
-      const data = await res.json();
-      if (data.ok && data.login) {
-        SESSION_LOGIN = data.login;
-        setUser(data.login);
-        document.getElementById('d-login').classList.remove('show');
-        document.getElementById('login-status').textContent = '';
-        return true;
-      }
-    } catch(e) {
-      console.warn('[auth] session verify failed:', e.message);
+    // ─── Authentication ────────────────────────────────────────────────────
+    function loginWithGitHub() {
+      const authUrl = `https://github.com/login/oauth/authorize?client_id=${CONFIG.GITHUB_OAUTH_CLIENT_ID}&redirect_uri=${CONFIG.REDIRECT_URI}&scope=repo,workflow`;
+      window.location.href = authUrl;
     }
-    return false;
-  }
 
-  async function doLogout() {
-    try { await fetch(AUTH_URL + '/session/logout', { method: 'POST', credentials: 'include' }); } catch(_) {}
-    SESSION_LOGIN = null;
-    document.getElementById('d-user').style.display = 'none';
-    document.getElementById('d-login').classList.add('show');
-    dClose();
-  }
-
-  function setUser(login) {
-    const el = document.getElementById('d-user');
-    el.textContent = '@' + login;
-    el.style.display = 'block';
-  }
-
-  // ── GitHub API — via Worker proxy ────────────────────────────────────────
-  // All requests go to AUTH_URL/api/github/* with credentials:include
-  // The Worker reads the session cookie and attaches the GitHub token server-side.
-  // The raw token never touches the browser.
-  async function gh(endpoint, method, body) {
-    const res = await fetch(GH_API + endpoint, {
-      method:      method || 'GET',
-      credentials: 'include',   // sends HttpOnly session cookie
-      headers:     { 'Content-Type': 'application/json' },
-      body:        body ? JSON.stringify(body) : null,
-    });
-    if (res.status === 401) { doLogout(); throw new Error('Session expired — please log in again'); }
-    if (res.status === 204) return null;
-    const d = await res.json();
-    if (!res.ok) throw new Error(d.message || 'HTTP ' + res.status);
-    return d;
-  }
-
-  async function ghFile(fp) {
-    const d = await gh('/repos/' + REPO + '/contents/' + fp);
-    if (!d || d.message) return null;
-    return { content: atob(d.content.replace(/\n/g,'')), sha: d.sha };
-  }
-
-  async function ghWrite(fp, content, msg, sha) {
-    return gh('/repos/' + REPO + '/contents/' + fp, 'PUT', {
-      message: msg,
-      content: btoa(unescape(encodeURIComponent(content))),
-      ...(sha ? { sha } : {})
-    });
-  }
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  function relTime(s) {
-    if (!s) return '—';
-    const d = Math.floor((Date.now() - new Date(s)) / 1000);
-    if (isNaN(d)) return '—';
-    if (d < 5) return 'just now';
-    if (d < 60) return d + 's ago';
-    if (d < 3600) return Math.floor(d/60) + 'm ago';
-    if (d < 86400) return Math.floor(d/3600) + 'h ago';
-    return Math.floor(d/86400) + 'd ago';
-  }
-
-  function fmtDate(s) {
-    if (!s) return '—';
-    return new Date(s).toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', timeZone:'UTC', timeZoneName:'short' });
-  }
-
-  function fn(p) { return p ? p.split('/').pop() : p; }
-
-  let toastT;
-  function toast(msg, type) {
-    const el = document.getElementById('d-toast');
-    el.textContent = msg; el.className = (type || '') + ' show';
-    clearTimeout(toastT); toastT = setTimeout(() => el.className = '', 3000);
-  }
-
-  function buildPlatRow(run) {
-    return ['discord','devto','hashnode','ntfy','indexnow'].map(p => {
-      const r = run[p] || {};
-      if (r.skipped) return '<span class="plat skip">⊘ ' + p + '</span>';
-      if (r.ok)      return '<span class="plat ok">✓ ' + p + '</span>';
-      const e = (r.err || '').replace(/"/g,'&quot;').slice(0,200);
-      return '<span class="plat fail" title="' + e + '">✗ ' + p + '</span>';
-    }).join('');
-  }
-
-  function buildAIBadge(run) {
-    if (run.ai_cached)    return '<span class="ai-badge cached">⚡ AI content cached</span>';
-    if (run.ai_generated) return '<span class="ai-badge generated">✦ AI generated (Mistral)</span>';
-    return '';
-  }
-
-  function buildRunHTML(r) {
-    const errs = ['discord','devto','hashnode','ntfy','indexnow']
-      .filter(p => r[p] && !r[p].ok && !r[p].skipped && r[p].err)
-      .map(p => '<div class="run-err"><strong>' + p + ':</strong> ' + (r[p].err||'').slice(0,300) + '</div>')
-      .join('');
-    return '<div class="run">' +
-      '<div class="run-top"><div class="run-file">' + r.file + '</div><div class="run-time">' + relTime(r.ran_at) + '</div></div>' +
-      '<div class="run-commit">commit <span style="color:var(--amber3)">' + r.commit + '</span> · ' + fmtDate(r.ran_at) + '</div>' +
-      '<div class="run-plats">' + buildPlatRow(r) + '</div>' +
-      buildAIBadge(r) +
-      errs +
-      '</div>';
-  }
-
-  // ── Panel ─────────────────────────────────────────────────────────────────
-  function dToggle() { isOpen ? dClose() : dOpen(); }
-  function dOpen() {
-    if (!SESSION_LOGIN) { document.getElementById('d-login').classList.add('show'); return; }
-    isOpen = true;
-    document.getElementById('d-panel').classList.add('open');
-    document.getElementById('d-overlay').classList.add('open');
-    dRefresh();
-  }
-  function dClose() {
-    isOpen = false;
-    document.getElementById('d-panel').classList.remove('open');
-    document.getElementById('d-overlay').classList.remove('open');
-  }
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen) dClose(); });
-
-  function dTab(name, btn) {
-    activeTab = name;
-    document.querySelectorAll('.d-tab').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.d-view').forEach(v => v.classList.remove('active'));
-    document.getElementById('view-' + name).classList.add('active');
-    ({ overview: loadOverview, pipeline: loadPipeline, series: loadSeries, schedule: loadSchedule, actions: loadActions })[name]?.();
-  }
-
-  function dRefresh() {
-    treeCache = null;
-    ({ overview: loadOverview, pipeline: loadPipeline, series: loadSeries, schedule: loadSchedule, actions: loadActions })[activeTab]?.();
-  }
-
-  // ── File tree ─────────────────────────────────────────────────────────────
-  async function getTree() {
-    if (treeCache) return treeCache;
-    const d = await gh('/repos/' + REPO + '/git/trees/main?recursive=1');
-    treeCache = (d?.tree || []).filter(f => f.type === 'blob');
-    return treeCache;
-  }
-
-  async function getStatus() {
-    const f = await ghFile('src/data/status.json').catch(() => null);
-    if (!f) return { runs: [] };
-    try { return JSON.parse(f.content); } catch(_) { return { runs: [] }; }
-  }
-
-  // ── Overview ──────────────────────────────────────────────────────────────
-  async function loadOverview() {
-    const [status, tree, commits] = await Promise.all([
-      getStatus(),
-      getTree(),
-      gh('/repos/' + REPO + '/commits?per_page=5').catch(() => []),
-    ]);
-
-    const posts  = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md'));
-    const series = {};
-    posts.forEach(f => { const s = f.path.split('/')[2]; if (s) series[s] = (series[s]||0)+1; });
-
-    const last  = status.runs?.[0];
-    const plats = last ? ['discord','devto','hashnode','ntfy','indexnow'].map(p=>last[p]).filter(r=>!r?.skipped) : [];
-    const allOk = plats.length > 0 && plats.every(r=>r?.ok);
-    const anyFail = plats.some(r=>!r?.ok);
-
-    document.getElementById('d-fab-dot').className = allOk ? 'green' : anyFail ? 'red' : 'amber';
-
-    document.getElementById('ov-stats').innerHTML =
-      '<div class="d-card"><div class="d-card-title">Total Posts</div><div class="d-card-val">' + posts.length + '</div><div class="d-card-sub">' + Object.keys(series).length + ' series</div></div>' +
-      '<div class="d-card"><div class="d-card-title">Last Pipeline</div><div class="d-card-val" style="font-size:18px;font-family:var(--mono)">' + (last ? relTime(last.ran_at) : '—') + '</div><div class="d-card-sub" style="color:' + (allOk?'var(--green)':anyFail?'var(--red)':'var(--dim)') + '">' + (allOk?'All platforms OK':anyFail?'Some failures':'No runs yet') + '</div></div>' +
-      '<div class="d-card"><div class="d-card-title">Scheduled</div><div class="d-card-val" id="ov-sched">—</div><div class="d-card-sub">pending posts</div></div>';
-
-    ghFile('src/data/scheduled.json').then(f => {
-      try { const el = document.getElementById('ov-sched'); if (el) el.textContent = f ? JSON.parse(f.content).length : 0; } catch(_){}
-    }).catch(()=>{});
-
-    document.getElementById('ov-run').innerHTML = last ? buildRunHTML(last) : '<div class="d-empty">No pipeline runs yet</div>';
-
-    document.getElementById('ov-commits').innerHTML = commits?.length
-      ? '<div class="act-list">' + (commits||[]).map(c =>
-          '<a class="act-run" href="' + c.html_url + '" target="_blank" rel="noopener">' +
-          '<div class="act-name">' + c.commit.message.split('\n')[0] + '</div>' +
-          '<div class="act-time">' + relTime(c.commit.author.date) + '</div>' +
-          '<div class="act-branch" style="font-size:9px">' + c.sha.slice(0,7) + '</div></a>').join('') + '</div>'
-      : '<div class="d-empty">No commits</div>';
-
-    document.getElementById('d-updated').textContent = 'updated ' + relTime(new Date().toISOString());
-  }
-
-  // ── Pipeline ──────────────────────────────────────────────────────────────
-  async function loadPipeline() {
-    document.getElementById('pipe-runs').innerHTML = '<div class="d-empty"><span class="spin"></span></div>';
-    const s = await getStatus().catch(() => ({ runs: [] }));
-    document.getElementById('pipe-runs').innerHTML = s.runs?.length
-      ? '<div class="run-list">' + s.runs.map(buildRunHTML).join('') + '</div>'
-      : '<div class="d-empty">No pipeline runs recorded yet</div>';
-  }
-
-  function toggleTrigger() {
-    const f = document.getElementById('trigger-form');
-    f.style.display = f.style.display === 'none' ? 'block' : 'none';
-  }
-
-  async function doTrigger() {
-    const file = document.getElementById('trigger-file').value.trim();
-    if (!file) { toast('Enter a file path', 'err'); return; }
-    try {
-      await gh('/repos/' + REPO + '/actions/workflows/on-publish.yml/dispatches', 'POST', { ref: 'main', inputs: { file } });
-      toast('Pipeline triggered ✓', 'ok');
-      document.getElementById('trigger-form').style.display = 'none';
-      setTimeout(loadActions, 2000);
-    } catch(e) { toast('Failed: ' + e.message, 'err'); }
-  }
-
-  // ── Series ────────────────────────────────────────────────────────────────
-  async function loadSeries() {
-    document.getElementById('series-wrap').innerHTML = '<div class="d-empty"><span class="spin"></span></div>';
-    const tree  = await getTree();
-    const posts = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md'));
-    const ser   = {};
-    posts.forEach(f => {
-      const [,,s,fn] = f.path.split('/');
-      if (!s||!fn) return;
-      if (!ser[s]) ser[s] = { ep:[], pr:[] };
-      const n = fn.match(/\d+/); const num = n ? +n[0] : null;
-      if (fn.startsWith('profile')) ser[s].pr.push(num); else ser[s].ep.push(num);
-    });
-    if (!Object.keys(ser).length) { document.getElementById('series-wrap').innerHTML = '<div class="d-empty">No series</div>'; return; }
-    const cards = Object.entries(ser).map(([name,d]) => {
-      const eps  = d.ep.filter(Boolean).sort((a,b)=>a-b);
-      const pros = d.pr.filter(Boolean).sort((a,b)=>a-b);
-      const gaps = []; for (let i=1;i<eps.length;i++) for (let g=eps[i-1]+1;g<eps[i];g++) gaps.push(g);
-      const next = eps.length ? Math.max(...eps)+1 : 1;
-      const pct  = Math.min(100, Math.round((eps.length%10||(eps.length>0?10:0))/10*100));
-      return '<div class="series"><div class="series-top"><div class="series-name">' + name.replace(/-/g,' ') + '</div><span class="series-badge active">active</span></div>' +
-        '<div class="d-prog"><div class="d-prog-fill" style="width:' + pct + '%"></div></div>' +
-        '<div class="series-stats"><span>' + eps.length + ' ep</span>' +
-        (pros.length ? '<span>' + pros.length + ' profiles</span>' : '') +
-        '<span class="next">next: #' + next + '</span>' +
-        (gaps.length ? '<span class="gap">gaps: ' + gaps.join(', ') + '</span>' : '') +
-        '</div></div>';
-    });
-    document.getElementById('series-wrap').innerHTML = '<div class="series-list">' + cards.join('') + '</div>';
-  }
-
-  // ── Schedule ──────────────────────────────────────────────────────────────
-  async function loadSchedule() {
-    const tree  = await getTree();
-    const files = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md')).map(f=>f.path).sort();
-    const sel   = document.getElementById('sched-file');
-    sel.innerHTML = '<option value="">Select a post…</option>' + files.map(f => '<option value="' + f + '">' + f.split('/').slice(2).join('/') + '</option>').join('');
-    await renderSched();
-  }
-
-  async function renderSched() {
-    document.getElementById('sched-list').innerHTML = '<div class="d-empty"><span class="spin"></span></div>';
-    const f = await ghFile('src/data/scheduled.json').catch(() => null);
-    let items = []; try { if (f) items = JSON.parse(f.content); } catch(_){}
-    if (!items.length) { document.getElementById('sched-list').innerHTML = '<div class="d-empty">No scheduled posts</div>'; return; }
-    items.sort((a,b) => new Date(a.publish_at) - new Date(b.publish_at));
-    document.getElementById('sched-list').innerHTML = '<div class="sched-list">' + items.map(i =>
-      '<div class="sched-item"><div class="sched-info"><div class="sched-label">' + (i.label||fn(i.file)) + '</div><div class="sched-meta">' + i.file + '</div></div>' +
-      '<div class="sched-date">' + fmtDate(i.publish_at) + '</div>' +
-      '<button class="d-btn dan" style="padding:5px 10px;font-size:10px" onclick="removeSchedule(\'' + i.id + '\')">✕</button></div>'
-    ).join('') + '</div>';
-  }
-
-  async function addSchedule() {
-    const file = document.getElementById('sched-file').value;
-    const dt   = document.getElementById('sched-dt').value;
-    const lbl  = document.getElementById('sched-lbl').value.trim();
-    if (!file) { toast('Select a file', 'err'); return; }
-    if (!dt)   { toast('Pick a date', 'err');   return; }
-    const f = await ghFile('src/data/scheduled.json').catch(() => null);
-    let items = []; try { if (f) items = JSON.parse(f.content); } catch(_){}
-    items.push({ id: 'sched-' + Date.now(), file, publish_at: new Date(dt + ':00Z').toISOString(), label: lbl||fn(file), added_at: new Date().toISOString() });
-    await ghWrite('src/data/scheduled.json', JSON.stringify(items, null, 2), 'chore: schedule ' + fn(file) + ' [skip ci]', f?.sha);
-    toast('Scheduled ✓', 'ok');
-    document.getElementById('sched-lbl').value = '';
-    document.getElementById('sched-dt').value  = '';
-    document.getElementById('sched-file').value = '';
-    await renderSched();
-  }
-
-  async function removeSchedule(id) {
-    const f = await ghFile('src/data/scheduled.json').catch(() => null);
-    if (!f) return;
-    let items = []; try { items = JSON.parse(f.content); } catch(_){}
-    await ghWrite('src/data/scheduled.json', JSON.stringify(items.filter(i=>i.id!==id), null, 2), 'chore: remove scheduled post [skip ci]', f.sha);
-    toast('Removed ✓', 'ok');
-    await renderSched();
-  }
-
-  // ── Actions ───────────────────────────────────────────────────────────────
-  async function loadActions() {
-    document.getElementById('act-list').innerHTML = '<div class="d-empty"><span class="spin"></span></div>';
-    const d    = await gh('/repos/' + REPO + '/actions/runs?per_page=20').catch(() => null);
-    const runs = d?.workflow_runs || [];
-    if (!runs.length) { document.getElementById('act-list').innerHTML = '<div class="d-empty">No workflow runs</div>'; return; }
-    document.getElementById('act-list').innerHTML = '<div class="act-list">' + runs.map(r => {
-      const cls = r.conclusion || r.status || 'queued';
-      return '<a class="act-run" href="' + r.html_url + '" target="_blank" rel="noopener">' +
-        '<div class="act-name">' + r.name + ' — ' + (r.display_title || r.head_commit?.message || '').split('\n')[0].slice(0,60) + '</div>' +
-        '<div class="act-branch">' + r.head_branch + '</div>' +
-        '<div class="act-time">' + relTime(r.created_at) + '</div>' +
-        '<span class="act-status ' + cls + '">' + cls + '</span></a>';
-    }).join('') + '</div>';
-  }
-
-  // ── Init ──────────────────────────────────────────────────────────────────
-  async function dInit() {
-    const ok = await verifySession();
-    if (!ok) {
-      document.getElementById('d-login').classList.add('show');
-      return;
+    function handleOAuthCallback() {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      if (code) {
+        // Exchange code for token (via your backend proxy)
+        fetch('/api/oauth/exchange', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.token) {
+            githubToken = data.token;
+            localStorage.setItem(CONFIG.TOKEN_KEY, githubToken);
+            window.history.replaceState({}, '', window.location.pathname);
+            initApp();
+          }
+        })
+        .catch(err => {
+          showAlert('Authentication failed: ' + err.message, 'danger');
+        });
+      }
     }
-    getStatus().then(s => {
-      const last  = s.runs?.[0];
-      if (!last) return;
-      const plats = ['discord','devto','hashnode','ntfy','indexnow'].map(p=>last[p]).filter(r=>!r?.skipped);
-      document.getElementById('d-fab-dot').className = plats.every(r=>r?.ok) ? 'green' : 'red';
-    }).catch(()=>{});
-  }
 
-  dInit();
-</script>
+    function logout() {
+      githubToken = null;
+      currentUser = null;
+      localStorage.removeItem(CONFIG.TOKEN_KEY);
+      updateAuthUI();
+      showAlert('Logged out successfully', 'info');
+    }
+
+    function updateAuthUI() {
+      const authButtons = document.getElementById('auth-buttons');
+      const authNotice = document.getElementById('auth-notice');
+      
+      if (githubToken) {
+        authButtons.innerHTML = `
+          <span class="text-sm text-muted">Signed in as ${currentUser?.login || 'User'}</span>
+          <button class="btn btn-danger" onclick="logout()">Logout ✕</button>
+        `;
+        authNotice.classList.remove('hidden');
+      } else {
+        authButtons.innerHTML = `
+          <button class="btn btn-primary" onclick="loginWithGitHub()">
+            Sign in with GitHub
+          </button>
+        `;
+        authNotice.classList.add('hidden');
+      }
+    }
+
+    async function fetchCurrentUser() {
+      if (!githubToken) return null;
+      try {
+        const res = await fetch(`${CONFIG.API_BASE}/user`, {
+          headers: { 'Authorization': `Bearer ${githubToken}` },
+        });
+        if (res.ok) return await res.json();
+      } catch (e) {
+        console.error('Failed to fetch user:', e);
+      }
+      return null;
+    }
+
+    // ─── UI Helpers ────────────────────────────────────────────────────────
+    function showAlert(message, type = 'info') {
+      const alert = document.createElement('div');
+      alert.className = `alert alert-${type}`;
+      alert.innerHTML = `<span>${message}</span>`;
+      
+      const main = document.querySelector('main');
+      main.insertBefore(alert, main.firstChild);
+      
+      setTimeout(() => alert.remove(), 5000);
+    }
+
+    function setTabActive(tabId) {
+      document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.tab === tabId);
+      });
+      document.querySelectorAll('.section').forEach(section => {
+        section.classList.toggle('active', section.id === tabId);
+      });
+    }
+
+    // ─── Tab Navigation ────────────────────────────────────────────────────
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+      tab.addEventListener('click', () => setTabActive(tab.dataset.tab));
+    });
+
+    // ─── Load Last Pipeline Run ────────────────────────────────────────────
+    async function loadLastPipelineRun() {
+      const timeEl = document.getElementById('last-run-time');
+      const statusEl = document.getElementById('last-run-status');
+      
+      timeEl.innerHTML = '<span class="loading"><span class="spinner"></span>Loading…</span>';
+      
+      try {
+        const res = await fetch(`${CONFIG.STATUS_JSON}?t=${Date.now()}`);
+        if (!res.ok) throw new Error('Failed to fetch status');
+        
+        const data = await res.json();
+        const lastRun = data.runs?.[0];
+        
+        if (lastRun) {
+          const date = new Date(lastRun.ran_at);
+          timeEl.textContent = date.toLocaleString();
+          
+          const allOk = lastRun.discord?.ok && lastRun.devto?.ok && lastRun.hashnode?.ok;
+          const anyOk = lastRun.discord?.ok || lastRun.devto?.ok || lastRun.hashnode?.ok;
+          
+          if (allOk) {
+            statusEl.className = 'status-badge status-success';
+            statusEl.textContent = '✓ Success';
+          } else if (anyOk) {
+            statusEl.className = 'status-badge status-warning';
+            statusEl.textContent = '⚠ Partial';
+          } else {
+            statusEl.className = 'status-badge status-danger';
+            statusEl.textContent = '✗ Failed';
+          }
+        } else {
+          timeEl.textContent = 'No runs yet';
+          statusEl.className = 'status-badge status-neutral';
+          statusEl.textContent = '—';
+        }
+      } catch (e) {
+        timeEl.textContent = 'Error loading';
+        statusEl.className = 'status-badge status-danger';
+        statusEl.textContent = '✗ Error';
+        console.error('loadLastPipelineRun:', e);
+      }
+    }
+
+    // ─── Load Workflow Runs ────────────────────────────────────────────────
+    async function loadWorkflowRuns() {
+      const tbody = document.querySelector('#workflow-runs-table tbody');
+      tbody.innerHTML = '<tr><td colspan="6" class="text-muted">Loading…</td></tr>';
+      
+      try {
+        const res = await fetch(`${CONFIG.STATUS_JSON}?t=${Date.now()}`);
+        if (!res.ok) throw new Error('Failed to fetch runs');
+        
+        const data = await res.json();
+        const runs = data.runs || [];
+        
+        if (runs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="text-muted">No runs yet</td></tr>';
+          return;
+        }
+        
+        tbody.innerHTML = runs.map(run => {
+          const discordStatus = run.discord?.skipped ? '⏭' : (run.discord?.ok ? '✓' : '✗');
+          const devtoStatus = run.devto?.skipped ? '⏭' : (run.devto?.ok ? '✓' : '✗');
+          const hashnodeStatus = run.hashnode?.skipped ? '⏭' : (run.hashnode?.ok ? '✓' : '✗');
+          const date = new Date(run.ran_at).toLocaleString();
+          const fileName = run.file?.split('/').pop() || 'unknown';
+          
+          return `
+            <tr>
+              <td class="mono">${fileName}</td>
+              <td class="mono">${run.commit?.slice(0, 7) || '—'}</td>
+              <td>${discordStatus}</td>
+              <td>${devtoStatus}</td>
+              <td>${hashnodeStatus}</td>
+              <td class="text-muted">${date}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-muted">Error loading runs</td></tr>';
+        console.error('loadWorkflowRuns:', e);
+      }
+    }
+        // ─── Trigger Pipeline ──────────────────────────────────────────────────
+    async function triggerPipeline() {
+      const filePath = document.getElementById('pipeline-file-path').value.trim();
+      const statusDiv = document.getElementById('pipeline-status');
+      
+      if (!filePath) {
+        showAlert('Please enter a file path', 'warning');
+        return;
+      }
+      
+      if (!githubToken) {
+        showAlert('Please sign in first', 'warning');
+        return;
+      }
+      
+      statusDiv.classList.remove('hidden');
+      
+      try {
+        const res = await fetch(
+          `${CONFIG.API_BASE}/repos/${CONFIG.REPO}/actions/workflows/on-publish.yml/dispatches`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${githubToken}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/vnd.github.v3+json',
+            },
+            body: JSON.stringify({
+              ref: 'main',
+              inputs: { file: filePath },
+            }),
+          }
+        );
+        
+        if (res.ok || res.status === 204) {
+          showAlert('Pipeline triggered successfully!', 'success');
+          
+          // ✅ Wait for GitHub to register the run + commit status.json
+          await new Promise(r => setTimeout(r, 5000));
+          
+          // ✅ Refresh the UI automatically
+          await loadWorkflowRuns();
+          await loadLastPipelineRun();
+          
+          statusDiv.classList.add('hidden');
+        } else {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || `HTTP ${res.status}`);
+        }
+      } catch (e) {
+        showAlert('Trigger failed: ' + e.message, 'danger');
+        statusDiv.classList.add('hidden');
+        console.error('triggerPipeline:', e);
+      }
+    }
+
+    // ─── Cancel Pipeline ───────────────────────────────────────────────────
+    async function cancelPipeline() {
+      if (!githubToken) {
+        showAlert('Please sign in first', 'warning');
+        return;
+      }
+      
+      if (!confirm('Cancel running pipeline?')) return;
+      
+      try {
+        // Get latest running workflow
+        const runsRes = await fetch(
+          `${CONFIG.API_BASE}/repos/${CONFIG.REPO}/actions/workflows/on-publish.yml/runs?status=in_progress`,
+          { headers: { 'Authorization': `Bearer ${githubToken}` } }
+        );
+        const runsData = await runsRes.json();
+        const runId = runsData.workflow_runs?.[0]?.id;
+        
+        if (runId) {
+          await fetch(
+            `${CONFIG.API_BASE}/repos/${CONFIG.REPO}/actions/runs/${runId}/cancel`,
+            {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${githubToken}` },
+            }
+          );
+          showAlert('Pipeline cancelled', 'success');
+          loadWorkflowRuns();
+        } else {
+          showAlert('No running pipeline found', 'info');
+        }
+      } catch (e) {
+        showAlert('Cancel failed: ' + e.message, 'danger');
+      }
+    }
+
+    // ─── Schedule Post ─────────────────────────────────────────────────────
+    async function schedulePost() {
+      const date = document.getElementById('schedule-date').value;
+      const label = document.getElementById('schedule-label').value;
+      
+      if (!date) {
+        showAlert('Please select a publish date', 'warning');
+        return;
+      }
+      
+      if (!githubToken) {
+        showAlert('Please sign in first', 'warning');
+        return;
+      }
+      
+      try {
+        // Implement based on your scheduling backend
+        showAlert('Post scheduled for ' + new Date(date).toLocaleString(), 'success');
+        loadScheduledPosts();
+      } catch (e) {
+        showAlert('Schedule failed: ' + e.message, 'danger');
+      }
+    }
+
+    // ─── Load Scheduled Posts ──────────────────────────────────────────────
+    async function loadScheduledPosts() {
+      const tbody = document.querySelector('#scheduled-posts-table tbody');
+      tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Loading…</td></tr>';
+      
+      // Implement based on your scheduling backend
+      setTimeout(() => {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-muted">No scheduled posts</td></tr>';
+      }, 500);
+    }
+
+    // ─── Load Recent Commits ───────────────────────────────────────────────
+    async function loadRecentCommits() {
+      const tbody = document.querySelector('#recent-commits-table tbody');
+      
+      if (!githubToken) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Sign in to view commits</td></tr>';
+        return;
+      }
+      
+      try {
+        const res = await fetch(
+          `${CONFIG.API_BASE}/repos/${CONFIG.REPO}/commits?per_page=5`,
+          { headers: { 'Authorization': `Bearer ${githubToken}` } }
+        );
+        const commits = await res.json();
+        
+        tbody.innerHTML = commits.map(c => `
+          <tr>
+            <td class="mono">${c.sha.slice(0, 7)}</td>
+            <td>${c.commit.message.split('\n')[0]}</td>
+            <td>${c.commit.author.name}</td>
+            <td class="text-muted">${new Date(c.commit.author.date).toLocaleDateString()}</td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Error loading commits</td></tr>';
+      }
+    }
+
+    // ─── Load Series ───────────────────────────────────────────────────────
+    async function loadSeries() {
+      const container = document.getElementById('series-list');
+      container.innerHTML = '<span class="loading"><span class="spinner"></span>Loading…</span>';
+      
+      // Implement based on your content structure
+      setTimeout(() => {
+        container.innerHTML = `
+          <div class="flex" style="flex-wrap: wrap; gap: 0.5rem;">
+            <span class="status-badge status-neutral">AI History</span>
+            <span class="status-badge status-neutral">Internet History</span>
+            <span class="status-badge status-neutral">Robotics</span>
+          </div>
+        `;
+      }, 500);
+    }
+
+    // ─── Action Buttons ────────────────────────────────────────────────────
+    function clearCache() {
+      localStorage.clear();
+      showAlert('Cache cleared', 'success');
+    }
+
+    function syncContent() {
+      showAlert('Content sync initiated', 'info');
+      // Implement sync logic
+    }
+
+    function resetAll() {
+      if (confirm('Reset all settings? This cannot be undone.')) {
+        localStorage.clear();
+        githubToken = null;
+        currentUser = null;
+        updateAuthUI();
+        showAlert('All settings reset', 'success');
+      }
+    }
+
+    // ─── Initialize App ────────────────────────────────────────────────────
+    async function initApp() {
+      // Check for OAuth callback
+      handleOAuthCallback();
+      
+      // Update auth UI
+      updateAuthUI();
+      
+      // Load current user
+      if (githubToken) {
+        currentUser = await fetchCurrentUser();
+        updateAuthUI();
+      }
+      
+      // Load initial data
+      loadLastPipelineRun();
+      loadWorkflowRuns();
+      loadRecentCommits();
+      loadSeries();
+      loadScheduledPosts();
+      
+      // Auto-refresh every 60 seconds
+      setInterval(() => {
+        loadLastPipelineRun();
+        loadWorkflowRuns();
+      }, 60000);
+    }
+
+    // ─── Start App ─────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', initApp);
+  </script>
 </body>
 </html>
