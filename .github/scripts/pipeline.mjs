@@ -21,8 +21,8 @@ const REPO_ROOT = path.resolve(__dir, '../..');
 const SITE_URL  = 'https://ishistory.pages.dev';
 
 // ─── Retry config ─────────────────────────────────────────────────────────────
-const MAX_RETRIES    = 2;
-const RETRY_DELAY_MS = 1500;
+const MAX_RETRIES    = 4;
+const RETRY_DELAY_MS = 10000;
 
 // ─── Environment ──────────────────────────────────────────────────────────────
 const ENV = {
@@ -513,6 +513,7 @@ async function pingIndexNow(url) {
   });
 }
 
+
 // ─── Report results → Worker ──────────────────────────────────────────────────
 async function reportToWorker(filePath, results) {
   if (!ENV.WORKER_URL || !ENV.CMS_API_KEY) {
@@ -629,8 +630,10 @@ async function main() {
   log.info(`Dev.to:   ${wc(devtoRaw)} words generated`);
   log.info(`Hashnode: ${wc(hashnodeRaw)} words generated`);
 
-  // Cache generated content back to .md frontmatter (non-blocking)
-  cacheGeneratedContent(relPath, devtoRaw, hashnodeRaw).catch(() => {});
+  // Cache generated content back to .md frontmatter (blocking to avoid race condition)
+  await cacheGeneratedContent(relPath, devtoRaw, hashnodeRaw).catch(e => {
+    log.warn(`Failed to cache generated content: ${e.message}`);
+  });
 
   const devtoContent    = formatForDevto(fm, devtoRaw, url);
   const hashnodeContent = formatForHashnode(fm, hashnodeRaw, url);
@@ -724,3 +727,4 @@ async function updateStatusJson(filePath, results, commitSha) {
 }
 
 main();
+           
