@@ -298,27 +298,32 @@
 
   function doOAuth() {
     const status = document.getElementById('login-status');
+    const authUrl = AUTH_URL + '/auth?provider=github&site_id=' + SITE_ID;
     status.textContent = 'Opening GitHub login…';
+
+    // Try popup first (desktop). If blocked, fall back to same-tab redirect.
     const w = 600, h = 700;
     const left = Math.max(0, (screen.width  - w) / 2);
     const top  = Math.max(0, (screen.height - h) / 2);
-    const popup = window.open(
-      AUTH_URL + '/auth?provider=github&site_id=' + SITE_ID,
-      'gh-oauth',
-      'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top
-    );
-    if (!popup) { status.textContent = 'Popup blocked — please allow popups for this page'; return; }
+    const popup = window.open(authUrl, 'gh-oauth',
+      'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top);
 
-    // Listen for Sveltia's postMessage — this confirms OAuth completed.
-    // The session cookie is already set by the Worker at this point.
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+      // Popup blocked (common on mobile) — navigate current tab to auth
+      // Worker callback will set session cookie then redirect back here
+      status.textContent = 'Redirecting to GitHub…';
+      window.location.href = authUrl;
+      return;
+    }
+
+    // Popup opened — listen for postMessage (desktop flow)
     const onMsg = async (e) => {
       if (typeof e.data !== 'string') return;
       if (!e.data.startsWith('authorization:github:success:')) return;
       window.removeEventListener('message', onMsg);
       clearInterval(checkClosed);
-      popup.close();
+      try { popup.close(); } catch(_) {}
       status.textContent = 'Verifying session…';
-      // Verify the session cookie was set correctly
       await verifySession();
     };
     window.addEventListener('message', onMsg);
@@ -327,8 +332,14 @@
       if (popup.closed) {
         clearInterval(checkClosed);
         window.removeEventListener('message', onMsg);
+        // Popup was closed — check if session was set anyway (user completed auth)
         const s = document.getElementById('login-status');
-        if (s && s.textContent.startsWith('Opening')) s.textContent = '';
+        if (s && s.textContent.startsWith('Opening')) {
+          s.textContent = 'Checking session…';
+          verifySession().then(ok => {
+            if (!ok && s) s.textContent = '';
+          });
+        }
       }
     }, 500);
   }
@@ -723,6 +734,14 @@
   }
 
   dInit();
+
+  // Handle mobile OAuth redirect (?auth=success — no window.opener on Android)
+  if (new URLSearchParams(location.search).get('auth') === 'success') {
+    history.replaceState({}, '', location.pathname); // clean URL
+    // Session cookie already set by Worker — open dashboard immediately
+    const ok = await verifySession();
+    if (ok) { dOpen(); }
+  }
 </script>
 </body>
 </html>
