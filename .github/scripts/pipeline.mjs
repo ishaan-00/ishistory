@@ -127,28 +127,20 @@ function validateFm(fm) {
 }
 
 // ─── Teaser builder ───────────────────────────────────────────────────────────
-// 1st priority: `teaser` frontmatter field   — custom-written by author
-// 2nd priority: auto-generated from body     — description + intro + section heads
-function buildTeaser(fm, body, url) {
-  const totalWords = wc(body);
-  const approx     = `~${(Math.round(totalWords / 100) * 100).toLocaleString()}`;
-  const cta        = `\n\n---\n\n*This is an excerpt. The full article (${approx} words) is on ishistory.pages.dev.*\n\n**[Read the full article: ${fm.title}](${url})**`;
-
+// ─── Core excerpt builder (shared base) ──────────────────────────────────────
+// Uses `teaser` frontmatter if present, otherwise auto-generates from body.
+function buildExcerpt(fm, body) {
   if (fm.teaser && typeof fm.teaser === 'string' && wc(fm.teaser) > 50) {
     log.info(`Using custom teaser — ${wc(fm.teaser)} words`);
-    return fm.teaser.trim() + cta;
+    return fm.teaser.trim();
   }
-
   log.warn('No custom teaser — auto-generating excerpt');
-
   const sections  = body.split(/^(?=## )/m);
   const introRaw  = sections[0].replace(/^#[^\n]*\n+/, '').trim();
   const introPara = introRaw.split(/\n{2,}/)[0].trim();
-
   let excerpt = '';
   if (fm.description)                            excerpt += fm.description + '\n\n';
   if (introPara && introPara !== fm.description) excerpt += introPara + '\n\n';
-
   for (let i = 1; i < sections.length && wc(excerpt) < 900; i++) {
     const lines     = sections[i].split('\n');
     const heading   = lines[0].trim();
@@ -156,9 +148,80 @@ function buildTeaser(fm, body, url) {
     const firstPara = sBody.split(/\n{2,}/)[0].trim();
     if (firstPara) excerpt += `## ${heading}\n\n${firstPara}\n\n`;
   }
+  log.info(`Auto-excerpt — ${wc(excerpt.trim())} words`);
+  return excerpt.trim();
+}
 
-  log.info(`Auto-teaser — ${wc(excerpt)} words`);
-  return excerpt.trim() + cta;
+// ─── Dev.to formatter ─────────────────────────────────────────────────────────
+// Community platform — readers scan fast. Opens with a canonical note (Dev.to
+// norm), uses a community-style CTA, keeps series context light.
+function formatForDevto(fm, body, url) {
+  const excerpt    = buildExcerpt(fm, body);
+  const totalWords = wc(body);
+  const approx     = `~${(Math.round(totalWords / 100) * 100).toLocaleString()}`;
+  const seriesName = (fm.series || '').replace(/-/g, ' ');
+  const epNum      = fm.episode_number ? ` — Episode ${fm.episode_number}` : '';
+  const partLabel  = fm.part_label ? ` · ${fm.part_label}` : '';
+
+  const header = [
+    `> 📖 *Originally published on [ishistory.pages.dev](${url})*`,
+    `> *${approx} word deep-dive · ${seriesName}${epNum}${partLabel}*`,
+    '',
+  ].join('\n');
+
+  const cta = [
+    '',
+    '---',
+    '',
+    '## Continue Reading',
+    '',
+    `This post is part of the **${seriesName}** series on [ishistory.pages.dev](https://ishistory.pages.dev).`,
+    `The full article (${approx} words) covers this topic in complete depth.`,
+    '',
+    `👉 **[Read the full article on ishistory.pages.dev](${url})**`,
+    '',
+    `*Follow the series — new episodes cover AI history, internet history, and robotics.*`,
+  ].join('\n');
+
+  return `${header}\n${excerpt}${cta}`;
+}
+
+// ─── Hashnode formatter ───────────────────────────────────────────────────────
+// Editorial/blog audience — expects context, series info, polished structure.
+// Opens with an episode metadata block, uses richer markdown, editorial CTA.
+function formatForHashnode(fm, body, url) {
+  const excerpt    = buildExcerpt(fm, body);
+  const totalWords = wc(body);
+  const approx     = `~${(Math.round(totalWords / 100) * 100).toLocaleString()}`;
+  const seriesName = (fm.series || '').replace(/-/g, ' ');
+  const metaParts  = [
+    fm.episode_number ? `Episode ${fm.episode_number}` : null,
+    fm.part_label     || null,
+    fm.tag            || null,
+    seriesName        ? `Series: ${seriesName}` : null,
+  ].filter(Boolean);
+
+  const header = [
+    metaParts.length ? `*${metaParts.join(' · ')}*` : '',
+    '',
+    fm.description ? `**${fm.description}**` : '',
+    '',
+  ].filter((l, i, a) => !(l === '' && (a[i-1] === '' || i === 0))).join('\n');
+
+  const cta = [
+    '',
+    '---',
+    '',
+    `### Full Article`,
+    '',
+    `*This is an excerpt from a ${approx}-word article in the **${seriesName}** series.*`,
+    '',
+    `The complete piece — with full historical context, primary sources, and detailed analysis — is on [ishistory.pages.dev](https://ishistory.pages.dev).`,
+    '',
+    `**[→ Read the complete article](${url})**`,
+  ].join('\n');
+
+  return `${header}\n${excerpt}${cta}`;
 }
 
 // ─── Tag sanitisers ───────────────────────────────────────────────────────────
@@ -428,15 +491,17 @@ async function main() {
   const raw          = fs.readFileSync(absPath, 'utf8');
   const { fm, body } = parseFrontmatter(raw);
   const url          = canonical(relPath);
-  const teaser       = buildTeaser(fm, body, url);
+  const devtoContent    = formatForDevto(fm, body, url);
+  const hashnodeContent = formatForHashnode(fm, body, url);
 
   log.section(`Processing: ${path.basename(relPath)}`);
-  log.info(`Title:   ${fm.title || '(missing)'}`);
-  log.info(`Series:  ${fm.series || '(missing)'}`);
-  log.info(`URL:     ${url}`);
-  log.info(`Commit:  ${ENV.GIT_SHA || '(local)'}`);
-  log.info(`Article: ${wc(body)} words`);
-  log.info(`Teaser:  ${wc(teaser)} words`);
+  log.info(`Title:    ${fm.title || '(missing)'}`);
+  log.info(`Series:   ${fm.series || '(missing)'}`);
+  log.info(`URL:      ${url}`);
+  log.info(`Commit:   ${ENV.GIT_SHA || '(local)'}`);
+  log.info(`Article:  ${wc(body)} words`);
+  log.info(`Dev.to:   ${wc(devtoContent)} words`);
+  log.info(`Hashnode: ${wc(hashnodeContent)} words`);
 
   const issues = validateFm(fm);
   if (issues.length) {
@@ -448,8 +513,8 @@ async function main() {
 
   const [discord, devto, hashnode, ntfy, indexnow] = await Promise.all([
     postDiscord(fm, url).catch(e => ({ ok: false, err: e.message })),
-    postDevto(fm, teaser, url).catch(e => ({ ok: false, err: e.message })),
-    postHashnode(fm, teaser, url).catch(e => ({ ok: false, err: e.message })),
+    postDevto(fm, devtoContent, url).catch(e => ({ ok: false, err: e.message })),
+    postHashnode(fm, hashnodeContent, url).catch(e => ({ ok: false, err: e.message })),
     sendNtfy(fm, url).catch(e => ({ ok: false, err: e.message })),
     pingIndexNow(url).catch(e => ({ ok: false, err: e.message })),
   ]);
