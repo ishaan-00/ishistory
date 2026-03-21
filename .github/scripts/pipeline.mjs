@@ -1,133 +1,167 @@
 /**
  * ishistory — Publish Pipeline
  * ─────────────────────────────────────────────────────────────────────────────
- * Runs in GitHub Actions when a new .md file is added to src/content/**.
- * Distributes the post to: Discord · Dev.to · Hashnode · Ntfy · Bing IndexNow
- * Reports per-platform results back to the Worker → stored in pipeline_log.
+ * Zero external dependencies. Runs on Node 20 out-of-the-box — no npm install.
+ * Triggered when a new .md file is added to src/content/**.
  *
- * Usage: node .github/scripts/pipeline.mjs <repo-relative-path-to-md>
+ * Distributes to: Discord · Dev.to · Hashnode · Ntfy · Bing IndexNow
+ * Reports results back to Worker → stored in D1 pipeline_log table.
+ *
+ * Usage: node .github/scripts/pipeline.mjs <repo-relative-path>
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import fs   from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import matter from 'gray-matter';
+import fs   from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-const SITE_URL   = 'https://ishistory.pages.dev';
-const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT  = path.resolve(SCRIPT_DIR, '../..');
+// ─── Paths ────────────────────────────────────────────────────────────────────
+const __dir     = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(__dir, '../..');
+const SITE_URL  = 'https://ishistory.pages.dev';
 
-// How many times to retry a failed platform call before giving up
+// ─── Retry config ─────────────────────────────────────────────────────────────
 const MAX_RETRIES    = 2;
 const RETRY_DELAY_MS = 1500;
 
 // ─── Environment ──────────────────────────────────────────────────────────────
 const ENV = {
-  DEVTO_API_KEY:            process.env.DEVTO_API_KEY           || '',
-  HASHNODE_API_KEY:         process.env.HASHNODE_API_KEY        || '',
-  HASHNODE_PUBLICATION_ID:  process.env.HASHNODE_PUBLICATION_ID || '',
-  DISCORD_WEBHOOK:          process.env.DISCORD_WEBHOOK_ARTICLES || '',
-  NTFY_TOPIC:               process.env.NTFY_TOPIC              || '',
-  INDEXNOW_KEY:             process.env.INDEXNOW_KEY            || '',
-  WORKER_URL:               process.env.WORKER_URL              || '',
-  CMS_API_KEY:              process.env.CMS_API_KEY             || '',
-  GIT_SHA:                  (process.env.GIT_SHA || '').slice(0, 7),
-  GIT_REPO:                 process.env.GIT_REPO               || 'ishaan-00/ishistory',
+  DEVTO_API_KEY:    process.env.DEVTO_API_KEY            || '',
+  HASHNODE_KEY:     process.env.HASHNODE_API_KEY         || '',
+  HASHNODE_PUB_ID:  process.env.HASHNODE_PUBLICATION_ID  || '',
+  DISCORD_WEBHOOK:  process.env.DISCORD_WEBHOOK_ARTICLES || '',
+  NTFY_TOPIC:       process.env.NTFY_TOPIC               || '',
+  INDEXNOW_KEY:     process.env.INDEXNOW_KEY             || '',
+  WORKER_URL:       process.env.WORKER_URL               || '',
+  CMS_API_KEY:      process.env.CMS_API_KEY              || '',
+  GIT_SHA:          (process.env.GIT_SHA || '').slice(0, 7),
+  GIT_REPO:         process.env.GIT_REPO || 'ishaan-00/ishistory',
 };
 
-// ─── Logging ──────────────────────────────────────────────────────────────────
+// ─── Logger ───────────────────────────────────────────────────────────────────
 const log = {
-  info:    (...a) => console.log('  ℹ', ...a),
-  success: (...a) => console.log('  ✓', ...a),
+  info:    (...a) => console.log('  ·', ...a),
+  ok:      (...a) => console.log('  ✓', ...a),
   warn:    (...a) => console.warn('  ⚠', ...a),
-  error:   (...a) => console.error('  ✗', ...a),
-  section: (t)   => console.log(`\n${'─'.repeat(52)}\n  ${t}\n${'─'.repeat(52)}`),
+  fail:    (...a) => console.error('  ✗', ...a),
+  section: (t)   => console.log(`\n── ${t} ${'─'.repeat(Math.max(0, 48 - t.length))}`),
 };
 
-// ─── Retry wrapper ────────────────────────────────────────────────────────────
-async function withRetry(name, fn, retries = MAX_RETRIES) {
-  for (let attempt = 1; attempt <= retries + 1; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      if (attempt <= retries) {
-        log.warn(`${name}: attempt ${attempt} failed (${err.message}) — retrying in ${RETRY_DELAY_MS}ms…`);
-        await new Promise(r => setTimeout(r, RETRY_DELAY_MS * attempt));
-      } else {
-        throw err;
+// ─── Inline frontmatter parser (zero deps) ────────────────────────────────────
+// Handles all ishistory fields including multiline `teaser: |` blocks.
+function parseFrontmatter(raw) {
+  const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+  if (!match) return { fm: {}, body: raw };
+
+  const fm = {};
+  let currentKey  = null;
+  let multilineVal = null;
+  let multilineIndent = 0;
+
+  for (const line of match[1].split('\n')) {
+    // Inside a block scalar
+    if (multilineVal !== null) {
+      // Detect indent of first content line
+      if (multilineIndent === 0 && line.trim()) {
+        multilineIndent = line.length - line.trimStart().length;
       }
+      if (line.trim() === '' || (multilineIndent > 0 && line.startsWith(' '.repeat(multilineIndent)))) {
+        multilineVal += (multilineVal ? '\n' : '') + line.slice(multilineIndent);
+        continue;
+      }
+      // End of block scalar
+      fm[currentKey]  = multilineVal.trimEnd();
+      multilineVal    = null;
+      multilineIndent = 0;
+      currentKey      = null;
     }
+
+    const colon = line.indexOf(':');
+    if (colon === -1) continue;
+
+    const key  = line.slice(0, colon).trim();
+    const rest = line.slice(colon + 1).trim();
+
+    if (!key) continue;
+
+    // Block scalar marker
+    if (rest === '|') {
+      currentKey      = key;
+      multilineVal    = '';
+      multilineIndent = 0;
+      continue;
+    }
+
+    // Strip surrounding quotes and coerce integer
+    let val = rest.replace(/^["']|["']$/g, '');
+    if (/^\d+$/.test(val)) val = parseInt(val, 10);
+    fm[key] = val;
   }
+
+  // Flush trailing multiline value
+  if (multilineVal !== null && currentKey) fm[currentKey] = multilineVal.trimEnd();
+
+  return { fm, body: match[2] };
 }
 
-// ─── Frontmatter validation ───────────────────────────────────────────────────
-function validateFrontmatter(fm, filePath) {
-  const issues = [];
-  if (!fm.title)          issues.push('missing: title');
-  if (!fm.series)         issues.push('missing: series');
-  if (!fm.date)           issues.push('missing: date');
-  if (!fm.description)    issues.push('recommended: description (used in Discord embed and teaser)');
-  if (fm.title && fm.title.length > 250) issues.push('title too long (>250 chars)');
-  return issues;
-}
-
-// ─── Canonical URL ────────────────────────────────────────────────────────────
-function canonicalUrl(filePath) {
-  const parts  = filePath.replace(/\\/g, '/').split('/');
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function canonical(filePath) {
+  const norm   = filePath.replace(/\\/g, '/');
+  const parts  = norm.split('/');
   const series = parts[parts.length - 2] || '';
   const slug   = path.basename(filePath, '.md');
   return `${SITE_URL}/${series ? series + '/' : ''}${slug}`;
 }
 
-// ─── Word counter ─────────────────────────────────────────────────────────────
-function wordCount(text) {
+function wc(text) {
   return (text || '').trim().split(/\s+/).filter(Boolean).length;
 }
 
-// ─── Teaser builder ───────────────────────────────────────────────────────────
-// Priority:
-//   1. `teaser` frontmatter field      (custom written — best)
-//   2. Auto-generated from body        (description + intro + section excerpts)
-function buildTeaser(fm, body, url) {
-  const totalWords = wordCount(body);
-  const approxK    = `~${Math.round(totalWords / 100) * 100}`;
-  const cta        = `\n\n---\n\n*This is an excerpt. Read the full article (${approxK} words) on ishistory.pages.dev →*\n\n**[Continue reading: ${fm.title}](${url})**`;
+function validateFm(fm) {
+  const issues = [];
+  if (!fm.title)       issues.push('missing: title');
+  if (!fm.series)      issues.push('missing: series');
+  if (!fm.date)        issues.push('missing: date');
+  if (!fm.description) issues.push('recommended: description (Discord embed + teaser fallback)');
+  return issues;
+}
 
-  // Custom teaser takes absolute priority
-  if (fm.teaser && fm.teaser.trim().length > 50) {
-    log.info(`Using custom teaser (${wordCount(fm.teaser)} words)`);
+// ─── Teaser builder ───────────────────────────────────────────────────────────
+// 1st priority: `teaser` frontmatter field   — custom-written by author
+// 2nd priority: auto-generated from body     — description + intro + section heads
+function buildTeaser(fm, body, url) {
+  const totalWords = wc(body);
+  const approx     = `~${(Math.round(totalWords / 100) * 100).toLocaleString()}`;
+  const cta        = `\n\n---\n\n*This is an excerpt. The full article (${approx} words) is on ishistory.pages.dev.*\n\n**[Read the full article: ${fm.title}](${url})**`;
+
+  if (fm.teaser && typeof fm.teaser === 'string' && wc(fm.teaser) > 50) {
+    log.info(`Using custom teaser — ${wc(fm.teaser)} words`);
     return fm.teaser.trim() + cta;
   }
 
-  log.info('No custom teaser found — auto-generating from body');
+  log.warn('No custom teaser — auto-generating excerpt');
 
-  // Auto-generate: strip frontmatter, split on H2 sections
-  const sections   = body.split(/^(?=## )/m);
-  const introBlock = sections[0].replace(/^#[^\n]+\n+/, '').trim();
-  const introPara  = introBlock.split(/\n{2,}/)[0].trim();
+  const sections  = body.split(/^(?=## )/m);
+  const introRaw  = sections[0].replace(/^#[^\n]*\n+/, '').trim();
+  const introPara = introRaw.split(/\n{2,}/)[0].trim();
 
-  let result = '';
-  if (fm.description) result += `${fm.description}\n\n`;
-  if (introPara && introPara !== fm.description) result += `${introPara}\n\n`;
+  let excerpt = '';
+  if (fm.description)                            excerpt += fm.description + '\n\n';
+  if (introPara && introPara !== fm.description) excerpt += introPara + '\n\n';
 
-  // Pull first paragraph from each H2 section until ~900 words
-  for (let i = 1; i < sections.length; i++) {
-    const lines      = sections[i].split('\n');
-    const heading    = lines[0].trim();
-    const body_      = lines.slice(1).join('\n').trim();
-    const firstPara  = body_.split(/\n{2,}/)[0].trim();
-    if (!firstPara) continue;
-    result += `## ${heading}\n\n${firstPara}\n\n`;
-    if (wordCount(result) > 900) break;
+  for (let i = 1; i < sections.length && wc(excerpt) < 900; i++) {
+    const lines     = sections[i].split('\n');
+    const heading   = lines[0].trim();
+    const sBody     = lines.slice(1).join('\n').trim();
+    const firstPara = sBody.split(/\n{2,}/)[0].trim();
+    if (firstPara) excerpt += `## ${heading}\n\n${firstPara}\n\n`;
   }
 
-  log.info(`Auto-teaser: ${wordCount(result)} words`);
-  return result.trim() + cta;
+  log.info(`Auto-teaser — ${wc(excerpt)} words`);
+  return excerpt.trim() + cta;
 }
 
-// ─── Tag helpers ──────────────────────────────────────────────────────────────
+// ─── Tag sanitisers ───────────────────────────────────────────────────────────
 function devtoTags(series) {
   return [series, 'history', 'technology', 'programming']
     .filter(Boolean)
@@ -142,36 +176,55 @@ function hashnodeTags(series) {
     .map(t => ({ name: t, slug: t.toLowerCase().replace(/[^a-z0-9]/g, '-') }));
 }
 
+// ─── Retry wrapper ────────────────────────────────────────────────────────────
+async function withRetry(label, fn) {
+  for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (attempt <= MAX_RETRIES) {
+        const delay = RETRY_DELAY_MS * attempt;
+        log.warn(`${label}: attempt ${attempt} failed (${err.message}) — retrying in ${delay}ms`);
+        await new Promise(r => setTimeout(r, delay));
+      } else {
+        throw err;
+      }
+    }
+  }
+}
+
 // ─── Platform: Discord ────────────────────────────────────────────────────────
 async function postDiscord(fm, url) {
-  if (!ENV.DISCORD_WEBHOOK) return { ok: false, skipped: true, err: 'DISCORD_WEBHOOK_ARTICLES not configured' };
+  if (!ENV.DISCORD_WEBHOOK)
+    return { ok: false, skipped: true, err: 'DISCORD_WEBHOOK_ARTICLES not configured' };
 
   return withRetry('Discord', async () => {
     const fields = [];
-    if (fm.series)         fields.push({ name: 'Series',  value: fm.series.replace(/-/g, ' '),       inline: true });
-    if (fm.episode_number) fields.push({ name: 'Episode', value: `#${fm.episode_number}`,             inline: true });
-    if (fm.tag)            fields.push({ name: 'Topic',   value: fm.tag,                              inline: true });
-    if (fm.date)           fields.push({ name: 'Date',    value: String(fm.date).slice(0, 10),        inline: true });
-
-    const embed = {
-      title:       `📰 ${fm.title}`,
-      description: fm.description || '',
-      url,
-      color:       0xB45309,
-      fields,
-      footer:      { text: 'ishistory.pages.dev' },
-      timestamp:   new Date().toISOString(),
-    };
+    if (fm.series)         fields.push({ name: 'Series',  value: fm.series.replace(/-/g, ' '), inline: true });
+    if (fm.episode_number) fields.push({ name: 'Episode', value: `#${fm.episode_number}`,      inline: true });
+    if (fm.tag)            fields.push({ name: 'Topic',   value: String(fm.tag),               inline: true });
+    if (fm.date)           fields.push({ name: 'Date',    value: String(fm.date).slice(0, 10), inline: true });
 
     const res = await fetch(ENV.DISCORD_WEBHOOK, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ username: 'ishistory', embeds: [embed] }),
+      body:    JSON.stringify({
+        username: 'ishistory',
+        embeds: [{
+          title:       `📰 ${fm.title}`,
+          description: fm.description || '',
+          url,
+          color:       0xB45309,
+          fields,
+          footer:      { text: 'ishistory.pages.dev' },
+          timestamp:   new Date().toISOString(),
+        }],
+      }),
     });
 
     if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+      const txt = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status}: ${txt.slice(0, 200)}`);
     }
     return { ok: true };
   });
@@ -179,7 +232,8 @@ async function postDiscord(fm, url) {
 
 // ─── Platform: Dev.to ─────────────────────────────────────────────────────────
 async function postDevto(fm, teaser, url) {
-  if (!ENV.DEVTO_API_KEY) return { ok: false, skipped: true, err: 'DEVTO_API_KEY not configured' };
+  if (!ENV.DEVTO_API_KEY)
+    return { ok: false, skipped: true, err: 'DEVTO_API_KEY not configured' };
 
   return withRetry('Dev.to', async () => {
     const res = await fetch('https://dev.to/api/articles', {
@@ -205,13 +259,15 @@ async function postDevto(fm, teaser, url) {
 
 // ─── Platform: Hashnode ───────────────────────────────────────────────────────
 async function postHashnode(fm, teaser, url) {
-  if (!ENV.HASHNODE_API_KEY)       return { ok: false, skipped: true, err: 'HASHNODE_API_KEY not configured' };
-  if (!ENV.HASHNODE_PUBLICATION_ID) return { ok: false, skipped: true, err: 'HASHNODE_PUBLICATION_ID not configured' };
+  if (!ENV.HASHNODE_KEY)
+    return { ok: false, skipped: true, err: 'HASHNODE_API_KEY not configured' };
+  if (!ENV.HASHNODE_PUB_ID)
+    return { ok: false, skipped: true, err: 'HASHNODE_PUBLICATION_ID not configured' };
 
   return withRetry('Hashnode', async () => {
     const res = await fetch('https://gql.hashnode.com', {
       method:  'POST',
-      headers: { Authorization: ENV.HASHNODE_API_KEY, 'Content-Type': 'application/json' },
+      headers: { Authorization: ENV.HASHNODE_KEY, 'Content-Type': 'application/json' },
       body:    JSON.stringify({
         query: `mutation PublishPost($input: PublishPostInput!) {
           publishPost(input: $input) { post { id url title } }
@@ -220,8 +276,8 @@ async function postHashnode(fm, teaser, url) {
           input: {
             title:           fm.title,
             contentMarkdown: teaser,
-            publicationId:   ENV.HASHNODE_PUBLICATION_ID,
-            canonicalUrl:    url,
+            publicationId:   ENV.HASHNODE_PUB_ID,
+            originalArticleURL: url,
             tags:            hashnodeTags(fm.series),
           },
         },
@@ -240,7 +296,8 @@ async function postHashnode(fm, teaser, url) {
 
 // ─── Platform: Ntfy ───────────────────────────────────────────────────────────
 async function sendNtfy(fm, url) {
-  if (!ENV.NTFY_TOPIC) return { ok: false, skipped: true, err: 'NTFY_TOPIC not configured' };
+  if (!ENV.NTFY_TOPIC)
+    return { ok: false, skipped: true, err: 'NTFY_TOPIC not configured' };
 
   return withRetry('Ntfy', async () => {
     const res = await fetch(`https://ntfy.sh/${ENV.NTFY_TOPIC}`, {
@@ -261,20 +318,25 @@ async function sendNtfy(fm, url) {
 
 // ─── Platform: Bing IndexNow ──────────────────────────────────────────────────
 async function pingIndexNow(url) {
-  if (!ENV.INDEXNOW_KEY) return { ok: false, skipped: true, err: 'INDEXNOW_KEY not configured' };
+  if (!ENV.INDEXNOW_KEY)
+    return { ok: false, skipped: true, err: 'INDEXNOW_KEY not configured' };
 
   return withRetry('IndexNow', async () => {
     const res = await fetch('https://api.indexnow.org/indexnow', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ host: 'ishistory.pages.dev', key: ENV.INDEXNOW_KEY, urlList: [url] }),
+      body:    JSON.stringify({
+        host:    'ishistory.pages.dev',
+        key:     ENV.INDEXNOW_KEY,
+        urlList: [url],
+      }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return { ok: true };
   });
 }
 
-// ─── Report results → Worker pipeline_log ────────────────────────────────────
+// ─── Report results → Worker ──────────────────────────────────────────────────
 async function reportToWorker(filePath, results) {
   if (!ENV.WORKER_URL || !ENV.CMS_API_KEY) {
     log.warn('WORKER_URL or CMS_API_KEY not set — skipping pipeline_log update');
@@ -303,28 +365,50 @@ async function reportToWorker(filePath, results) {
         indexnow_err: results.indexnow.err || null,
       }),
     });
-
     if (!res.ok) log.warn(`Worker callback HTTP ${res.status}`);
-    else         log.success('Results logged to Worker pipeline_log');
+    else         log.ok('Results logged to Worker pipeline_log');
   } catch (e) {
     log.warn(`Worker callback failed: ${e.message}`);
   }
 }
 
-// ─── Results table ────────────────────────────────────────────────────────────
-function printSummary(results) {
-  log.section('Pipeline Results');
-  const pad = s => s.padEnd(12);
+// ─── Print results ────────────────────────────────────────────────────────────
+function printResults(results) {
+  log.section('Results');
   for (const [platform, r] of Object.entries(results)) {
-    if (r.skipped) {
-      log.warn(`${pad(platform)} SKIPPED  ${r.err}`);
-    } else if (r.ok) {
-      const extra = r.url ? `  → ${r.url}` : '';
-      log.success(`${pad(platform)} OK${extra}`);
-    } else {
-      log.error(`${pad(platform)} FAILED   ${r.err}`);
-    }
+    const label = platform.padEnd(12);
+    if (r.skipped)   log.warn(`${label} SKIPPED  — ${r.err}`);
+    else if (r.ok)   log.ok(`${label} OK${r.url ? '  → ' + r.url : ''}`);
+    else             log.fail(`${label} FAILED   — ${r.err}`);
   }
+}
+
+// ─── Write GitHub Actions step summary ───────────────────────────────────────
+function writeStepSummary(fm, body, results, url) {
+  const f = process.env.GITHUB_STEP_SUMMARY;
+  if (!f) return;
+
+  const rows = Object.entries(results).map(([p, r]) => {
+    const status = r.skipped ? '⏭ Skipped' : r.ok ? '✅ OK' : '❌ Failed';
+    const detail = r.url ? `[View post](${r.url})` : (r.err || '—');
+    return `| ${p} | ${status} | ${detail} |`;
+  });
+
+  const md = [
+    `## 📰 ${fm.title}`,
+    '',
+    `| | |`,
+    `|---|---|`,
+    `| **URL** | [${url}](${url}) |`,
+    `| **Commit** | \`${ENV.GIT_SHA || 'local'}\` |`,
+    `| **Article length** | ~${wc(body)} words |`,
+    '',
+    '| Platform | Status | Detail |',
+    '|----------|--------|--------|',
+    ...rows,
+  ].join('\n');
+
+  fs.appendFileSync(f, '\n' + md + '\n');
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -341,28 +425,27 @@ async function main() {
     process.exit(1);
   }
 
-  // Parse file
-  const raw              = fs.readFileSync(absPath, 'utf8');
-  const { data: fm, content: body } = matter(raw);
-  const url              = canonicalUrl(relPath);
-  const teaser           = buildTeaser(fm, body, url);
+  const raw          = fs.readFileSync(absPath, 'utf8');
+  const { fm, body } = parseFrontmatter(raw);
+  const url          = canonical(relPath);
+  const teaser       = buildTeaser(fm, body, url);
 
   log.section(`Processing: ${path.basename(relPath)}`);
-  log.info(`Title:     ${fm.title}`);
-  log.info(`Series:    ${fm.series || '(none)'}`);
-  log.info(`URL:       ${url}`);
-  log.info(`Commit:    ${ENV.GIT_SHA || '(local)'}`);
-  log.info(`Full body: ${wordCount(body)} words`);
-  log.info(`Teaser:    ${wordCount(teaser)} words`);
+  log.info(`Title:   ${fm.title || '(missing)'}`);
+  log.info(`Series:  ${fm.series || '(missing)'}`);
+  log.info(`URL:     ${url}`);
+  log.info(`Commit:  ${ENV.GIT_SHA || '(local)'}`);
+  log.info(`Article: ${wc(body)} words`);
+  log.info(`Teaser:  ${wc(teaser)} words`);
 
-  // Validate frontmatter
-  const issues = validateFrontmatter(fm, relPath);
+  const issues = validateFm(fm);
   if (issues.length) {
-    issues.forEach(i => log.warn(`Frontmatter: ${i}`));
+    log.section('Frontmatter warnings');
+    issues.forEach(i => log.warn(i));
   }
 
-  // Run all platforms in parallel — failures never block others
   log.section('Running platforms');
+
   const [discord, devto, hashnode, ntfy, indexnow] = await Promise.all([
     postDiscord(fm, url).catch(e => ({ ok: false, err: e.message })),
     postDevto(fm, teaser, url).catch(e => ({ ok: false, err: e.message })),
@@ -373,34 +456,15 @@ async function main() {
 
   const results = { discord, devto, hashnode, ntfy, indexnow };
 
-  printSummary(results);
+  printResults(results);
+  writeStepSummary(fm, body, results, url);
   await reportToWorker(relPath, results);
 
-  // Write GitHub Actions job summary
-  const summary = [
-    `## Pipeline: ${fm.title}`,
-    '',
-    `**URL:** ${url}`,
-    `**Commit:** \`${ENV.GIT_SHA}\``,
-    '',
-    '| Platform | Status | Detail |',
-    '|---|---|---|',
-    ...Object.entries(results).map(([p, r]) => {
-      const status = r.skipped ? '⏭ Skipped' : r.ok ? '✅ OK' : '❌ Failed';
-      const detail = r.url ? `[View](${r.url})` : (r.err || '');
-      return `| ${p} | ${status} | ${detail} |`;
-    }),
-  ].join('\n');
-
-  if (process.env.GITHUB_STEP_SUMMARY) {
-    fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '\n' + summary + '\n');
-  }
-
-  // Exit 1 only if all non-skipped platforms failed
-  const nonSkipped = Object.values(results).filter(r => !r.skipped);
-  const allFailed  = nonSkipped.length > 0 && nonSkipped.every(r => !r.ok);
+  // Fail only if every configured (non-skipped) platform failed
+  const active    = Object.values(results).filter(r => !r.skipped);
+  const allFailed = active.length > 0 && active.every(r => !r.ok);
   if (allFailed) {
-    log.error('All platforms failed.');
+    log.fail('All configured platforms failed.');
     process.exit(1);
   }
 }
