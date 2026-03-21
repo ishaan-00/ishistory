@@ -8,10 +8,6 @@ part_label: "Part I · Myth & Imagination"
 tag: "Engineering & Automata"
 description: "Hero of Alexandria, Al-Jazari, and Leonardo da Vinci — the engineers who translated the dream of artificial life into working machines."
 date: 2026-03-09
-devto_content: |
-  Hero of Alexandria, Al-Jazari, and Leonardo da Vinci — the engineers who translated the dream of artificial life into working machines.
-hashnode_content: |
-  Hero of Alexandria, Al-Jazari, and Leonardo da Vinci — the engineers who translated the dream of artificial life into working machines.
 ---
 
 AI HISTORY SERIES --- EPISODE 2
