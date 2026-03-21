@@ -21,11 +21,11 @@
       --red:     #ef4444;
       --blue:    #3b82f6;
       --yellow:  #eab308;
+      --purple:  #a78bfa;
       --text:    #94a3b8;
       --text2:   #cbd5e1;
       --text3:   #e2e8f0;
       --dim:     #334155;
-      --dimmer:  #1e3a5f33;
       --mono:    'JetBrains Mono', ui-monospace, monospace;
       --sans:    'DM Sans', system-ui, sans-serif;
       --serif:   'Playfair Display', Georgia, serif;
@@ -33,474 +33,383 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: var(--bg); color: var(--text); font-family: var(--sans); }
 
-    /* ── FAB ── */
+    /* FAB */
     #d-fab {
       position: fixed; right: 10px; top: 50%; transform: translateY(-50%);
       width: 44px; height: 44px; border-radius: 12px;
       background: var(--surface); border: 1px solid var(--border2);
       cursor: pointer; z-index: 99990; display: flex; align-items: center; justify-content: center;
       box-shadow: 0 4px 24px #00000088; transition: all .2s; user-select: none;
-      font-family: var(--mono); font-size: 11px; color: var(--dim);
     }
-    #d-fab:hover { border-color: var(--amber); color: var(--amber2); background: var(--card); }
-    #d-fab-dot {
-      width: 8px; height: 8px; border-radius: 50%; background: var(--dim);
-      transition: background .4s, box-shadow .4s;
-    }
+    #d-fab:hover { border-color: var(--amber); background: var(--card); }
+    #d-fab-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); transition: background .4s, box-shadow .4s; }
     #d-fab-dot.green  { background: var(--green);  box-shadow: 0 0 8px #22c55e66; }
     #d-fab-dot.amber  { background: var(--amber2); box-shadow: 0 0 8px #d9770666; }
     #d-fab-dot.red    { background: var(--red);    box-shadow: 0 0 8px #ef444466; }
-    #d-fab-dot.pulse  { animation: pulse 2s ease-in-out infinite; }
-    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.2} }
 
-    /* ── Overlay ── */
-    #d-overlay {
-      position: fixed; inset: 0; background: #00000099; z-index: 99991;
-      opacity: 0; pointer-events: none; transition: opacity .25s;
-    }
+    /* Overlay */
+    #d-overlay { position: fixed; inset: 0; background: #00000099; z-index: 99991; opacity: 0; pointer-events: none; transition: opacity .25s; }
     #d-overlay.open { opacity: 1; pointer-events: all; }
 
-    /* ── Dashboard Panel ── */
-    #d-panel {
-      position: fixed; inset: 0; z-index: 99992;
-      display: flex; flex-direction: column;
-      transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1);
-      background: var(--bg);
-    }
+    /* Panel */
+    #d-panel { position: fixed; inset: 0; z-index: 99992; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1); background: var(--bg); }
     #d-panel.open { transform: translateY(0); }
 
-    /* ── Header ── */
-    #d-header {
-      display: flex; align-items: center; gap: 16px;
-      padding: 12px 20px; border-bottom: 1px solid var(--border);
-      background: var(--surface); flex-shrink: 0;
-    }
-    #d-title { font-family: var(--serif); font-size: 18px; color: var(--text3); letter-spacing: .02em; }
+    /* Header */
+    #d-header { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+    #d-title { font-family: var(--serif); font-size: 18px; color: var(--text3); }
     #d-title span { color: var(--amber2); }
-    #d-last-updated { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-left: auto; }
-    #d-close {
-      background: none; border: none; color: var(--dim); cursor: pointer;
-      font-size: 18px; line-height: 1; padding: 4px; transition: color .15s;
-    }
-    #d-close:hover { color: var(--red); }
+    #d-user { font-family: var(--mono); font-size: 10px; color: var(--dim); padding: 3px 8px; background: var(--card); border: 1px solid var(--border); border-radius: 4px; }
+    #d-updated { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-left: auto; }
+    .hdr-btn { font-family: var(--mono); font-size: 10px; color: var(--dim); background: none; border: 1px solid var(--border); padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: all .15s; }
+    .hdr-btn:hover { color: var(--red); border-color: var(--red); }
+    .hdr-btn.close-btn:hover { color: var(--text2); border-color: var(--border2); }
 
-    /* ── Tabs ── */
-    #d-tabs {
-      display: flex; gap: 2px; padding: 10px 20px 0;
-      border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0;
-      overflow-x: auto; scrollbar-width: none;
-    }
+    /* Tabs */
+    #d-tabs { display: flex; gap: 2px; padding: 10px 20px 0; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
     #d-tabs::-webkit-scrollbar { display: none; }
-    .d-tab {
-      font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
-      color: var(--dim); background: none; border: none; cursor: pointer;
-      padding: 8px 14px; border-bottom: 2px solid transparent; white-space: nowrap;
-      transition: all .15s;
-    }
+    .d-tab { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); background: none; border: none; cursor: pointer; padding: 8px 14px; border-bottom: 2px solid transparent; white-space: nowrap; transition: all .15s; }
     .d-tab:hover { color: var(--text2); }
     .d-tab.active { color: var(--amber2); border-bottom-color: var(--amber2); }
 
-    /* ── Body ── */
+    /* Body */
     #d-body { flex: 1; overflow-y: auto; padding: 20px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
     .d-view { display: none; }
     .d-view.active { display: block; }
 
-    /* ── Cards ── */
-    .d-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-bottom: 20px; }
-    .d-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
-      padding: 16px; position: relative; overflow: hidden;
-    }
-    .d-card::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-      background: linear-gradient(90deg, var(--amber) 0%, transparent 100%);
-    }
-    .d-card-title {
-      font-family: var(--mono); font-size: 9px; text-transform: uppercase;
-      letter-spacing: .12em; color: var(--dim); margin-bottom: 12px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
+    /* Login */
+    #d-login { position: fixed; inset: 0; z-index: 99993; background: var(--bg); display: none; align-items: center; justify-content: center; }
+    #d-login.show { display: flex; }
+    .login-box { width: 360px; padding: 40px; background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; }
+    .login-logo { font-family: var(--serif); font-size: 28px; color: var(--amber2); margin-bottom: 4px; }
+    .login-sub  { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-bottom: 28px; text-transform: uppercase; letter-spacing: .1em; }
+    .login-note { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 16px; line-height: 1.7; }
+    .login-note a { color: var(--amber2); text-decoration: none; }
+
+    /* Cards */
+    .d-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .d-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; position: relative; overflow: hidden; }
+    .d-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--amber) 0%, transparent 100%); }
+    .d-card-title { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .12em; color: var(--dim); margin-bottom: 12px; }
     .d-card-val { font-family: var(--serif); font-size: 28px; color: var(--text3); line-height: 1; }
     .d-card-sub { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 4px; }
 
-    /* ── Section headings ── */
-    .d-section-title {
-      font-family: var(--mono); font-size: 10px; text-transform: uppercase;
-      letter-spacing: .1em; color: var(--dim); margin: 20px 0 10px;
-      display: flex; align-items: center; gap: 8px;
-    }
-    .d-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    /* Section titles */
+    .d-sec { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--dim); margin: 20px 0 10px; display: flex; align-items: center; gap: 8px; }
+    .d-sec::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-    /* ── Status dots ── */
-    .d-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
-    .d-dot.green  { background: var(--green);  box-shadow: 0 0 5px #22c55e55; }
-    .d-dot.red    { background: var(--red);    box-shadow: 0 0 5px #ef444455; }
-    .d-dot.amber  { background: var(--amber2); box-shadow: 0 0 5px #d9770655; }
-    .d-dot.grey   { background: var(--dim); }
-    .d-dot.blue   { background: var(--blue);   box-shadow: 0 0 5px #3b82f655; }
-    .d-dot.skip   { background: var(--dim); }
-
-    /* ── Platform row ── */
-    .d-platform-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
-    .d-platform {
-      display: flex; align-items: center; gap: 6px;
-      font-family: var(--mono); font-size: 10px; color: var(--text);
-      background: var(--surface); border: 1px solid var(--border);
-      padding: 5px 10px; border-radius: 6px;
-    }
-    .d-platform.ok     { border-color: #052e16; color: var(--green); }
-    .d-platform.fail   { border-color: #450a0a; color: var(--red); }
-    .d-platform.skip   { color: var(--dim); }
-
-    /* ── Run rows ── */
-    .d-run-list { display: flex; flex-direction: column; gap: 8px; }
-    .d-run {
-      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-      padding: 12px 14px;
-    }
-    .d-run-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-    .d-run-file { font-family: var(--mono); font-size: 11px; color: var(--amber3); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .d-run-time { font-family: var(--mono); font-size: 10px; color: var(--dim); flex-shrink: 0; }
-    .d-run-commit { font-family: var(--mono); font-size: 10px; color: var(--dim); }
-    .d-run-err { font-family: var(--mono); font-size: 10px; color: var(--red); margin-top: 6px; padding: 4px 8px; background: #450a0a22; border-radius: 4px; word-break: break-all; }
-
-    /* ── Series cards ── */
-    .d-series-list { display: flex; flex-direction: column; gap: 10px; }
-    .d-series {
-      background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px;
-    }
-    .d-series-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-    .d-series-name { font-family: var(--serif); font-size: 16px; color: var(--text3); text-transform: capitalize; }
-    .d-series-badge {
-      font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase;
-      padding: 3px 8px; border-radius: 20px; font-weight: 500;
-    }
-    .d-series-badge.active   { background: #0c1e3a; color: var(--blue); border: 1px solid #1d3a6a; }
-    .d-series-badge.complete { background: #052010; color: var(--green); border: 1px solid #145228; }
-    .d-progress { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 10px; }
-    .d-progress-fill { height: 100%; border-radius: 2px; transition: width .6s ease; }
-    .d-progress-fill.active   { background: linear-gradient(90deg, var(--blue), var(--amber2)); }
-    .d-progress-fill.complete { background: linear-gradient(90deg, var(--green), var(--amber3)); }
-    .d-series-stats { font-family: var(--mono); font-size: 11px; color: var(--dim); display: flex; gap: 16px; flex-wrap: wrap; }
-    .d-series-stats .next { color: var(--green); }
-    .d-series-stats .gap  { color: var(--yellow); }
-
-    /* ── Action runs ── */
-    .d-action-list { display: flex; flex-direction: column; gap: 6px; }
-    .d-action-run {
-      display: flex; align-items: center; gap: 10px;
-      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-      padding: 10px 14px; cursor: pointer; transition: border-color .15s; text-decoration: none;
-    }
-    .d-action-run:hover { border-color: var(--border2); }
-    .d-action-name { font-family: var(--sans); font-size: 12px; color: var(--text2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .d-action-branch { font-family: var(--mono); font-size: 10px; color: var(--dim); }
-    .d-action-time { font-family: var(--mono); font-size: 10px; color: var(--dim); flex-shrink: 0; }
-    .d-action-status {
-      font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .06em;
-      padding: 3px 8px; border-radius: 4px; flex-shrink: 0;
-    }
-    .d-action-status.success   { background: #052e16; color: var(--green); }
-    .d-action-status.failure   { background: #450a0a; color: var(--red); }
-    .d-action-status.in_progress { background: #1c3a0a; color: var(--yellow); }
-    .d-action-status.queued    { background: var(--card); color: var(--dim); }
-    .d-action-status.skipped   { background: var(--card); color: var(--dim); }
-
-    /* ── Buttons ── */
-    .d-btn {
-      font-family: var(--mono); font-size: 11px; letter-spacing: .04em;
-      background: var(--surface); color: var(--dim); border: 1px solid var(--border2);
-      padding: 7px 14px; border-radius: 6px; cursor: pointer; transition: all .15s; white-space: nowrap;
-    }
+    /* Buttons */
+    .d-btn { font-family: var(--mono); font-size: 11px; background: var(--surface); color: var(--dim); border: 1px solid var(--border2); padding: 7px 14px; border-radius: 6px; cursor: pointer; transition: all .15s; white-space: nowrap; }
     .d-btn:hover:not(:disabled) { background: var(--card); color: var(--text2); border-color: var(--dim); }
     .d-btn:disabled { opacity: .35; cursor: not-allowed; }
-    .d-btn.primary { background: var(--amber); color: #fff; border-color: var(--amber); }
-    .d-btn.primary:hover:not(:disabled) { background: var(--amber2); border-color: var(--amber2); }
-    .d-btn.danger:hover:not(:disabled) { background: #450a0a; color: var(--red); border-color: var(--red); }
-    .d-btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+    .d-btn.pri { background: var(--amber); color: #fff; border-color: var(--amber); }
+    .d-btn.pri:hover:not(:disabled) { background: var(--amber2); }
+    .d-btn.dan:hover:not(:disabled) { background: #450a0a; color: var(--red); border-color: var(--red); }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
 
-    /* ── Schedule form ── */
+    /* Form */
     .d-form { background: var(--card); border: 1px solid var(--border2); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
     .d-form-title { font-family: var(--serif); font-size: 15px; color: var(--text3); margin-bottom: 14px; }
     .d-field { margin-bottom: 12px; }
-    .d-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); display: block; margin-bottom: 5px; }
-    .d-input, .d-select {
-      width: 100%; background: var(--surface); border: 1px solid var(--border2); color: var(--text2);
-      padding: 9px 12px; border-radius: 6px; font-family: var(--mono); font-size: 12px;
-      transition: border-color .15s; outline: none;
-    }
-    .d-input:focus, .d-select:focus { border-color: var(--amber); }
-    .d-select option { background: var(--surface); }
+    .d-lbl { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); display: block; margin-bottom: 5px; }
+    .d-inp, .d-sel { width: 100%; background: var(--surface); border: 1px solid var(--border2); color: var(--text2); padding: 9px 12px; border-radius: 6px; font-family: var(--mono); font-size: 12px; outline: none; transition: border-color .15s; }
+    .d-inp:focus, .d-sel:focus { border-color: var(--amber); }
+    .d-sel option { background: var(--surface); }
 
-    /* ── Schedule list ── */
-    .d-sched-list { display: flex; flex-direction: column; gap: 8px; }
-    .d-sched-item {
-      display: flex; align-items: center; gap: 10px;
-      background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;
-    }
-    .d-sched-info { flex: 1; min-width: 0; }
-    .d-sched-label { font-family: var(--sans); font-size: 13px; color: var(--text2); margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .d-sched-meta  { font-family: var(--mono); font-size: 10px; color: var(--dim); }
-    .d-sched-date  { font-family: var(--mono); font-size: 11px; color: var(--amber2); flex-shrink: 0; }
+    /* Run cards */
+    .run-list { display: flex; flex-direction: column; gap: 8px; }
+    .run { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+    .run-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
+    .run-file { font-family: var(--mono); font-size: 11px; color: var(--amber3); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .run-time { font-family: var(--mono); font-size: 10px; color: var(--dim); flex-shrink: 0; }
+    .run-commit { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-bottom: 8px; }
+    .run-plats { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+    .plat { font-family: var(--mono); font-size: 10px; padding: 3px 9px; border-radius: 4px; display: flex; align-items: center; gap: 4px; cursor: default; }
+    .plat.ok   { background: #052e1622; color: var(--green);  border: 1px solid #052e16; }
+    .plat.fail { background: #450a0a22; color: var(--red);    border: 1px solid #450a0a; cursor: pointer; }
+    .plat.skip { background: var(--surface); color: var(--dim); border: 1px solid var(--border); }
+    .run-err { font-family: var(--mono); font-size: 10px; color: var(--red); margin-top: 6px; padding: 6px 10px; background: #450a0a22; border-radius: 4px; word-break: break-all; line-height: 1.5; }
 
-    /* ── Login screen ── */
-    #d-login {
-      position: fixed; inset: 0; z-index: 99993;
-      background: var(--bg); display: flex; align-items: center; justify-content: center;
-    }
-    .d-login-box { text-align: center; max-width: 320px; padding: 32px; }
-    .d-login-logo { font-family: var(--serif); font-size: 32px; color: var(--amber2); margin-bottom: 8px; }
-    .d-login-sub  { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-bottom: 28px; }
-    .d-login-note { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 16px; line-height: 1.6; }
+    /* AI badge */
+    .ai-badge { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .06em; padding: 3px 9px; border-radius: 4px; margin-top: 8px; }
+    .ai-badge.generated { background: #1c1040; color: var(--purple); border: 1px solid #3b1fa0; }
+    .ai-badge.cached    { background: #052e16; color: var(--green);  border: 1px solid #145228; }
 
-    /* ── Toast ── */
-    #d-toast {
-      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
-      background: var(--card); border: 1px solid var(--border2); color: var(--text2);
-      font-family: var(--mono); font-size: 11px; padding: 10px 20px; border-radius: 8px;
-      z-index: 99999; transition: transform .3s; pointer-events: none; white-space: nowrap;
-    }
+    /* Series */
+    .series-list { display: flex; flex-direction: column; gap: 10px; }
+    .series { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+    .series-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .series-name { font-family: var(--serif); font-size: 16px; color: var(--text3); text-transform: capitalize; }
+    .series-badge { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 20px; }
+    .series-badge.active   { background: #0c1e3a; color: var(--blue);  border: 1px solid #1d3a6a; }
+    .series-badge.complete { background: #052010; color: var(--green); border: 1px solid #145228; }
+    .d-prog { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 10px; }
+    .d-prog-fill { height: 100%; border-radius: 2px; transition: width .6s ease; background: linear-gradient(90deg, var(--blue), var(--amber2)); }
+    .series-stats { font-family: var(--mono); font-size: 11px; color: var(--dim); display: flex; gap: 16px; flex-wrap: wrap; }
+    .series-stats .next { color: var(--green); }
+    .series-stats .gap  { color: var(--yellow); }
+
+    /* Action runs */
+    .act-list { display: flex; flex-direction: column; gap: 6px; }
+    .act-run { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; text-decoration: none; transition: border-color .15s; }
+    .act-run:hover { border-color: var(--border2); }
+    .act-name { font-family: var(--sans); font-size: 12px; color: var(--text2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .act-branch { font-family: var(--mono); font-size: 10px; color: var(--dim); }
+    .act-time { font-family: var(--mono); font-size: 10px; color: var(--dim); flex-shrink: 0; }
+    .act-status { font-family: var(--mono); font-size: 9px; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; flex-shrink: 0; }
+    .act-status.success     { background: #052e16; color: var(--green); }
+    .act-status.failure     { background: #450a0a; color: var(--red); }
+    .act-status.in_progress { background: #1c2a0a; color: var(--yellow); }
+    .act-status.queued      { background: var(--card); color: var(--dim); }
+
+    /* Schedule */
+    .sched-list { display: flex; flex-direction: column; gap: 8px; }
+    .sched-item { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+    .sched-info { flex: 1; min-width: 0; }
+    .sched-label { font-family: var(--sans); font-size: 13px; color: var(--text2); margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sched-meta  { font-family: var(--mono); font-size: 10px; color: var(--dim); }
+    .sched-date  { font-family: var(--mono); font-size: 11px; color: var(--amber2); flex-shrink: 0; }
+
+    /* Toast */
+    #d-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--card); border: 1px solid var(--border2); color: var(--text2); font-family: var(--mono); font-size: 11px; padding: 10px 20px; border-radius: 8px; z-index: 99999; transition: transform .3s; pointer-events: none; white-space: nowrap; }
     #d-toast.show { transform: translateX(-50%) translateY(0); }
     #d-toast.ok   { border-color: var(--green); color: var(--green); }
     #d-toast.err  { border-color: var(--red);   color: var(--red);   }
 
-    /* ── Empty states ── */
+    /* Misc */
     .d-empty { font-family: var(--mono); font-size: 11px; color: var(--dim); padding: 20px; text-align: center; }
-
-    /* ── Loading ── */
-    .d-loading {
-      display: inline-block; width: 12px; height: 12px; border-radius: 50%;
-      border: 2px solid var(--border2); border-top-color: var(--amber2);
-      animation: spin .7s linear infinite;
-    }
+    .spin { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border2); border-top-color: var(--amber2); animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── Scrollbar ── */
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+    ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
   </style>
 </head>
 <body>
-  <!-- Sveltia CMS -->
-  <script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js" type="module" data-cfasync="false"></script>
 
-  <!-- Login screen (shown when not authenticated) -->
-  <div id="d-login" style="display:none">
-    <div class="d-login-box">
-      <div class="d-login-logo">ishistory</div>
-      <div class="d-login-sub">COMMAND CENTRE</div>
-      <button class="d-btn primary" style="width:100%;font-size:13px;padding:12px" onclick="dLogin()">Login with GitHub</button>
-      <div class="d-login-note">Uses the same OAuth session as the CMS.<br>One login for both.</div>
+<script src="https://unpkg.com/@sveltia/cms/dist/sveltia-cms.js" type="module" data-cfasync="false"></script>
+
+<!-- Login screen -->
+<div id="d-login">
+  <div class="login-box">
+    <div class="login-logo">ishistory</div>
+    <div class="login-sub">Command Centre</div>
+    <div class="d-field">
+      <label class="d-lbl">GitHub Personal Access Token</label>
+      <input class="d-inp" type="password" id="d-pat" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" />
+    </div>
+    <button class="d-btn pri" style="width:100%;padding:11px;font-size:12px" onclick="doLogin()">Connect to GitHub</button>
+    <div class="login-note">
+      Needs <strong style="color:var(--text2)">repo</strong> scope only.<br>
+      <a href="https://github.com/settings/tokens/new?scopes=repo&description=ishistory+dashboard" target="_blank" rel="noopener">Generate token on GitHub →</a><br><br>
+      Stored in browser localStorage. Only used to call GitHub's API directly.
     </div>
   </div>
+</div>
 
-  <!-- FAB -->
-  <div id="d-fab" onclick="dToggle()" title="Dashboard">
-    <div id="d-fab-dot"></div>
+<!-- FAB -->
+<div id="d-fab" onclick="dToggle()"><div id="d-fab-dot"></div></div>
+
+<!-- Overlay -->
+<div id="d-overlay" onclick="dClose()"></div>
+
+<!-- Panel -->
+<div id="d-panel">
+  <div id="d-header">
+    <div id="d-title">is<span>history</span></div>
+    <div id="d-user" style="display:none"></div>
+    <div id="d-updated" style="margin-left:auto"></div>
+    <button class="hdr-btn" onclick="doLogout()">Logout</button>
+    <button class="hdr-btn close-btn" onclick="dClose()">✕</button>
   </div>
-
-  <!-- Overlay backdrop -->
-  <div id="d-overlay" onclick="dClose()"></div>
-
-  <!-- Dashboard panel -->
-  <div id="d-panel">
-    <div id="d-header">
-      <div id="d-title">is<span>history</span> · command centre</div>
-      <div id="d-last-updated">—</div>
-      <button id="d-close" onclick="dClose()">✕</button>
-    </div>
-    <div id="d-tabs">
-      <button class="d-tab active" onclick="dTab('overview',this)">Overview</button>
-      <button class="d-tab" onclick="dTab('pipeline',this)">Pipeline</button>
-      <button class="d-tab" onclick="dTab('series',this)">Series</button>
-      <button class="d-tab" onclick="dTab('schedule',this)">Schedule</button>
-      <button class="d-tab" onclick="dTab('actions',this)">Actions</button>
-    </div>
-    <div id="d-body">
-
-      <!-- OVERVIEW -->
-      <div id="view-overview" class="d-view active">
-        <div class="d-grid" id="ov-stats"></div>
-        <div class="d-section-title">Last Pipeline Run</div>
-        <div id="ov-last-run"><div class="d-empty"><span class="d-loading"></span></div></div>
-        <div class="d-section-title">Recent Commits</div>
-        <div id="ov-commits"><div class="d-empty"><span class="d-loading"></span></div></div>
-      </div>
-
-      <!-- PIPELINE -->
-      <div id="view-pipeline" class="d-view">
-        <div class="d-btn-row">
-          <button class="d-btn primary" onclick="dTriggerPipeline()">▶ Run Pipeline</button>
-          <button class="d-btn" onclick="loadPipeline()">↺ Refresh</button>
-        </div>
-        <div id="pipe-trigger-form" style="display:none;margin-bottom:12px">
-          <input class="d-input" id="pipe-file-input" placeholder="src/content/ai-history/episode-01.md" style="margin-bottom:8px" />
-          <div class="d-btn-row">
-            <button class="d-btn primary" onclick="dDoTrigger()">Trigger</button>
-            <button class="d-btn" onclick="document.getElementById('pipe-trigger-form').style.display='none'">Cancel</button>
-          </div>
-        </div>
-        <div class="d-section-title">Run History</div>
-        <div id="pipe-runs"><div class="d-empty"><span class="d-loading"></span></div></div>
-      </div>
-
-      <!-- SERIES -->
-      <div id="view-series" class="d-view">
-        <div id="series-list"><div class="d-empty"><span class="d-loading"></span></div></div>
-      </div>
-
-      <!-- SCHEDULE -->
-      <div id="view-schedule" class="d-view">
-        <div class="d-form">
-          <div class="d-form-title">Schedule a Post</div>
-          <div class="d-field">
-            <label class="d-label">File</label>
-            <select class="d-select" id="sched-file"><option value="">Loading posts…</option></select>
-          </div>
-          <div class="d-field">
-            <label class="d-label">Publish Date & Time (UTC)</label>
-            <input class="d-input" type="datetime-local" id="sched-date" />
-          </div>
-          <div class="d-field">
-            <label class="d-label">Label (optional)</label>
-            <input class="d-input" type="text" id="sched-label" placeholder="e.g. AI History Episode 26" />
-          </div>
-          <button class="d-btn primary" onclick="dAddSchedule()">Schedule Post</button>
-        </div>
-        <div class="d-section-title">Scheduled Posts</div>
-        <div id="sched-list"><div class="d-empty"><span class="d-loading"></span></div></div>
-      </div>
-
-      <!-- ACTIONS -->
-      <div id="view-actions" class="d-view">
-        <div class="d-btn-row">
-          <button class="d-btn" onclick="loadActions()">↺ Refresh</button>
-        </div>
-        <div class="d-section-title">Workflow Runs</div>
-        <div id="actions-list"><div class="d-empty"><span class="d-loading"></span></div></div>
-      </div>
-
-    </div>
+  <div id="d-tabs">
+    <button class="d-tab active" onclick="dTab('overview',this)">Overview</button>
+    <button class="d-tab" onclick="dTab('pipeline',this)">Pipeline</button>
+    <button class="d-tab" onclick="dTab('series',this)">Series</button>
+    <button class="d-tab" onclick="dTab('schedule',this)">Schedule</button>
+    <button class="d-tab" onclick="dTab('actions',this)">Actions</button>
   </div>
+  <div id="d-body">
 
-  <!-- Toast -->
-  <div id="d-toast"></div>
+    <div id="view-overview" class="d-view active">
+      <div class="d-grid" id="ov-stats"></div>
+      <div class="d-sec">Last Pipeline Run</div>
+      <div id="ov-run"><div class="d-empty"><span class="spin"></span></div></div>
+      <div class="d-sec">Recent Commits</div>
+      <div id="ov-commits"><div class="d-empty"><span class="spin"></span></div></div>
+    </div>
+
+    <div id="view-pipeline" class="d-view">
+      <div class="btn-row">
+        <button class="d-btn pri" onclick="toggleTrigger()">▶ Run Pipeline</button>
+        <button class="d-btn" onclick="loadPipeline()">↺ Refresh</button>
+      </div>
+      <div class="d-form" id="trigger-form" style="display:none">
+        <div class="d-form-title">Trigger Pipeline Manually</div>
+        <div class="d-field">
+          <label class="d-lbl">File path</label>
+          <input class="d-inp" id="trigger-file" placeholder="src/content/ai-history/episode-01.md" />
+        </div>
+        <div class="btn-row">
+          <button class="d-btn pri" onclick="doTrigger()">Trigger</button>
+          <button class="d-btn" onclick="document.getElementById('trigger-form').style.display='none'">Cancel</button>
+        </div>
+      </div>
+      <div class="d-sec">Run History</div>
+      <div id="pipe-runs"><div class="d-empty"><span class="spin"></span></div></div>
+    </div>
+
+    <div id="view-series" class="d-view">
+      <div id="series-wrap"><div class="d-empty"><span class="spin"></span></div></div>
+    </div>
+
+    <div id="view-schedule" class="d-view">
+      <div class="d-form">
+        <div class="d-form-title">Schedule a Post</div>
+        <div class="d-field"><label class="d-lbl">File</label><select class="d-sel" id="sched-file"><option>Loading…</option></select></div>
+        <div class="d-field"><label class="d-lbl">Publish Date &amp; Time (UTC)</label><input class="d-inp" type="datetime-local" id="sched-dt" /></div>
+        <div class="d-field"><label class="d-lbl">Label (optional)</label><input class="d-inp" type="text" id="sched-lbl" placeholder="AI History Episode 26" /></div>
+        <button class="d-btn pri" onclick="addSchedule()">Schedule Post</button>
+      </div>
+      <div class="d-sec">Scheduled Posts</div>
+      <div id="sched-list"><div class="d-empty"><span class="spin"></span></div></div>
+    </div>
+
+    <div id="view-actions" class="d-view">
+      <div class="btn-row"><button class="d-btn" onclick="loadActions()">↺ Refresh</button></div>
+      <div class="d-sec">Workflow Runs</div>
+      <div id="act-list"><div class="d-empty"><span class="spin"></span></div></div>
+    </div>
+
+  </div>
+</div>
+
+<div id="d-toast"></div>
 
 <script>
   const REPO    = 'ishaan-00/ishistory';
-  const SITE    = 'https://ishistory.pages.dev';
   const GH_API  = 'https://api.github.com';
-  let TOKEN     = null;
-  let isOpen    = false;
-  let fileCache = null;
-  let statusCache = null;
+  const TOK_KEY = 'ih-gh-token';
 
-  // ── Auth ───────────────────────────────────────────────────────────────────
-  function getToken() {
+  let TOKEN = null, isOpen = false, activeTab = 'overview', treeCache = null;
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  async function doLogin() {
+    const v = document.getElementById('d-pat').value.trim();
+    if (!v) { toast('Paste your token', 'err'); return; }
+    // Verify immediately
     try {
-      // Sveltia CMS stores: { login, name, email, token, ... }
-      const u = JSON.parse(localStorage.getItem('sveltia-cms.user') || 'null');
-      if (u?.token) return u.token;
-    } catch (_) {}
-    // Fallback: standalone token
-    return localStorage.getItem('d-gh-token');
+      const u = await ghRaw('/user', 'GET', null, v);
+      localStorage.setItem(TOK_KEY, v);
+      TOKEN = v;
+      setUser(u.login);
+      document.getElementById('d-login').classList.remove('show');
+    } catch(e) {
+      toast('Invalid token: ' + e.message, 'err');
+    }
   }
 
-  function dLogin() {
-    // Use same OAuth flow as Sveltia CMS
-    const authWorker = 'https://sveltia-cms-auth.aadityadarpan5.workers.dev';
-    const popup = window.open(`${authWorker}/auth?provider=github&site_id=${location.host}`, 'login', 'width=600,height=700');
-    window.addEventListener('message', function onMsg(e) {
-      if (e.data?.startsWith?.('authorization:github:success:')) {
-        try {
-          const payload = JSON.parse(e.data.replace('authorization:github:success:', ''));
-          if (payload.token) {
-            localStorage.setItem('d-gh-token', payload.token);
-            TOKEN = payload.token;
-            document.getElementById('d-login').style.display = 'none';
-            dInit();
-          }
-        } catch (_) {}
-        window.removeEventListener('message', onMsg);
-      }
-    });
+  function doLogout() {
+    localStorage.removeItem(TOK_KEY);
+    TOKEN = null;
+    document.getElementById('d-user').style.display = 'none';
+    document.getElementById('d-login').classList.add('show');
+    dClose();
   }
 
-  // ── GitHub API ─────────────────────────────────────────────────────────────
-  async function gh(endpoint, method = 'GET', body = null) {
-    const res = await fetch(`${GH_API}${endpoint}`, {
-      method,
-      headers: {
-        Authorization:  `Bearer ${TOKEN}`,
-        Accept:         'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
-      },
+  function setUser(login) {
+    const el = document.getElementById('d-user');
+    el.textContent = '@' + login;
+    el.style.display = 'block';
+  }
+
+  // ── GitHub API ────────────────────────────────────────────────────────────
+  async function ghRaw(endpoint, method, body, tok) {
+    const res = await fetch(GH_API + endpoint, {
+      method: method || 'GET',
+      headers: { Authorization: 'Bearer ' + (tok || TOKEN), Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
       body: body ? JSON.stringify(body) : null,
     });
+    if (res.status === 401) { doLogout(); throw new Error('Token expired — please log in again'); }
     if (res.status === 204) return null;
-    return res.json();
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.message || 'HTTP ' + res.status);
+    return d;
   }
+  const gh = (ep, m, b) => ghRaw(ep, m, b, TOKEN);
 
-  async function ghFile(path) {
-    const d = await gh(`/repos/${REPO}/contents/${path}`);
+  async function ghFile(fp) {
+    const d = await gh('/repos/' + REPO + '/contents/' + fp);
     if (!d || d.message) return null;
-    return { content: atob(d.content.replace(/\n/g, '')), sha: d.sha };
+    return { content: atob(d.content.replace(/\n/g,'')), sha: d.sha };
   }
 
-  async function ghWrite(path, content, message, sha = null) {
-    const body = { message, content: btoa(unescape(encodeURIComponent(content))), ...(sha ? { sha } : {}) };
-    return gh(`/repos/${REPO}/contents/${path}`, 'PUT', body);
+  async function ghWrite(fp, content, msg, sha) {
+    return gh('/repos/' + REPO + '/contents/' + fp, 'PUT', {
+      message: msg,
+      content: btoa(unescape(encodeURIComponent(content))),
+      ...(sha ? { sha } : {})
+    });
   }
 
-  // ── UI helpers ─────────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
   function relTime(s) {
     if (!s) return '—';
-    const ms = new Date(s).getTime();
-    if (isNaN(ms)) return '—';
-    const d = Math.floor((Date.now() - ms) / 1000);
+    const d = Math.floor((Date.now() - new Date(s)) / 1000);
+    if (isNaN(d)) return '—';
     if (d < 5) return 'just now';
     if (d < 60) return d + 's ago';
-    if (d < 3600) return Math.floor(d / 60) + 'm ago';
-    if (d < 86400) return Math.floor(d / 3600) + 'h ago';
-    return Math.floor(d / 86400) + 'd ago';
+    if (d < 3600) return Math.floor(d/60) + 'm ago';
+    if (d < 86400) return Math.floor(d/3600) + 'h ago';
+    return Math.floor(d/86400) + 'd ago';
   }
 
   function fmtDate(s) {
     if (!s) return '—';
-    return new Date(s).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short' });
+    return new Date(s).toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', timeZone:'UTC', timeZoneName:'short' });
   }
 
-  function fileName(p) { return p ? p.split('/').pop() : p; }
+  function fn(p) { return p ? p.split('/').pop() : p; }
 
-  let toastTimer;
-  function toast(msg, type = '') {
+  let toastT;
+  function toast(msg, type) {
     const el = document.getElementById('d-toast');
-    el.textContent = msg; el.className = type + ' show';
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.className = '', 3000);
+    el.textContent = msg; el.className = (type || '') + ' show';
+    clearTimeout(toastT); toastT = setTimeout(() => el.className = '', 3000);
   }
 
-  function platDot(r) {
-    if (r.skipped) return `<span class="d-platform skip">⊘ skipped</span>`;
-    if (r.ok) return `<span class="d-platform ok">✓</span>`;
-    return `<span class="d-platform fail" title="${r.err || ''}">✗</span>`;
+  function buildPlatRow(run) {
+    return ['discord','devto','hashnode','ntfy','indexnow'].map(p => {
+      const r = run[p] || {};
+      if (r.skipped) return '<span class="plat skip">⊘ ' + p + '</span>';
+      if (r.ok)      return '<span class="plat ok">✓ ' + p + '</span>';
+      const e = (r.err || '').replace(/"/g,'&quot;').slice(0,200);
+      return '<span class="plat fail" title="' + e + '">✗ ' + p + '</span>';
+    }).join('');
   }
 
-  function platRow(results) {
-    const platforms = ['discord', 'devto', 'hashnode', 'ntfy', 'indexnow'];
-    return `<div class="d-platform-grid">${platforms.map(p => {
-      const r = results[p] || {};
-      const cls = r.skipped ? 'skip' : r.ok ? 'ok' : 'fail';
-      const icon = r.skipped ? '⊘' : r.ok ? '✓' : '✗';
-      const title = r.err ? ` title="${r.err.slice(0, 120)}"` : '';
-      return `<span class="d-platform ${cls}"${title}>${icon} ${p}</span>`;
-    }).join('')}</div>`;
+  function buildAIBadge(run) {
+    if (run.ai_cached)    return '<span class="ai-badge cached">⚡ AI content cached</span>';
+    if (run.ai_generated) return '<span class="ai-badge generated">✦ AI generated (Mistral)</span>';
+    return '';
   }
 
-  // ── Toggle & tabs ──────────────────────────────────────────────────────────
+  function buildRunHTML(r) {
+    const errs = ['discord','devto','hashnode','ntfy','indexnow']
+      .filter(p => r[p] && !r[p].ok && !r[p].skipped && r[p].err)
+      .map(p => '<div class="run-err"><strong>' + p + ':</strong> ' + (r[p].err||'').slice(0,300) + '</div>')
+      .join('');
+    return '<div class="run">' +
+      '<div class="run-top"><div class="run-file">' + r.file + '</div><div class="run-time">' + relTime(r.ran_at) + '</div></div>' +
+      '<div class="run-commit">commit <span style="color:var(--amber3)">' + r.commit + '</span> · ' + fmtDate(r.ran_at) + '</div>' +
+      '<div class="run-plats">' + buildPlatRow(r) + '</div>' +
+      buildAIBadge(r) +
+      errs +
+      '</div>';
+  }
+
+  // ── Panel ─────────────────────────────────────────────────────────────────
   function dToggle() { isOpen ? dClose() : dOpen(); }
   function dOpen() {
+    if (!TOKEN) { document.getElementById('d-login').classList.add('show'); return; }
     isOpen = true;
     document.getElementById('d-panel').classList.add('open');
     document.getElementById('d-overlay').classList.add('open');
@@ -513,323 +422,216 @@
   }
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen) dClose(); });
 
-  let activeTab = 'overview';
   function dTab(name, btn) {
     activeTab = name;
     document.querySelectorAll('.d-tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
     document.querySelectorAll('.d-view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-' + name).classList.add('active');
-    if (name === 'overview') loadOverview();
-    if (name === 'pipeline') loadPipeline();
-    if (name === 'series')   loadSeries();
-    if (name === 'schedule') loadSchedule();
-    if (name === 'actions')  loadActions();
+    ({ overview: loadOverview, pipeline: loadPipeline, series: loadSeries, schedule: loadSchedule, actions: loadActions })[name]?.();
   }
 
-  // ── Status.json ────────────────────────────────────────────────────────────
-  async function fetchStatus() {
+  function dRefresh() {
+    treeCache = null;
+    ({ overview: loadOverview, pipeline: loadPipeline, series: loadSeries, schedule: loadSchedule, actions: loadActions })[activeTab]?.();
+  }
+
+  // ── File tree ─────────────────────────────────────────────────────────────
+  async function getTree() {
+    if (treeCache) return treeCache;
+    const d = await gh('/repos/' + REPO + '/git/trees/main?recursive=1');
+    treeCache = (d?.tree || []).filter(f => f.type === 'blob');
+    return treeCache;
+  }
+
+  async function getStatus() {
     const f = await ghFile('src/data/status.json').catch(() => null);
     if (!f) return { runs: [] };
-    try { return JSON.parse(f.content); }
-    catch (_) { return { runs: [] }; }
+    try { return JSON.parse(f.content); } catch(_) { return { runs: [] }; }
   }
 
-  // ── File tree ──────────────────────────────────────────────────────────────
-  async function fetchFileTree() {
-    if (fileCache) return fileCache;
-    const data = await gh(`/repos/${REPO}/git/trees/main?recursive=1`);
-    fileCache = (data?.tree || []).filter(f => f.type === 'blob');
-    return fileCache;
-  }
-
-  // ── Overview ───────────────────────────────────────────────────────────────
+  // ── Overview ──────────────────────────────────────────────────────────────
   async function loadOverview() {
     const [status, tree, commits] = await Promise.all([
-      fetchStatus(),
-      fetchFileTree(),
-      gh(`/repos/${REPO}/commits?per_page=5`).catch(() => []),
+      getStatus(),
+      getTree(),
+      gh('/repos/' + REPO + '/commits?per_page=5').catch(() => []),
     ]);
 
-    // Stats cards
-    const posts = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md'));
+    const posts  = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md'));
     const series = {};
-    for (const f of posts) {
-      const s = f.path.split('/')[2];
-      if (s) series[s] = (series[s] || 0) + 1;
-    }
-    const lastRun = status.runs?.[0];
-    const allOk = lastRun ? Object.values({discord:lastRun.discord,devto:lastRun.devto,hashnode:lastRun.hashnode,ntfy:lastRun.ntfy,indexnow:lastRun.indexnow}).filter(r=>!r.skipped).every(r=>r.ok) : null;
+    posts.forEach(f => { const s = f.path.split('/')[2]; if (s) series[s] = (series[s]||0)+1; });
 
-    document.getElementById('ov-stats').innerHTML = `
-      <div class="d-card">
-        <div class="d-card-title">Total Posts</div>
-        <div class="d-card-val">${posts.length}</div>
-        <div class="d-card-sub">${Object.keys(series).length} series</div>
-      </div>
-      <div class="d-card">
-        <div class="d-card-title">Last Pipeline</div>
-        <div class="d-card-val" style="font-size:18px;font-family:var(--mono)">${lastRun ? relTime(lastRun.ran_at) : '—'}</div>
-        <div class="d-card-sub" style="color:${allOk===true?'var(--green)':allOk===false?'var(--red)':'var(--dim)'}">${allOk===true?'All platforms OK':allOk===false?'Some failures':'No runs yet'}</div>
-      </div>
-      <div class="d-card">
-        <div class="d-card-title">Scheduled</div>
-        <div class="d-card-val" id="ov-sched-count">—</div>
-        <div class="d-card-sub">pending posts</div>
-      </div>`;
+    const last  = status.runs?.[0];
+    const plats = last ? ['discord','devto','hashnode','ntfy','indexnow'].map(p=>last[p]).filter(r=>!r?.skipped) : [];
+    const allOk = plats.length > 0 && plats.every(r=>r?.ok);
+    const anyFail = plats.some(r=>!r?.ok);
 
-    // Load scheduled count
+    document.getElementById('d-fab-dot').className = allOk ? 'green' : anyFail ? 'red' : 'amber';
+
+    document.getElementById('ov-stats').innerHTML =
+      '<div class="d-card"><div class="d-card-title">Total Posts</div><div class="d-card-val">' + posts.length + '</div><div class="d-card-sub">' + Object.keys(series).length + ' series</div></div>' +
+      '<div class="d-card"><div class="d-card-title">Last Pipeline</div><div class="d-card-val" style="font-size:18px;font-family:var(--mono)">' + (last ? relTime(last.ran_at) : '—') + '</div><div class="d-card-sub" style="color:' + (allOk?'var(--green)':anyFail?'var(--red)':'var(--dim)') + '">' + (allOk?'All platforms OK':anyFail?'Some failures':'No runs yet') + '</div></div>' +
+      '<div class="d-card"><div class="d-card-title">Scheduled</div><div class="d-card-val" id="ov-sched">—</div><div class="d-card-sub">pending posts</div></div>';
+
     ghFile('src/data/scheduled.json').then(f => {
-      try {
-        const n = f ? JSON.parse(f.content).length : 0;
-        const el = document.getElementById('ov-sched-count');
-        if (el) el.textContent = n;
-      } catch(_) {}
-    }).catch(() => {});
+      try { const el = document.getElementById('ov-sched'); if (el) el.textContent = f ? JSON.parse(f.content).length : 0; } catch(_){}
+    }).catch(()=>{});
 
-    // Fab dot
-    const dot = document.getElementById('d-fab-dot');
-    dot.className = allOk === false ? 'red' : allOk === true ? 'green' : 'amber';
+    document.getElementById('ov-run').innerHTML = last ? buildRunHTML(last) : '<div class="d-empty">No pipeline runs yet</div>';
 
-    // Last run
-    if (lastRun) {
-      document.getElementById('ov-last-run').innerHTML = `
-        <div class="d-run">
-          <div class="d-run-top">
-            <div class="d-run-file">${lastRun.file}</div>
-            <div class="d-run-time">${relTime(lastRun.ran_at)}</div>
-          </div>
-          ${platRow(lastRun)}
-          ${['discord','devto','hashnode','ntfy','indexnow'].filter(p=>lastRun[p]?.err).map(p=>`<div class="d-run-err">${p}: ${lastRun[p].err.slice(0,200)}</div>`).join('')}
-        </div>`;
-    } else {
-      document.getElementById('ov-last-run').innerHTML = '<div class="d-empty">No pipeline runs yet</div>';
-    }
+    document.getElementById('ov-commits').innerHTML = commits?.length
+      ? '<div class="act-list">' + (commits||[]).map(c =>
+          '<a class="act-run" href="' + c.html_url + '" target="_blank" rel="noopener">' +
+          '<div class="act-name">' + c.commit.message.split('\n')[0] + '</div>' +
+          '<div class="act-time">' + relTime(c.commit.author.date) + '</div>' +
+          '<div class="act-branch" style="font-size:9px">' + c.sha.slice(0,7) + '</div></a>').join('') + '</div>'
+      : '<div class="d-empty">No commits</div>';
 
-    // Commits
-    if (commits?.length) {
-      document.getElementById('ov-commits').innerHTML = `<div class="d-action-list">${(commits||[]).map(c => `
-        <a class="d-action-run" href="${c.html_url}" target="_blank" rel="noopener">
-          <div class="d-action-name">${c.commit.message.split('\n')[0]}</div>
-          <div class="d-action-time">${relTime(c.commit.author.date)}</div>
-          <div class="d-action-branch" style="font-size:9px;color:var(--dim)">${c.sha.slice(0,7)}</div>
-        </a>`).join('')}</div>`;
-    } else {
-      document.getElementById('ov-commits').innerHTML = '<div class="d-empty">No commits</div>';
-    }
-
-    document.getElementById('d-last-updated').textContent = 'updated ' + relTime(new Date().toISOString());
+    document.getElementById('d-updated').textContent = 'updated ' + relTime(new Date().toISOString());
   }
 
-  // ── Pipeline ───────────────────────────────────────────────────────────────
+  // ── Pipeline ──────────────────────────────────────────────────────────────
   async function loadPipeline() {
-    document.getElementById('pipe-runs').innerHTML = '<div class="d-empty"><span class="d-loading"></span></div>';
-    const status = await fetchStatus();
-    const runs = status.runs || [];
-    if (!runs.length) {
-      document.getElementById('pipe-runs').innerHTML = '<div class="d-empty">No pipeline runs recorded yet</div>';
-      return;
-    }
-    document.getElementById('pipe-runs').innerHTML = `<div class="d-run-list">${runs.map(r => `
-      <div class="d-run">
-        <div class="d-run-top">
-          <div class="d-run-file">${r.file}</div>
-          <div class="d-run-time">${relTime(r.ran_at)}</div>
-        </div>
-        <div class="d-run-commit" style="margin-bottom:8px">commit <span style="color:var(--amber3)">${r.commit}</span></div>
-        ${platRow(r)}
-        ${['discord','devto','hashnode','ntfy','indexnow'].filter(p=>r[p]?.err).map(p=>`<div class="d-run-err">${p}: ${(r[p].err||'').slice(0,200)}</div>`).join('')}
-      </div>`).join('')}</div>`;
+    document.getElementById('pipe-runs').innerHTML = '<div class="d-empty"><span class="spin"></span></div>';
+    const s = await getStatus().catch(() => ({ runs: [] }));
+    document.getElementById('pipe-runs').innerHTML = s.runs?.length
+      ? '<div class="run-list">' + s.runs.map(buildRunHTML).join('') + '</div>'
+      : '<div class="d-empty">No pipeline runs recorded yet</div>';
   }
 
-  function dTriggerPipeline() {
-    const form = document.getElementById('pipe-trigger-form');
-    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  function toggleTrigger() {
+    const f = document.getElementById('trigger-form');
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
   }
 
-  async function dDoTrigger() {
-    const file = document.getElementById('pipe-file-input').value.trim();
+  async function doTrigger() {
+    const file = document.getElementById('trigger-file').value.trim();
     if (!file) { toast('Enter a file path', 'err'); return; }
     try {
-      await gh(`/repos/${REPO}/actions/workflows/on-publish.yml/dispatches`, 'POST', { ref: 'main', inputs: { file } });
+      await gh('/repos/' + REPO + '/actions/workflows/on-publish.yml/dispatches', 'POST', { ref: 'main', inputs: { file } });
       toast('Pipeline triggered ✓', 'ok');
-      document.getElementById('pipe-trigger-form').style.display = 'none';
+      document.getElementById('trigger-form').style.display = 'none';
       setTimeout(loadActions, 2000);
     } catch(e) { toast('Failed: ' + e.message, 'err'); }
   }
 
-  // ── Series ─────────────────────────────────────────────────────────────────
+  // ── Series ────────────────────────────────────────────────────────────────
   async function loadSeries() {
-    document.getElementById('series-list').innerHTML = '<div class="d-empty"><span class="d-loading"></span></div>';
-    const tree = await fetchFileTree();
+    document.getElementById('series-wrap').innerHTML = '<div class="d-empty"><span class="spin"></span></div>';
+    const tree  = await getTree();
     const posts = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md'));
-    const series = {};
-    for (const f of posts) {
-      const [,, s, fn] = f.path.split('/');
-      if (!s || !fn) continue;
-      if (!series[s]) series[s] = { episodes: [], profiles: [] };
-      const num = fn.match(/\d+/);
-      const n = num ? parseInt(num[0]) : null;
-      if (fn.startsWith('profile')) series[s].profiles.push(n);
-      else series[s].episodes.push(n);
-    }
-
-    if (!Object.keys(series).length) {
-      document.getElementById('series-list').innerHTML = '<div class="d-empty">No series found</div>';
-      return;
-    }
-
-    const cards = Object.entries(series).map(([name, data]) => {
-      const eps  = data.episodes.filter(Boolean).sort((a,b)=>a-b);
-      const pros = data.profiles.filter(Boolean).sort((a,b)=>a-b);
-      const gaps = [];
-      for (let i = 1; i < eps.length; i++) for (let g = eps[i-1]+1; g < eps[i]; g++) gaps.push(g);
-      const next = eps.length ? Math.max(...eps) + 1 : 1;
-      const pct  = Math.min(100, Math.round((eps.length % 10 || (eps.length > 0 ? 10 : 0)) / 10 * 100));
-
-      return `<div class="d-series">
-        <div class="d-series-top">
-          <div class="d-series-name">${name.replace(/-/g,' ')}</div>
-          <span class="d-series-badge active">active</span>
-        </div>
-        <div class="d-progress"><div class="d-progress-fill active" style="width:${pct}%"></div></div>
-        <div class="d-series-stats">
-          <span>${eps.length} episode${eps.length!==1?'s':''}</span>
-          ${pros.length ? `<span>${pros.length} profile${pros.length!==1?'s':''}</span>` : ''}
-          <span class="next">next: #${next}</span>
-          ${gaps.length ? `<span class="gap">gaps: ${gaps.join(', ')}</span>` : ''}
-        </div>
-      </div>`;
+    const ser   = {};
+    posts.forEach(f => {
+      const [,,s,fn] = f.path.split('/');
+      if (!s||!fn) return;
+      if (!ser[s]) ser[s] = { ep:[], pr:[] };
+      const n = fn.match(/\d+/); const num = n ? +n[0] : null;
+      if (fn.startsWith('profile')) ser[s].pr.push(num); else ser[s].ep.push(num);
     });
-
-    document.getElementById('series-list').innerHTML = `<div class="d-series-list">${cards.join('')}</div>`;
+    if (!Object.keys(ser).length) { document.getElementById('series-wrap').innerHTML = '<div class="d-empty">No series</div>'; return; }
+    const cards = Object.entries(ser).map(([name,d]) => {
+      const eps  = d.ep.filter(Boolean).sort((a,b)=>a-b);
+      const pros = d.pr.filter(Boolean).sort((a,b)=>a-b);
+      const gaps = []; for (let i=1;i<eps.length;i++) for (let g=eps[i-1]+1;g<eps[i];g++) gaps.push(g);
+      const next = eps.length ? Math.max(...eps)+1 : 1;
+      const pct  = Math.min(100, Math.round((eps.length%10||(eps.length>0?10:0))/10*100));
+      return '<div class="series"><div class="series-top"><div class="series-name">' + name.replace(/-/g,' ') + '</div><span class="series-badge active">active</span></div>' +
+        '<div class="d-prog"><div class="d-prog-fill" style="width:' + pct + '%"></div></div>' +
+        '<div class="series-stats"><span>' + eps.length + ' ep</span>' +
+        (pros.length ? '<span>' + pros.length + ' profiles</span>' : '') +
+        '<span class="next">next: #' + next + '</span>' +
+        (gaps.length ? '<span class="gap">gaps: ' + gaps.join(', ') + '</span>' : '') +
+        '</div></div>';
+    });
+    document.getElementById('series-wrap').innerHTML = '<div class="series-list">' + cards.join('') + '</div>';
   }
 
-  // ── Schedule ───────────────────────────────────────────────────────────────
+  // ── Schedule ──────────────────────────────────────────────────────────────
   async function loadSchedule() {
-    // Populate file dropdown
-    const tree = await fetchFileTree();
-    const mdFiles = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md'))
-      .map(f => f.path).sort();
-    const sel = document.getElementById('sched-file');
-    sel.innerHTML = `<option value="">Select a post…</option>` +
-      mdFiles.map(f => `<option value="${f}">${f.split('/').slice(2).join('/')}</option>`).join('');
-
-    // Load scheduled.json
-    await renderScheduleList();
+    const tree  = await getTree();
+    const files = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md')).map(f=>f.path).sort();
+    const sel   = document.getElementById('sched-file');
+    sel.innerHTML = '<option value="">Select a post…</option>' + files.map(f => '<option value="' + f + '">' + f.split('/').slice(2).join('/') + '</option>').join('');
+    await renderSched();
   }
 
-  async function renderScheduleList() {
-    document.getElementById('sched-list').innerHTML = '<div class="d-empty"><span class="d-loading"></span></div>';
+  async function renderSched() {
+    document.getElementById('sched-list').innerHTML = '<div class="d-empty"><span class="spin"></span></div>';
     const f = await ghFile('src/data/scheduled.json').catch(() => null);
-    let items = [];
-    try { if (f) items = JSON.parse(f.content); } catch(_) {}
-
-    if (!items.length) {
-      document.getElementById('sched-list').innerHTML = '<div class="d-empty">No scheduled posts</div>';
-      return;
-    }
-
-    items.sort((a, b) => new Date(a.publish_at) - new Date(b.publish_at));
-    document.getElementById('sched-list').innerHTML = `<div class="d-sched-list">${items.map(item => `
-      <div class="d-sched-item">
-        <div class="d-sched-info">
-          <div class="d-sched-label">${item.label || fileName(item.file)}</div>
-          <div class="d-sched-meta">${item.file}</div>
-        </div>
-        <div class="d-sched-date">${fmtDate(item.publish_at)}</div>
-        <button class="d-btn danger" style="padding:5px 10px;font-size:10px" onclick="dRemoveSchedule('${item.id}')">✕</button>
-      </div>`).join('')}</div>`;
+    let items = []; try { if (f) items = JSON.parse(f.content); } catch(_){}
+    if (!items.length) { document.getElementById('sched-list').innerHTML = '<div class="d-empty">No scheduled posts</div>'; return; }
+    items.sort((a,b) => new Date(a.publish_at) - new Date(b.publish_at));
+    document.getElementById('sched-list').innerHTML = '<div class="sched-list">' + items.map(i =>
+      '<div class="sched-item"><div class="sched-info"><div class="sched-label">' + (i.label||fn(i.file)) + '</div><div class="sched-meta">' + i.file + '</div></div>' +
+      '<div class="sched-date">' + fmtDate(i.publish_at) + '</div>' +
+      '<button class="d-btn dan" style="padding:5px 10px;font-size:10px" onclick="removeSchedule(\'' + i.id + '\')">✕</button></div>'
+    ).join('') + '</div>';
   }
 
-  async function dAddSchedule() {
+  async function addSchedule() {
     const file = document.getElementById('sched-file').value;
-    const date = document.getElementById('sched-date').value;
-    const label = document.getElementById('sched-label').value.trim();
+    const dt   = document.getElementById('sched-dt').value;
+    const lbl  = document.getElementById('sched-lbl').value.trim();
     if (!file) { toast('Select a file', 'err'); return; }
-    if (!date) { toast('Pick a date', 'err'); return; }
-
+    if (!dt)   { toast('Pick a date', 'err');   return; }
     const f = await ghFile('src/data/scheduled.json').catch(() => null);
-    let items = [];
-    try { if (f) items = JSON.parse(f.content); } catch(_) {}
-
-    items.push({
-      id:         'sched-' + Date.now(),
-      file,
-      publish_at: new Date(date).toISOString(),
-      label:      label || fileName(file),
-      added_at:   new Date().toISOString(),
-    });
-
-    await ghWrite('src/data/scheduled.json', JSON.stringify(items, null, 2),
-      `chore: schedule ${fileName(file)} [skip ci]`, f?.sha || null);
-
+    let items = []; try { if (f) items = JSON.parse(f.content); } catch(_){}
+    items.push({ id: 'sched-' + Date.now(), file, publish_at: new Date(dt + ':00Z').toISOString(), label: lbl||fn(file), added_at: new Date().toISOString() });
+    await ghWrite('src/data/scheduled.json', JSON.stringify(items, null, 2), 'chore: schedule ' + fn(file) + ' [skip ci]', f?.sha);
     toast('Scheduled ✓', 'ok');
-    document.getElementById('sched-label').value = '';
-    document.getElementById('sched-date').value = '';
+    document.getElementById('sched-lbl').value = '';
+    document.getElementById('sched-dt').value  = '';
     document.getElementById('sched-file').value = '';
-    await renderScheduleList();
+    await renderSched();
   }
 
-  async function dRemoveSchedule(id) {
+  async function removeSchedule(id) {
     const f = await ghFile('src/data/scheduled.json').catch(() => null);
     if (!f) return;
-    let items = [];
-    try { items = JSON.parse(f.content); } catch(_) {}
-    const updated = items.filter(i => i.id !== id);
-    await ghWrite('src/data/scheduled.json', JSON.stringify(updated, null, 2),
-      `chore: remove scheduled post [skip ci]`, f.sha);
+    let items = []; try { items = JSON.parse(f.content); } catch(_){}
+    await ghWrite('src/data/scheduled.json', JSON.stringify(items.filter(i=>i.id!==id), null, 2), 'chore: remove scheduled post [skip ci]', f.sha);
     toast('Removed ✓', 'ok');
-    await renderScheduleList();
+    await renderSched();
   }
 
-  // ── Actions ────────────────────────────────────────────────────────────────
+  // ── Actions ───────────────────────────────────────────────────────────────
   async function loadActions() {
-    document.getElementById('actions-list').innerHTML = '<div class="d-empty"><span class="d-loading"></span></div>';
-    const data = await gh(`/repos/${REPO}/actions/runs?per_page=15`).catch(() => null);
-    const runs = data?.workflow_runs || [];
-    if (!runs.length) {
-      document.getElementById('actions-list').innerHTML = '<div class="d-empty">No workflow runs</div>';
-      return;
-    }
-    document.getElementById('actions-list').innerHTML = `<div class="d-action-list">${runs.map(r => {
+    document.getElementById('act-list').innerHTML = '<div class="d-empty"><span class="spin"></span></div>';
+    const d    = await gh('/repos/' + REPO + '/actions/runs?per_page=20').catch(() => null);
+    const runs = d?.workflow_runs || [];
+    if (!runs.length) { document.getElementById('act-list').innerHTML = '<div class="d-empty">No workflow runs</div>'; return; }
+    document.getElementById('act-list').innerHTML = '<div class="act-list">' + runs.map(r => {
       const cls = r.conclusion || r.status || 'queued';
-      const label = r.conclusion || r.status || 'queued';
-      return `<a class="d-action-run" href="${r.html_url}" target="_blank" rel="noopener">
-        <div class="d-action-name">${r.name} — ${r.display_title || r.head_commit?.message?.split('\n')[0] || ''}</div>
-        <div class="d-action-branch">${r.head_branch}</div>
-        <div class="d-action-time">${relTime(r.created_at)}</div>
-        <span class="d-action-status ${cls}">${label}</span>
-      </a>`;
-    }).join('')}</div>`;
+      return '<a class="act-run" href="' + r.html_url + '" target="_blank" rel="noopener">' +
+        '<div class="act-name">' + r.name + ' — ' + (r.display_title || r.head_commit?.message || '').split('\n')[0].slice(0,60) + '</div>' +
+        '<div class="act-branch">' + r.head_branch + '</div>' +
+        '<div class="act-time">' + relTime(r.created_at) + '</div>' +
+        '<span class="act-status ' + cls + '">' + cls + '</span></a>';
+    }).join('') + '</div>';
   }
 
-  // ── Init ───────────────────────────────────────────────────────────────────
-  function dRefresh() {
-    if (activeTab === 'overview')  loadOverview();
-    if (activeTab === 'pipeline')  loadPipeline();
-    if (activeTab === 'series')    loadSeries();
-    if (activeTab === 'schedule')  loadSchedule();
-    if (activeTab === 'actions')   loadActions();
-  }
-
+  // ── Init ──────────────────────────────────────────────────────────────────
   async function dInit() {
-    TOKEN = getToken();
-    if (!TOKEN) {
-      document.getElementById('d-login').style.display = 'flex';
+    TOKEN = localStorage.getItem(TOK_KEY);
+    if (!TOKEN) { document.getElementById('d-login').classList.add('show'); return; }
+    try {
+      const u = await gh('/user');
+      setUser(u.login);
+    } catch(e) {
+      document.getElementById('d-login').classList.add('show');
       return;
     }
-    // Prefetch status.json to set FAB dot colour immediately
-    fetchStatus().then(s => {
-      const last = s.runs?.[0];
+    // Pre-fetch status for FAB dot colour
+    getStatus().then(s => {
+      const last  = s.runs?.[0];
       if (!last) return;
-      const active = ['discord','devto','hashnode','ntfy','indexnow']
-        .map(p => last[p]).filter(r => !r?.skipped);
-      const allOk = active.every(r => r?.ok);
-      document.getElementById('d-fab-dot').className = allOk ? 'green' : 'red';
-    }).catch(() => {});
+      const plats = ['discord','devto','hashnode','ntfy','indexnow'].map(p=>last[p]).filter(r=>!r?.skipped);
+      document.getElementById('d-fab-dot').className = plats.every(r=>r?.ok) ? 'green' : 'red';
+    }).catch(()=>{});
   }
 
+  document.getElementById('d-pat').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
   dInit();
 </script>
 </body>
