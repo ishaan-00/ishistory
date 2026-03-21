@@ -1,0 +1,63 @@
+name: Validate Content
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/content/**/*.md'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/content/**/*.md'
+  workflow_dispatch:
+    inputs:
+      file:
+        description: 'Specific file to validate (optional — leave blank for all changed)'
+        required: false
+        type: string
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate frontmatter
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    outputs:
+      valid_new_files: ${{ steps.run.outputs.valid_new_files }}
+      has_new_files:   ${{ steps.run.outputs.has_new_files }}
+      passed:          ${{ steps.run.outputs.passed }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0     # full history needed for cross-file duplicate checks
+
+      - name: Detect changed files
+        if: github.event_name != 'workflow_dispatch'
+        id: changed
+        uses: tj-actions/changed-files@v44
+        with:
+          files: 'src/content/**/*.md'
+          since_last_remote_commit: true
+          separator: ','
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run validation
+        id: run
+        env:
+          ADDED_FILES:    ${{ steps.changed.outputs.added_files }}
+          MODIFIED_FILES: ${{ steps.changed.outputs.modified_files }}
+          MANUAL_FILE:    ${{ github.event.inputs.file }}
+          GIT_EVENT:      ${{ github.event_name }}
+        run: node .github/scripts/validate.mjs
