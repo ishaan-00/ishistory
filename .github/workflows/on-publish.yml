@@ -5,11 +5,10 @@ on:
     branches: [main]
     paths:
       - 'src/content/**/*.md'
-  # Add this to allow manual triggers from your CMS and daily script
   workflow_dispatch:
     inputs:
       file:
-        description: 'File to publish (e.g. src/content/ai-history/episode-01.md)'
+        description: 'File to process'
         required: true
         type: string
 
@@ -32,40 +31,32 @@ jobs:
         with:
           fetch-depth: 2
 
-      # Only run tj-actions/changed-files if triggered by a push
       - name: Detect new content files
-        id: changed
         if: github.event_name == 'push'
+        id: changed
         uses: tj-actions/changed-files@v44
         with:
           files: 'src/content/**/*.md'
           since_last_remote_commit: true
-
-      # Combine logic: use inputs.file for dispatch, added_files for push
-      - name: Determine files to process
-        id: target
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "files=${{ inputs.file }}" >> $GITHUB_OUTPUT
-          else
-            echo "files=${{ steps.changed.outputs.added_files }}" >> $GITHUB_OUTPUT
-          fi
+          separator: ','
 
       - name: Log detected files
+        if: github.event_name == 'push'
         run: |
-          echo "Files to process: ${{ steps.target.outputs.files }}"
-          if [ -z "${{ steps.target.outputs.files }}" ]; then
+          echo "Added:    ${{ steps.changed.outputs.added_files }}"
+          echo "Modified: ${{ steps.changed.outputs.modified_files }}"
+          if [ -z "${{ steps.changed.outputs.added_files }}" ]; then
             echo "No new posts — only edits or non-content changes."
           fi
 
       - name: Setup Node.js
-        if: steps.target.outputs.files != ''
+        if: github.event_name == 'workflow_dispatch' || steps.changed.outputs.added_files != ''
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Run publish pipeline
-        if: steps.target.outputs.files != ''
+        if: github.event_name == 'workflow_dispatch' || steps.changed.outputs.added_files != ''
         env:
           DEVTO_API_KEY:            ${{ secrets.DEVTO_API_KEY }}
           HASHNODE_API_KEY:         ${{ secrets.HASHNODE_API_KEY }}
@@ -81,32 +72,48 @@ jobs:
           GIT_REPO:                 ${{ github.repository }}
         run: |
           EXIT_CODE=0
-          # Use a while-read loop to safely handle filenames with spaces
-          echo "${{ steps.target.outputs.files }}" | tr ' ' '\n' | while read -r file; do
-            if [ -n "$file" ]; then
-              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-              echo "Processing: $file"
-              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-              node .github/scripts/pipeline.mjs "$file" || EXIT_CODE=$?
-            fi
-          done
+          
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "Processing scheduled file: ${{ github.event.inputs.file }}"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            node .github/scripts/pipeline.mjs "${{ github.event.inputs.file }}" || EXIT_CODE=$?
+          else
+            IFS=',' read -r -a files <<< "${{ steps.changed.outputs.added_files }}"
+            for file in "${files[@]}"; do
+              if [ -n "$file" ]; then
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                echo "Processing: $file"
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                node .github/scripts/pipeline.mjs "$file" || EXIT_CODE=$?
+              fi
+            done
+          fi
           exit $EXIT_CODE
 
       - name: Pipeline summary
         if: always()
         run: |
-          if [ -z "${{ steps.target.outputs.files }}" ]; then
-            echo "## No new posts to process" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "## Publish Pipeline Complete" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "## Publish Pipeline Complete (Scheduled)" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Files processed:**" >> $GITHUB_STEP_SUMMARY
-            # Safe loop for summary too
-            echo "${{ steps.target.outputs.files }}" | tr ' ' '\n' | while read -r file; do
-              if [ -n "$file" ]; then
-                echo "- \`$file\`" >> $GITHUB_STEP_SUMMARY
-              fi
-            done
+            echo "**File processed:**" >> $GITHUB_STEP_SUMMARY
+            echo "- \`${{ github.event.inputs.file }}\`" >> $GITHUB_STEP_SUMMARY
             echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          else
+            if [ -z "${{ steps.changed.outputs.added_files }}" ]; then
+              echo "## No new posts in this push" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "## Publish Pipeline Complete" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "**Files processed:**" >> $GITHUB_STEP_SUMMARY
+              IFS=',' read -r -a files <<< "${{ steps.changed.outputs.added_files }}"
+              for file in "${files[@]}"; do
+                if [ -n "$file" ]; then
+                  echo "- \`$file\`" >> $GITHUB_STEP_SUMMARY
+                fi
+              done
+              echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+            fi
           fi
           
