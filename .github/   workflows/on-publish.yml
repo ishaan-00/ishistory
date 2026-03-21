@@ -1,1 +1,67 @@
+name: Publish Pipeline
 
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/content/**/*.md'
+
+concurrency:
+  group: publish-pipeline
+  cancel-in-progress: false
+
+jobs:
+  pipeline:
+    name: Social & notification pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Get newly added content files
+        id: changed
+        uses: tj-actions/changed-files@v44
+        with:
+          files: 'src/content/**/*.md'
+          diff_relative: true
+
+      - name: Skip if no new posts
+        if: steps.changed.outputs.added_files == ''
+        run: |
+          echo "No new markdown files added. Skipping pipeline."
+          exit 0
+
+      - name: Setup Node.js
+        if: steps.changed.outputs.added_files != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        if: steps.changed.outputs.added_files != ''
+        run: |
+          cd .github/scripts
+          npm install
+
+      - name: Run publish pipeline for each new post
+        if: steps.changed.outputs.added_files != ''
+        env:
+          DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
+          HASHNODE_API_KEY: ${{ secrets.HASHNODE_API_KEY }}
+          HASHNODE_PUBLICATION_ID: ${{ secrets.HASHNODE_PUBLICATION_ID }}
+          DISCORD_WEBHOOK_ARTICLES: ${{ secrets.DISCORD_WEBHOOK_ARTICLES }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
+          WORKER_URL: ${{ secrets.WORKER_URL }}
+          CMS_API_KEY: ${{ secrets.CMS_API_KEY }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          for file in ${{ steps.changed.outputs.added_files }}; do
+            echo "Processing: $file"
+            node .github/scripts/pipeline.js "$file"
+          done
