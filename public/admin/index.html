@@ -192,15 +192,13 @@
   <div class="login-box">
     <div class="login-logo">ishistory</div>
     <div class="login-sub">Command Centre</div>
-    <div class="d-field">
-      <label class="d-lbl">GitHub Personal Access Token</label>
-      <input class="d-inp" type="password" id="d-pat" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" />
-    </div>
-    <button class="d-btn pri" style="width:100%;padding:11px;font-size:12px" onclick="doLogin()">Connect to GitHub</button>
+    <button class="d-btn pri" style="width:100%;padding:13px;font-size:13px;margin-bottom:12px" onclick="doOAuth()">
+      Sign in with GitHub
+    </button>
+    <div id="login-status" style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;min-height:16px"></div>
     <div class="login-note">
-      Needs <strong style="color:var(--text2)">repo</strong> scope only.<br>
-      <a href="https://github.com/settings/tokens/new?scopes=repo&description=ishistory+dashboard" target="_blank" rel="noopener">Generate token on GitHub →</a><br><br>
-      Stored in browser localStorage. Only used to call GitHub's API directly.
+      Uses the same OAuth flow as the CMS.<br>
+      One login covers both — no token to remember.
     </div>
   </div>
 </div>
@@ -292,19 +290,54 @@
   let TOKEN = null, isOpen = false, activeTab = 'overview', treeCache = null;
 
   // ── Auth ──────────────────────────────────────────────────────────────────
-  async function doLogin() {
-    const v = document.getElementById('d-pat').value.trim();
-    if (!v) { toast('Paste your token', 'err'); return; }
-    // Verify immediately
-    try {
-      const u = await ghRaw('/user', 'GET', null, v);
-      localStorage.setItem(TOK_KEY, v);
-      TOKEN = v;
-      setUser(u.login);
-      document.getElementById('d-login').classList.remove('show');
-    } catch(e) {
-      toast('Invalid token: ' + e.message, 'err');
-    }
+  const AUTH_WORKER = 'https://sveltia-cms-auth.aadityadarpan5.workers.dev';
+  const SITE_ID     = location.host || 'ishistory.pages.dev';
+
+  function doOAuth() {
+    const status = document.getElementById('login-status');
+    status.textContent = 'Opening GitHub login…';
+    const w = 600, h = 700;
+    const left = Math.max(0, (screen.width  - w) / 2);
+    const top  = Math.max(0, (screen.height - h) / 2);
+    const popup = window.open(
+      AUTH_WORKER + '/auth?provider=github&site_id=' + SITE_ID,
+      'gh-oauth',
+      'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top
+    );
+    if (!popup) { status.textContent = 'Popup blocked — allow popups for this page'; return; }
+
+    const onMsg = async (e) => {
+      // sveltia-cms-auth sends: "authorization:github:success:{...}"
+      if (typeof e.data !== 'string') return;
+      if (!e.data.startsWith('authorization:github:success:')) return;
+      window.removeEventListener('message', onMsg);
+      try {
+        const payload = JSON.parse(e.data.replace('authorization:github:success:', ''));
+        const tok = payload.token;
+        if (!tok) { status.textContent = 'No token in response'; return; }
+        // Verify token
+        const u = await ghRaw('/user', 'GET', null, tok);
+        localStorage.setItem(TOK_KEY, tok);
+        TOKEN = tok;
+        setUser(u.login);
+        document.getElementById('d-login').classList.remove('show');
+        status.textContent = '';
+        popup.close();
+      } catch(e2) {
+        status.textContent = 'Auth failed: ' + e2.message;
+      }
+    };
+    window.addEventListener('message', onMsg);
+
+    // Clean up if popup closed manually
+    const checkClosed = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(checkClosed);
+        window.removeEventListener('message', onMsg);
+        const s = document.getElementById('login-status');
+        if (s && s.textContent === 'Opening GitHub login…') s.textContent = '';
+      }
+    }, 500);
   }
 
   function doLogout() {
@@ -631,7 +664,7 @@
     }).catch(()=>{});
   }
 
-  document.getElementById('d-pat').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+  // OAuth flow — no PAT input needed
   dInit();
 </script>
 </body>
