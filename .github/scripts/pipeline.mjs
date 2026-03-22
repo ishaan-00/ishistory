@@ -94,6 +94,16 @@ async function safeJson(res) {
   return res.json();
 }
 
+// ─── Content hashing ──────────────────────────────────────────────────────────
+function hashContent(text) {
+  return createHash('sha256').update(text).digest('hex');
+}
+
+// ─── HMAC request signing (for Worker webhook) ────────────────────────────────
+function signRequest(bodyStr, secret, timestamp) {
+  return createHmac('sha256', secret).update(`${timestamp}:${bodyStr}`).digest('hex');
+}
+
 // ─── Frontmatter parser (using gray-matter) ───────────────────────────────────
 function parseFrontmatter(raw) {
   try {
@@ -108,93 +118,6 @@ function parseFrontmatter(raw) {
   } catch (e) {
     log.warn(`Frontmatter parse failed: ${e.message}`);
     return { fm: {}, body: raw };
-// ─── Content hashing ──────────────────────────────────────────────────────────
-function hashContent(text) {
-  return createHash('sha256').update(text).digest('hex');
-}
-
-// ─── HMAC request signing (for Worker webhook) ────────────────────────────────
-function signRequest(bodyStr, secret, timestamp) {
-  return createHmac('sha256', secret).update(`${timestamp}:${bodyStr}`).digest('hex');
-}
-
-// ─── Inline frontmatter parser (zero deps) ────────────────────────────────────
-// Handles: block scalars (|), booleans, arrays (inline + block), floats, null.
-function parseFrontmatter(raw) {
-  const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
-  if (!match) return { fm: {}, body: raw };
-
-  const fm = {};
-  let currentKey      = null;
-  let multilineVal    = null;
-  let multilineIndent = 0;
-  let blockListKey    = null;
-  let blockList       = null;
-
-  for (const line of match[1].split('\n')) {
-    // Inside a block sequence (- item)
-    if (blockList !== null) {
-      const listItem = line.match(/^\s+-\s+(.*)$/);
-      if (listItem) {
-        blockList.push(listItem[1].trim().replace(/^["']|["']$/g, ''));
-        continue;
-      }
-      fm[blockListKey] = blockList;
-      blockList = null; blockListKey = null;
-    }
-
-    // Inside a block scalar (|)
-    if (multilineVal !== null) {
-      if (multilineIndent === 0 && line.trim())
-        multilineIndent = line.length - line.trimStart().length;
-      if (line.trim() === '' || (multilineIndent > 0 && line.startsWith(' '.repeat(multilineIndent)))) {
-        multilineVal += (multilineVal ? '\n' : '') + line.slice(multilineIndent);
-        continue;
-      }
-      fm[currentKey]  = multilineVal.trimEnd();
-      multilineVal    = null;
-      multilineIndent = 0;
-      currentKey      = null;
-    }
-
-    const colon = line.indexOf(':');
-    if (colon === -1) continue;
-
-    const key  = line.slice(0, colon).trim();
-    const rest = line.slice(colon + 1).trim();
-    if (!key) continue;
-
-    if (rest === '|') {
-      currentKey = key; multilineVal = ''; multilineIndent = 0; continue;
-    }
-
-    // Empty value followed by block list on next lines
-    if (rest === '') {
-      blockListKey = key; blockList = []; continue;
-    }
-
-    fm[key] = coerceYamlValue(rest);
-  }
-
-  // Flush trailing values
-  if (multilineVal !== null && currentKey) fm[currentKey] = multilineVal.trimEnd();
-  if (blockList !== null && blockListKey)  fm[blockListKey] = blockList;
-
-  return { fm, body: match[2] };
-}
-
-// ─── YAML value coercion ──────────────────────────────────────────────────────
-function coerceYamlValue(raw) {
-  const val = raw.replace(/^["']|["']$/g, '');
-  if (val === 'true')                   return true;
-  if (val === 'false')                  return false;
-  if (val === 'null' || val === '~')    return null;
-  if (val === '')                       return '';
-  if (/^-?\d+$/.test(val))             return parseInt(val, 10);
-  if (/^-?\d+\.\d+$/.test(val))        return parseFloat(val);
-  if (/^\d{4}-\d{2}-\d{2}/.test(val))  return val;
-  if (val.startsWith('[') && val.endsWith(']')) {
-    return val.slice(1, -1).split(',').map(s => s.trim().replace(/^["']|["']$/g, ''));
   }
 }
 
