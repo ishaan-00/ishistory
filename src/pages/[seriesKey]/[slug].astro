@@ -4,6 +4,7 @@ import Cosmos from '../../components/Cosmos.astro';
 import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
 import { series as allSeries } from '../../data/series.js';
+import { safeJsonStringify } from '../../utils/json.js';
 
 export async function getStaticPaths() {
   const allContent = await Astro.glob('../../content/**/*.md');
@@ -74,8 +75,8 @@ const breadcrumbLd = {
   nextUrl={nextUrl}
 >
 <Fragment slot="head">
-  <script type="application/ld+json" set:html={JSON.stringify(articleLd)}></script>
-  <script type="application/ld+json" set:html={JSON.stringify(breadcrumbLd)}></script>
+  <script type="application/ld+json" set:html={safeJsonStringify(articleLd)}></script>
+  <script type="application/ld+json" set:html={safeJsonStringify(breadcrumbLd)}></script>
 </Fragment>
 
 <div id="progress-bar" aria-hidden="true"></div>
