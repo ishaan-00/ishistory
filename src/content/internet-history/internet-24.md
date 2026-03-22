@@ -9,6 +9,8 @@ tag: "Culture"
 description: "How the web developed its own language — from early image macros to viral culture, and what memes reveal about how information spreads."
 date: 2026-03-12
 coming_soon: true
+read_time: 1
+
 ---
 
 *Coming soon.*

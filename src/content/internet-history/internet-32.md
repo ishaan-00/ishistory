@@ -9,6 +9,8 @@ tag: "Social Media"
 description: "The platform that changed political communication — from Arab Spring to presidential tweets to Elon Musk's takeover, and what it all means."
 date: 2026-03-12
 coming_soon: true
+read_time: 1
+
 ---
 
 *Coming soon.*

@@ -8,6 +8,8 @@ part_label: "Part IX · The Creative & Human Frontier"
 tag: "Creativity & Co-creation"
 description: "Art, writing, design — the uneasy and productive collaboration between human and machine imagination."
 date: 2026-03-09
+read_time: 33
+
 ---
 
 **AI in Creativity**

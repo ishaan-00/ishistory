@@ -9,6 +9,8 @@ tag: "Business"
 description: "Why it all collapsed, who survived, and what the wreckage left behind — including the seeds of everything that came next."
 date: 2026-03-12
 coming_soon: true
+read_time: 1
+
 ---
 
 *Coming soon.*

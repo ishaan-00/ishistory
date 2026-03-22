@@ -9,6 +9,8 @@ part_label: "Profiles: The Builders"
 tag: "Profile"
 description: "From Y Combinator president to OpenAI CEO — the story of the man steering the most prominent AI company in the world through historic breakthroughs and boardroom drama."
 date: 2026-03-12
+read_time: 8
+
 ---
 
 # Sam Altman

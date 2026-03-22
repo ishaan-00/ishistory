@@ -9,6 +9,8 @@ part_label: "Profiles: Founders & Theorists"
 tag: "Profile"
 description: "The father of information theory — the mathematical framework that made digital communication, computers, and AI possible."
 date: 2026-03-12
+read_time: 12
+
 ---
 
 # Claude Shannon

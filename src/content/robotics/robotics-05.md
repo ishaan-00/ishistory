@@ -9,6 +9,8 @@ tag: "Ethics"
 description: "How a science fiction writer's three rules became the foundation for real policy debate, and why they ultimately fall short."
 date: 2026-03-12
 draft: true
+read_time: 1
+
 ---
 
 *Coming soon.*

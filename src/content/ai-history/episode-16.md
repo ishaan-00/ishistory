@@ -8,6 +8,8 @@ part_label: "Part VII · AI in the Real World"
 tag: "Generative AI"
 description: "From GANs and diffusion models to DALL·E, Stable Diffusion, and the automation of creativity."
 date: 2026-03-09
+read_time: 38
+
 ---
 
 **The Rise of Generative AI**

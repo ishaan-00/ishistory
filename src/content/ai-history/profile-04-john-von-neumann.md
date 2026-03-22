@@ -9,6 +9,8 @@ part_label: "Profiles: Founders & Theorists"
 tag: "Profile"
 description: "The architect of modern computer design whose stored-program concept made general-purpose computing — and eventually AI — possible."
 date: 2026-03-12
+read_time: 13
+
 ---
 
 # John von Neumann

@@ -9,6 +9,8 @@ tag: "Ethics"
 description: "As robots become more sophisticated, an emerging legal and philosophical debate asks: at what point do machines deserve moral consideration?"
 date: 2026-03-12
 draft: true
+read_time: 1
+
 ---
 
 *Coming soon.*

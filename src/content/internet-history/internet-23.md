@@ -9,6 +9,8 @@ tag: "Business"
 description: "Why the open web gave way to walled gardens — and what we lost when the internet became a collection of locked platforms."
 date: 2026-03-12
 coming_soon: true
+read_time: 1
+
 ---
 
 *Coming soon.*

@@ -8,6 +8,8 @@ part_label: "Part X · The Deepest Questions"
 tag: "Philosophy of Mind"
 description: "Consciousness, intelligence, and the Chinese Room — the questions AI forces us to ask about ourselves."
 date: 2026-03-09
+read_time: 35
+
 ---
 
 **AI and Philosophy of Mind**

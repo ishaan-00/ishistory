@@ -9,6 +9,8 @@ tag: "Web"
 description: "Clearing up the most common misconception in tech — and the story of Tim Berners-Lee's proposal that his boss called 'vague but exciting.'"
 date: 2026-03-12
 coming_soon: true
+read_time: 1
+
 ---
 
 *Coming soon.*

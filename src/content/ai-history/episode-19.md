@@ -8,6 +8,8 @@ part_label: "Part VIII · Society & Consequences"
 tag: "Industry & Automation"
 description: "Finance, logistics, manufacturing — how AI is restructuring the economy and the nature of work."
 date: 2026-03-09
+read_time: 33
+
 ---
 
 **AI in Industry**

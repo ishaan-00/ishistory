@@ -48,6 +48,8 @@ teaser: |
   Artificial intelligence is not an accident of the late twentieth century. It is the continuation of humanity's oldest and most persistent dream.
 
   **The full article** explores each of these traditions in depth — the complete mythology of Talos and the Golem, the engineering genius of Al-Jazari, the philosophical frameworks of Descartes, Hobbes, and Leibniz, and the mechanical wonders of the Renaissance — tracing the unbroken thread from ancient myth to the threshold of the modern computer age.
+read_time: 15
+
 ---
 
 **AI Before Computers**

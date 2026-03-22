@@ -92,8 +92,7 @@ const breadcrumbJsonLd = {
           {eps.map(page => {
             const fm   = page.frontmatter;
             const slug = page.file.split('/').pop()?.replace('.md', '') ?? '';
-            const words = typeof page.rawContent === 'function' ? page.rawContent().trim().split(/\s+/).length : 0;
-            const time  = Math.max(1, Math.round(words / 230));
+            const time = fm.read_time ?? 0;
             return (
               <a href={`/${seriesKey}/${slug}/`} class="ep-card" data-read-key={`read:${seriesKey}:${slug}`}>
                 <div class="ep-card-num">{fm.roman}</div>

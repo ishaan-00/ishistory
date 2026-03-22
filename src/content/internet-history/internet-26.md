@@ -9,6 +9,8 @@ tag: "Security"
 description: "Security's weakest link from the very beginning — the surprisingly long, consistently troubled history of trying to keep people out of things online."
 date: 2026-03-12
 coming_soon: true
+read_time: 1
+
 ---
 
 *Coming soon.*

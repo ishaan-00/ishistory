@@ -8,6 +8,8 @@ part_label: "Part X · The Deepest Questions"
 tag: "Futures"
 description: "Utopian visions and existential risks — the spectrum of possibilities that AI opens for humanity."
 date: 2026-03-09
+read_time: 27
+
 ---
 
 **Future Scenarios**

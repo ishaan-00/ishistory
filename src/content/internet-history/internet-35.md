@@ -9,6 +9,8 @@ tag: "Technology"
 description: "The dream of a decentralized internet — blockchain, Bitcoin, NFTs, and the enduring question of whether trustless systems can actually replace trust."
 date: 2026-03-12
 coming_soon: true
+read_time: 1
+
 ---
 
 *Coming soon.*

@@ -9,6 +9,8 @@ tag: "Business"
 description: "Netflix, Spotify, and the death of physical media — how Silicon Valley dismantled the music, film, and TV industries and rebuilt them in its own image."
 date: 2026-03-12
 coming_soon: true
+read_time: 1
+
 ---
 
 *Coming soon.*

@@ -8,6 +8,8 @@ part_label: "Part VI · The Deep Learning Decade"
 tag: "Language & Speech"
 description: "How machines learned to hear, understand, and speak the language of humans."
 date: 2026-03-09
+read_time: 32
+
 ---
 
 **Speech Recognition & NLP Breakthroughs**

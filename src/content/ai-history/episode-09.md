@@ -8,6 +8,8 @@ part_label: "Part V · The Deep Learning Decade"
 tag: "Deep Learning"
 description: "How neural networks scaled from curiosity to world-changing technology in a single decade — AlexNet, AlphaGo, and the Transformer."
 date: 2026-03-09
+read_time: 31
+
 ---
 
 AI HISTORY SERIES --- EPISODE 9

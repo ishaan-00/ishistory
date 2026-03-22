@@ -9,6 +9,8 @@ part_label: 'Profiles: Deep Learning Revolution'
 tag: Profile
 description: The quiet architect of deep learning's theoretical foundations, and the most prominent AI scientist to have embraced the cause of existential safety.
 date: 2026-03-16
+read_time: 11
+
 ---
 
 # Yoshua Bengio

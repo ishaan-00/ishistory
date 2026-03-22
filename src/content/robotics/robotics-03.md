@@ -9,6 +9,8 @@ tag: "Science"
 description: "The forgotten science that laid the theoretical groundwork for robotics, feedback loops, and intelligent machines."
 date: 2026-03-12
 draft: true
+read_time: 1
+
 ---
 
 *Coming soon.*

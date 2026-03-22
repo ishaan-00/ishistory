@@ -9,6 +9,8 @@ part_label: "Profiles: Founders & Theorists"
 tag: "Profile"
 description: "The man who asked 'Can machines think?' — his wartime codebreaking, the Turing Test, and his tragic end."
 date: 2026-03-12
+read_time: 14
+
 ---
 
 # Alan Turing

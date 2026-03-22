@@ -8,6 +8,8 @@ part_label: "Part VI · The Deep Learning Decade"
 tag: "Transformers"
 description: "How eight researchers and one equation remade the architecture of artificial intelligence."
 date: 2026-03-09
+read_time: 36
+
 ---
 
 **Transformers & GPT Architecture**

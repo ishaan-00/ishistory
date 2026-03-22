@@ -8,6 +8,8 @@ part_label: "Part VII · AI in the Real World"
 tag: "AI & Medicine"
 description: "How machine learning entered the clinic, the laboratory, and the foundations of science itself."
 date: 2026-03-09
+read_time: 36
+
 ---
 
 **AI in Healthcare & Science**

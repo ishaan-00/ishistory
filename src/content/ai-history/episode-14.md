@@ -8,6 +8,8 @@ part_label: "Part VII · AI in the Real World"
 tag: "Games & RL"
 description: "From Shannon's paper king to AlphaZero: how the pursuit of game mastery drove seventy years of AI breakthroughs."
 date: 2026-03-09
+read_time: 37
+
 ---
 
 **AI in Gaming**

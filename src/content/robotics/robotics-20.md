@@ -9,6 +9,8 @@ tag: "Society"
 description: "Loneliness, elder care, and emotional machines — the complicated story of robots designed to provide comfort and connection."
 date: 2026-03-12
 draft: true
+read_time: 1
+
 ---
 
 *Coming soon.*

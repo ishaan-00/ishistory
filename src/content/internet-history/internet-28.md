@@ -9,6 +9,8 @@ tag: "Privacy"
 description: "Cookies, tracking pixels, and the ad-tech machine — how the internet's business model turned user attention into the world's most valuable commodity."
 date: 2026-03-12
 coming_soon: true
+read_time: 1
+
 ---
 
 *Coming soon.*

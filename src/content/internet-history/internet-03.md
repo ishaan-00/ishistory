@@ -9,6 +9,8 @@ tag: "Engineering"
 description: "The invisible rules that every device on earth follows — and the two engineers who designed them over a single afternoon."
 date: 2026-03-12
 coming_soon: true
+read_time: 1
+
 ---
 
 *Coming soon.*

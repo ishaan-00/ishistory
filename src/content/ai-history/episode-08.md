@@ -8,6 +8,8 @@ part_label: "Part IV · Winters & Revivals"
 tag: "Machine Learning"
 description: "How AI abandoned hand-crafted rules, embraced statistical learning from data, and quietly embedded itself in the fabric of everyday life."
 date: 2026-03-09
+read_time: 27
+
 ---
 
 AI HISTORY SERIES --- EPISODE 8

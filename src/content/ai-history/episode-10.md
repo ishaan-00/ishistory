@@ -8,6 +8,8 @@ part_label: "Part V · The Deep Learning Decade"
 tag: "AI & Society"
 description: "Search engines, spam filters, voice assistants, and recommendation systems — the invisible infrastructure of machine intelligence in daily life."
 date: 2026-03-09
+read_time: 30
+
 ---
 
 AI HISTORY SERIES --- EPISODE 10

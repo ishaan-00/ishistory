@@ -9,6 +9,8 @@ part_label: "Profiles: Founders & Theorists"
 tag: "Profile"
 description: "The man who named artificial intelligence, invented Lisp, and spent fifty years insisting that machines could — and should — be made to reason."
 date: 2026-03-12
+read_time: 14
+
 ---
 
 # John McCarthy

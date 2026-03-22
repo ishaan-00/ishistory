@@ -9,6 +9,8 @@ tag: "Business"
 description: "Amazon, eBay, and the slow-then-sudden transformation of retail — and why almost everyone said it would never work."
 date: 2026-03-12
 coming_soon: true
+read_time: 1
+
 ---
 
 *Coming soon.*

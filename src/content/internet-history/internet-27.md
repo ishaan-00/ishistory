@@ -9,6 +9,8 @@ tag: "Policy"
 description: "The battle over who controls internet speed — the policy fight that sounds technical but is really about who owns the future of communication."
 date: 2026-03-12
 coming_soon: true
+read_time: 1
+
 ---
 
 *Coming soon.*

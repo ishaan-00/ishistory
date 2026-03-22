@@ -9,6 +9,8 @@ tag: "Culture"
 description: "From Frankenstein to R2-D2 — how science fiction shaped public expectations, fears, and ultimately the direction of real-world robotics research."
 date: 2026-03-12
 draft: true
+read_time: 1
+
 ---
 
 *Coming soon.*

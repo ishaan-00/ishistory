@@ -9,6 +9,8 @@ tag: "Culture"
 description: "Why Japan embraced robots culturally and industrially before anyone else — and what it tells us about the relationship between society and automation."
 date: 2026-03-12
 draft: true
+read_time: 1
+
 ---
 
 *Coming soon.*

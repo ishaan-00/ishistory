@@ -8,6 +8,8 @@ part_label: "Part IX · The Creative & Human Frontier"
 tag: "Education & Knowledge"
 description: "Tutoring systems, knowledge discovery, and the transformation of how humans learn and investigate."
 date: 2026-03-09
+read_time: 33
+
 ---
 
 **AI in Education & Research**

@@ -8,6 +8,8 @@ part_label: "Part VIII · Society & Consequences"
 tag: "Culture & Identity"
 description: "How artificial intelligence is reshaping art, media, memory, and what it means to be human."
 date: 2026-03-09
+read_time: 39
+
 ---
 
 **AI in Society & Culture**

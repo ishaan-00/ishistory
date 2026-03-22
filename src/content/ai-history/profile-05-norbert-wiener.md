@@ -9,6 +9,8 @@ part_label: "Profiles: Founders & Theorists"
 tag: "Profile"
 description: "The originator of cybernetics, whose ideas about feedback, control, and communication in machines and animals laid the groundwork for AI and robotics alike."
 date: 2026-03-12
+read_time: 14
+
 ---
 
 # Norbert Wiener

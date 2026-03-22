@@ -72,6 +72,8 @@ hashnode_content: |
   Thus, as we reflect on the philosophical foundations of artificial intelligence, we acknowledge a lineage of thought that transcends the mere mechanics of computation—a lineage that invites us to engage with the profound complexities of our own humanity. In the light of this rich historical tapestry, we are compelled to consider not only how we build machines that think but also what it means to think and to be human in a world increasingly populated by our own creations. This exploration is not merely an academic pursuit; it is a vital inquiry that resonates deeply with the very essence of our existence as we stand at the crossroads of humanity and technology.
   
   This article is part of the AI history series on ishistory.pages.dev, where we delve into the intricate relationship between philosophical thought and technological advancement, tracing the lineage of ideas that shape our understanding of artificial intelligence today.
+read_time: 25
+
 ---
 
 AI HISTORY SERIES --- EPISODE 3

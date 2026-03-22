@@ -8,6 +8,8 @@ part_label: "Part X · The Deepest Questions"
 tag: "The Full Arc"
 description: "From bronze giants to transformers — tying mythology, history, and modern breakthroughs into one story."
 date: 2026-03-09
+read_time: 31
+
 ---
 
 **From Myth to Modern Reality**

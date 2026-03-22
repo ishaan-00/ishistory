@@ -8,6 +8,8 @@ part_label: "Part X · The Deepest Questions"
 tag: "Policy & Geopolitics"
 description: "Regulation, international competition, and the race to govern a technology that respects no borders."
 date: 2026-03-09
+read_time: 34
+
 ---
 
 **AI Governance & Global Policy**

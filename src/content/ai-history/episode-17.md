@@ -8,6 +8,8 @@ part_label: "Part VIII · Society & Consequences"
 tag: "AI Ethics"
 description: "How societies are confronting the fairness, transparency, and governance challenges of the AI age."
 date: 2026-03-09
+read_time: 38
+
 ---
 
 **Ethics, Bias, and Regulation**

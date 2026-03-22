@@ -9,6 +9,8 @@ part_label: "Profiles: Deep Learning Revolution"
 tag: "Profile"
 description: "The researcher who invented Generative Adversarial Networks in a single evening — and changed the course of generative AI forever."
 date: 2026-03-16
+read_time: 13
+
 ---
 
 # Ian Goodfellow

@@ -8,6 +8,8 @@ part_label: "Part VI · The Deep Learning Decade"
 tag: "Deep Learning"
 description: "How a dataset of fourteen million images and a gaming chip changed the trajectory of artificial intelligence."
 date: 2026-03-09
+read_time: 31
+
 ---
 
 **ImageNet & the GPU Revolution**

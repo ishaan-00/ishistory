@@ -8,6 +8,8 @@ part_label: "Part IV · Winters & Revivals"
 tag: "AI Winters"
 description: "The boom-and-bust cycles that nearly killed AI — and the painful lessons about overconfidence, funding, and the true difficulty of intelligence."
 date: 2026-03-09
+read_time: 26
+
 ---
 
 AI HISTORY SERIES --- EPISODE 7

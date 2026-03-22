@@ -9,6 +9,8 @@ tag: "Culture"
 description: "RoboCup, BattleBots, FIRST Robotics — how competitive robotics has driven innovation and inspired the next generation of engineers."
 date: 2026-03-12
 draft: true
+read_time: 1
+
 ---
 
 *Coming soon.*

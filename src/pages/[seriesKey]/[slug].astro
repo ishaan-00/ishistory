@@ -38,9 +38,7 @@ const related = sorted
   .filter(p => p.file.split('/').pop()?.replace('.md','') !== slug && p.frontmatter.part_label === fm.part_label)
   .slice(0, 3);
 
-const raw      = typeof page.rawContent === 'function' ? page.rawContent() : '';
-const words    = raw.trim().split(/\s+/).length;
-const readTime = Math.max(1, Math.round(words / 230));
+const readTime = fm.read_time ?? 0;
 const dateStr  = fm.date
   ? new Date(fm.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
   : null;
@@ -130,9 +128,8 @@ const breadcrumbLd = {
     <p class="ep-related-label">Also in this part</p>
     <div class="ep-related-grid">
       {related.map(r => {
-        const rSlug  = r.file.split('/').pop()?.replace('.md','');
-        const rWords = typeof r.rawContent === 'function' ? r.rawContent().trim().split(/\s+/).length : 0;
-        const rTime  = Math.max(1, Math.round(rWords / 230));
+        const rSlug = r.file.split('/').pop()?.replace('.md','');
+        const rTime = r.frontmatter.read_time ?? 0;
         return (
           <a href={`/${seriesKey}/${rSlug}/`} class="ep-related-card">
             <div class="ep-related-roman" aria-hidden="true">{r.frontmatter.roman}</div>

@@ -9,6 +9,8 @@ part_label: "Profiles: Founders & Theorists"
 tag: "Profile"
 description: "The co-founder of MIT's AI Lab who built the first neural network machine, then spent decades arguing that intelligence was a society of simple, mindless agents."
 date: 2026-03-12
+read_time: 12
+
 ---
 
 # Marvin Minsky

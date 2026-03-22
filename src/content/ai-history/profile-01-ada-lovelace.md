@@ -9,6 +9,8 @@ part_label: "Profiles: Founders & Theorists"
 tag: "Profile"
 description: "The first programmer, a century before computers existed. How a 19th-century mathematician envisioned machines that could do more than calculate."
 date: 2026-03-12
+read_time: 12
+
 ---
 
 # Ada Lovelace

@@ -122,6 +122,11 @@ function validateFile(filePath, isNew) {
   else if (typeof fm.title !== 'string' || fm.title.trim().length === 0)
     errors.push('title must be a non-empty string');
 
+  if (fm.read_time === undefined || fm.read_time === '')
+    errors.push('Missing required field: read_time');
+  else if (!Number.isInteger(Number(fm.read_time)) || Number(fm.read_time) < 1)
+    errors.push(`read_time must be a positive integer (got: ${fm.read_time})`);
+
   if (!fm.series)
     errors.push('Missing required field: series');
   else if (!KNOWN_SERIES.includes(fm.series))

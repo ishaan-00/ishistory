@@ -9,6 +9,8 @@ part_label: "Profiles: The Builders"
 tag: "Profile"
 description: "The quiet genius behind GPT — co-founder of OpenAI, architect of some of its most important research, and a pivotal figure in the dramatic boardroom crisis of 2023."
 date: 2026-03-12
+read_time: 9
+
 ---
 
 # Ilya Sutskever

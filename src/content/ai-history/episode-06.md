@@ -8,6 +8,8 @@ part_label: "Part III · The Birth of Computing"
 tag: "Origins of AI"
 description: "How Turing's imitation game and the Dartmouth workshop of 1956 transformed artificial intelligence from philosophical fantasy into a scientific discipline."
 date: 2026-03-09
+read_time: 26
+
 ---
 
 AI HISTORY SERIES --- EPISODE 6

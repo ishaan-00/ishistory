@@ -9,6 +9,8 @@ tag: "Science"
 description: "Part machine, part living tissue — the cutting edge of robotics research where biology and engineering converge."
 date: 2026-03-12
 draft: true
+read_time: 1
+
 ---
 
 *Coming soon.*

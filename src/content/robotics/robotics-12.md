@@ -9,6 +9,8 @@ tag: "Engineering"
 description: "The high-stakes competitions that kickstarted modern autonomous vehicles and field robotics — and the teams that changed everything."
 date: 2026-03-12
 draft: true
+read_time: 1
+
 ---
 
 *Coming soon.*

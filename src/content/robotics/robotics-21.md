@@ -9,6 +9,8 @@ tag: "Society"
 description: "Automation anxiety, job displacement, and the real data — separating fear from fact in the debate over robots and employment."
 date: 2026-03-12
 draft: true
+read_time: 1
+
 ---
 
 *Coming soon.*
