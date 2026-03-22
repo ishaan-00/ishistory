@@ -1,7 +1,6 @@
 import type { APIRoute } from 'astro';
 import { series as allSeries } from '../data/series.js';
-
-const siteUrl = 'https://ishistory.pages.dev';
+import { siteUrl } from '../data/config.js';
 
 function esc(str: string): string {
   return (str ?? '')

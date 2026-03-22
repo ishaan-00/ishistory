@@ -4,6 +4,7 @@ import Cosmos from '../../components/Cosmos.astro';
 import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
 import { series as allSeries } from '../../data/series.js';
+import { siteUrl } from '../../data/config.js';
 
 export function getStaticPaths() {
   return Object.keys(allSeries).map(key => ({ params: { seriesKey: key } }));
@@ -34,8 +35,8 @@ const breadcrumbJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'ishistory', item: 'https://ishistory.pages.dev' },
-    { '@type': 'ListItem', position: 2, name: s.label, item: `https://ishistory.pages.dev/${seriesKey}/` },
+    { '@type': 'ListItem', position: 1, name: 'ishistory', item: siteUrl },
+    { '@type': 'ListItem', position: 2, name: s.label, item: `${siteUrl}/${seriesKey}/` },
   ],
 };
 ---

@@ -4,6 +4,7 @@ import Cosmos from '../../components/Cosmos.astro';
 import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
 import { series as allSeries } from '../../data/series.js';
+import { siteUrl } from '../../data/config.js';
 
 export async function getStaticPaths() {
   const allContent = await Astro.glob('../../content/**/*.md');
@@ -45,7 +46,6 @@ const dateStr  = fm.date
   ? new Date(fm.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
   : null;
 
-const siteUrl   = 'https://ishistory.pages.dev';
 const canonical = `${siteUrl}/${seriesKey}/${slug}/`;
 
 const articleLd = {
