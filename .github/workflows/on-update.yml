@@ -1,0 +1,104 @@
+name: Update Published Article
+
+# Triggered by the dashboard "Update on platforms" button via the Worker's
+# /webhook/trigger-update endpoint, which calls:
+#   POST /repos/{repo}/actions/workflows/on-update.yml/dispatches
+#
+# Can also be triggered manually from the Actions tab.
+
+on:
+  workflow_dispatch:
+    inputs:
+      file:
+        description: 'Repo-relative path to the .md file to update'
+        required: true
+        type: string
+      platforms:
+        description: 'Comma-separated platforms to update (devto, hashnode, or both)'
+        required: false
+        type: string
+        default: 'devto,hashnode'
+      dry_run:
+        description: 'Dry run — preview changes without pushing to platforms'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  # Allow one update per file at a time; queue rather than cancel
+  group: update-${{ github.event.inputs.file }}
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Update published article
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write   # writes updated content hash back to post-ids.json
+      models:   read    # GitHub Models API (gpt-4o-mini) for content re-generation
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate input file exists
+        run: |
+          if [ ! -f "${{ github.event.inputs.file }}" ]; then
+            echo "::error::File not found: ${{ github.event.inputs.file }}"
+            exit 1
+          fi
+          echo "✓ File exists: ${{ github.event.inputs.file }}"
+
+      - name: Run update pipeline
+        env:
+          DEVTO_API_KEY:            ${{ secrets.DEVTO_API_KEY }}
+          HASHNODE_API_KEY:         ${{ secrets.HASHNODE_API_KEY }}
+          HASHNODE_PUBLICATION_ID:  ${{ secrets.HASHNODE_PUBLICATION_ID }}
+          WORKER_URL:               ${{ secrets.WORKER_URL }}
+          CMS_API_KEY:              ${{ secrets.CMS_API_KEY }}
+          GITHUB_TOKEN:             ${{ secrets.GITHUB_TOKEN }}
+          GIT_SHA:                  ${{ github.sha }}
+          GIT_REPO:                 ${{ github.repository }}
+          # Discord / Ntfy / IndexNow are intentionally NOT passed here —
+          # update runs never re-notify or re-ping search engines.
+        run: |
+          DRY_RUN_FLAG=""
+          if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+            DRY_RUN_FLAG="--dry-run"
+            echo "ℹ Dry run mode — no updates will be pushed"
+          fi
+
+          PLATFORMS_FLAG=""
+          if [ -n "${{ github.event.inputs.platforms }}" ]; then
+            PLATFORMS_FLAG="--platforms=${{ github.event.inputs.platforms }}"
+          fi
+
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Updating: ${{ github.event.inputs.file }}"
+          echo "Platforms: ${{ github.event.inputs.platforms }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          node .github/scripts/pipeline.mjs \
+            "${{ github.event.inputs.file }}" \
+            --update \
+            $PLATFORMS_FLAG \
+            $DRY_RUN_FLAG
+
+      - name: Update summary
+        if: always()
+        run: |
+          echo "## Update Pipeline" >> $GITHUB_STEP_SUMMARY
+          echo "- **File:** \`${{ github.event.inputs.file }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Platforms:** \`${{ github.event.inputs.platforms }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+            echo "> ⚠️ **Dry run** — no platforms were updated" >> $GITHUB_STEP_SUMMARY
+          fi

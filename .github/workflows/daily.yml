@@ -11,7 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      contents: write      # needed to update scheduled.json
+      contents: write   # update scheduled.json after dispatching due posts
+      actions:  write   # dispatch workflow_dispatch on on-publish.yml
 
     steps:
       - name: Checkout
@@ -27,23 +28,16 @@ jobs:
 
       - name: Run daily tasks
         env:
+          # Only the vars daily.mjs actually reads — platform API keys are
+          # not used here; they are passed in on-publish.yml instead.
           DISCORD_WEBHOOK_TODAY:    ${{ secrets.DISCORD_WEBHOOK_TODAY }}
           DISCORD_WEBHOOK_ARTICLES: ${{ secrets.DISCORD_WEBHOOK_ARTICLES }}
-          DEVTO_API_KEY:            ${{ secrets.DEVTO_API_KEY }}
-          HASHNODE_API_KEY:         ${{ secrets.HASHNODE_API_KEY }}
-          HASHNODE_PUBLICATION_ID:  ${{ secrets.HASHNODE_PUBLICATION_ID }}
-          NTFY_TOPIC:               ${{ secrets.NTFY_TOPIC }}
-          INDEXNOW_KEY:             ${{ secrets.INDEXNOW_KEY }}
-          WORKER_URL:               ${{ secrets.WORKER_URL }}
-          CMS_API_KEY:              ${{ secrets.CMS_API_KEY }}
           GITHUB_TOKEN:             ${{ secrets.GITHUB_TOKEN }}
           GIT_REPO:                 ${{ github.repository }}
-          GIT_SHA:                  ${{ github.sha }}
         run: node .github/scripts/daily.mjs
 
       - name: Summary
         if: always()
         run: |
           echo "## Daily Run — $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
-          echo "Cron: Today in History + Scheduled posts processed." >> $GITHUB_STEP_SUMMARY
-
+          echo "Today in History posted to Discord + scheduled posts dispatched." >> $GITHUB_STEP_SUMMARY

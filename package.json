@@ -1,14 +1,18 @@
 {
-  "name": "ishistory",
-  "version": "1.0.0",
+  "name": "ishistory-pipeline",
+  "version": "2.0.0",
   "private": true,
-  "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview"
+  "description": "Publish pipeline scripts for ishistory — zero external runtime dependencies",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
   },
-  "dependencies": {
-    "astro": "^4.16.0",
-    "@astrojs/mdx": "^3.1.0"
-  }
+  "scripts": {
+    "validate": "node .github/scripts/validate.mjs",
+    "publish":  "node .github/scripts/pipeline.mjs",
+    "update":   "node .github/scripts/pipeline.mjs --update",
+    "dry-run":  "node .github/scripts/pipeline.mjs --dry-run",
+    "daily":    "node .github/scripts/daily.mjs"
+  },
+  "dependencies": {}
 }
