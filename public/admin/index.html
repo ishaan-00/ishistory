@@ -406,6 +406,10 @@
       // Security: only accept messages from our auth origin
       if (e.origin !== AUTH_ORIGIN) return;
       if (typeof e.data !== 'string') return;
+      if (e.data === 'authorizing:github') {
+        e.source.postMessage(e.data, e.origin);
+        return;
+      }
       if (!e.data.startsWith('authorization:github:success:')) return;
       window.removeEventListener('message', onMsg);
       clearInterval(checkClosed);

@@ -23,6 +23,9 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install script dependencies
+        run: cd .github/scripts && npm install
+
       - name: Run daily tasks
         env:
           # Only the vars daily.mjs actually reads — platform API keys are

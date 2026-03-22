@@ -55,6 +55,9 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install script dependencies
+        run: cd .github/scripts && npm install
+
       - name: Run validation
         id: run
         env:
@@ -87,6 +90,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Install script dependencies
+        run: cd .github/scripts && npm install
 
       - name: Run publish pipeline
         env:

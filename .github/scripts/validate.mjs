@@ -23,6 +23,7 @@
 import fs   from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import matter from 'gray-matter';
 
 const __dir     = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dir, '../..');
@@ -56,42 +57,21 @@ const log = {
   section: (t)   => console.log(`\n${BOLD}── ${t}${RESET} ${'─'.repeat(Math.max(0, 50 - t.length))}`),
 };
 
-// ─── Frontmatter parser (zero deps, handles multiline | blocks) ───────────────
+// ─── Frontmatter parser (using gray-matter) ───────────────
 function parseFrontmatter(raw) {
-  const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!match) return null;
+  try {
+    const { data: fm } = matter(raw);
 
-  const fm = {};
-  let currentKey      = null;
-  let multilineVal    = null;
-  let multilineIndent = 0;
-
-  for (const line of match[1].split('\n')) {
-    if (multilineVal !== null) {
-      if (multilineIndent === 0 && line.trim())
-        multilineIndent = line.length - line.trimStart().length;
-      if (line.trim() === '' || (multilineIndent > 0 && line.startsWith(' '.repeat(multilineIndent)))) {
-        multilineVal += (multilineVal ? '\n' : '') + line.slice(multilineIndent);
-        continue;
-      }
-      fm[currentKey] = multilineVal.trimEnd();
-      multilineVal = null; multilineIndent = 0; currentKey = null;
+    // Ensure Date objects returned by gray-matter match exactly with what validate expects
+    if (fm.date && fm.date instanceof Date) {
+      fm.date = fm.date.toISOString().slice(0, 10);
     }
 
-    const colon = line.indexOf(':');
-    if (colon === -1) continue;
-    const key  = line.slice(0, colon).trim();
-    const rest = line.slice(colon + 1).trim();
-    if (!key) continue;
-
-    if (rest === '|') { currentKey = key; multilineVal = ''; multilineIndent = 0; continue; }
-
-    let val = rest.replace(/^["']|["']$/g, '');
-    if (/^\d+$/.test(val)) val = parseInt(val, 10);
-    fm[key] = val;
+    return fm;
+  } catch (e) {
+    log.warn(`Frontmatter parse failed: ${e.message}`);
+    return null;
   }
-  if (multilineVal !== null && currentKey) fm[currentKey] = multilineVal.trimEnd();
-  return fm;
 }
 
 // ─── Collect all existing .md files in the repo ───────────────────────────────
