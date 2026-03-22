@@ -368,16 +368,31 @@ async function cacheGeneratedContent(relPath, devtoRaw, hashnodeRaw) {
     const data = await safeJson(res);
     const raw  = Buffer.from(data.content.replace(/\n/g, ''), 'base64').toString('utf8');
 
-    const hasDevto    = /^devto_content:/m.test(raw);
-    const hasHashnode = /^hashnode_content:/m.test(raw);
-    if (hasDevto && hasHashnode) return; // both cached — nothing to do
-
+    const { fm } = parseFrontmatter(raw);
     let updated = raw;
-    const insertions = [];
-    if (!hasDevto)    insertions.push(yamlBlockScalar('devto_content',    sanitizeForFrontmatter(devtoRaw)));
-    if (!hasHashnode) insertions.push(yamlBlockScalar('hashnode_content', sanitizeForFrontmatter(hashnodeRaw)));
 
-    updated = raw.replace(/^(---[\s\S]*?)(---)/m, `$1${insertions.join('\n')}\n$2`);
+    const platforms = [
+      { key: 'devto_content',    raw: devtoRaw },
+      { key: 'hashnode_content', raw: hashnodeRaw },
+    ];
+
+    for (const p of platforms) {
+      const sanitized = sanitizeForFrontmatter(p.raw);
+      const existing  = fm[p.key];
+
+      // Update if missing or content differs (trimmed comparison)
+      if (typeof existing !== 'string' || existing.trim() !== sanitized.trim()) {
+        const newBlock = yamlBlockScalar(p.key, sanitized);
+        const regex    = new RegExp(`^${p.key}:[\\s\\S]*?(?=\\n\\S|\\n---)`, 'm');
+
+        if (regex.test(updated)) {
+          updated = updated.replace(regex, newBlock);
+        } else {
+          updated = updated.replace(/^(---[\s\S]*?)(---)/m, `$1${newBlock}\n$2`);
+        }
+      }
+    }
+
     if (updated === raw) return;
 
     await fetchWithTimeout(apiBase, {
