@@ -20,11 +20,12 @@ import path         from 'node:path';
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import matter from 'gray-matter';
+import { siteUrl } from '../../src/data/config.js';
 
 // ─── Paths ────────────────────────────────────────────────────────────────────
 const __dir     = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dir, '../..');
-const SITE_URL  = 'https://ishistory.pages.dev';
+const SITE_URL  = siteUrl;
 
 // ─── Platform list — single source of truth ───────────────────────────────────
 const PLATFORMS = ['discord', 'devto', 'hashnode', 'ntfy', 'indexnow'];

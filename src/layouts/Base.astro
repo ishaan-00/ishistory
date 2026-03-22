@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { siteUrl } from '../data/config.js';
 export interface Props {
   title: string;
   description?: string;
@@ -18,7 +19,6 @@ const {
   nextUrl,
   ogImage = '/og-default.png',
 } = Astro.props;
-const siteUrl   = 'https://ishistory.pages.dev';
 const canonical = new URL(Astro.url.pathname, siteUrl).href;
 ---
 <!doctype html>
