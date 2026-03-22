@@ -22,6 +22,9 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install script dependencies
+        run: cd .github/scripts && npm install
+
       - name: Run daily tasks
         env:
           DISCORD_WEBHOOK_TODAY:    ${{ secrets.DISCORD_WEBHOOK_TODAY }}

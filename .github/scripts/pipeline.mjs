@@ -14,6 +14,7 @@
 import fs   from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import matter from 'gray-matter';
 
 // ─── Paths ────────────────────────────────────────────────────────────────────
 const __dir     = path.dirname(fileURLToPath(import.meta.url));
@@ -75,75 +76,21 @@ async function safeJson(res) {
   return res.json();
 }
 
-// ─── Inline frontmatter parser (zero deps) ────────────────────────────────────
-// Handles all ishistory fields including multiline `teaser: |` blocks,
-// booleans, arrays, floats, and null.
+// ─── Frontmatter parser (using gray-matter) ───────────────────────────────────
 function parseFrontmatter(raw) {
-  const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
-  if (!match) return { fm: {}, body: raw };
+  try {
+    const { data: fm, content: body } = matter(raw);
 
-  const fm = {};
-  let currentKey    = null;
-  let multilineVal  = null;
-  let multilineIndent = 0;
-
-  for (const line of match[1].split('\n')) {
-    // Inside a block scalar
-    if (multilineVal !== null) {
-      if (multilineIndent === 0 && line.trim()) {
-        multilineIndent = line.length - line.trimStart().length;
-      }
-      if (line.trim() === '' || (multilineIndent > 0 && line.startsWith(' '.repeat(multilineIndent)))) {
-        multilineVal += (multilineVal ? '\n' : '') + line.slice(multilineIndent);
-        continue;
-      }
-      fm[currentKey]  = multilineVal.trimEnd();
-      multilineVal    = null;
-      multilineIndent = 0;
-      currentKey      = null;
+    // Convert Dates returned by gray-matter back to YYYY-MM-DD strings to match expected behaviour
+    if (fm.date && fm.date instanceof Date) {
+      fm.date = fm.date.toISOString().slice(0, 10);
     }
 
-    const colon = line.indexOf(':');
-    if (colon === -1) continue;
-
-    const key  = line.slice(0, colon).trim();
-    const rest = line.slice(colon + 1).trim();
-
-    if (!key) continue;
-
-    // Block scalar marker
-    if (rest === '|') {
-      currentKey      = key;
-      multilineVal    = '';
-      multilineIndent = 0;
-      continue;
-    }
-
-    fm[key] = coerceYamlValue(rest);
+    return { fm, body };
+  } catch (e) {
+    log.warn(`Frontmatter parse failed: ${e.message}`);
+    return { fm: {}, body: raw };
   }
-
-  // Flush trailing multiline value
-  if (multilineVal !== null && currentKey) fm[currentKey] = multilineVal.trimEnd();
-
-  return { fm, body: match[2] };
-}
-
-// ─── YAML value coercion ──────────────────────────────────────────────────────
-function coerceYamlValue(raw) {
-  const val = raw.replace(/^["']|["']$/g, '');
-  if (val === 'true')                   return true;
-  if (val === 'false')                  return false;
-  if (val === 'null' || val === '~')    return null;
-  if (val === '')                       return '';
-  if (/^-?\d+$/.test(val))             return parseInt(val, 10);
-  if (/^-?\d+\.\d+$/.test(val))        return parseFloat(val);
-  // ISO date strings — keep as string
-  if (/^\d{4}-\d{2}-\d{2}/.test(val))  return val;
-  // Inline array: [item1, item2]
-  if (val.startsWith('[') && val.endsWith(']')) {
-    return val.slice(1, -1).split(',').map(s => s.trim().replace(/^["']|["']$/g, ''));
-  }
-  return val;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
