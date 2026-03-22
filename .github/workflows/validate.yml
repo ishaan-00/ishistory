@@ -18,7 +18,7 @@ on:
 
 concurrency:
   group: validate-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: true   # safe to cancel — validate is read-only
 
 jobs:
   validate:
@@ -26,7 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
-      contents: read
+      contents:      read
+      pull-requests: write   # post validation errors as PR check annotations
 
     outputs:
       valid_new_files: ${{ steps.run.outputs.valid_new_files }}
@@ -37,7 +38,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0     # full history needed for cross-file duplicate checks
+          fetch-depth: 0   # full history needed for cross-file duplicate checks
 
       - name: Detect changed files
         if: github.event_name != 'workflow_dispatch'

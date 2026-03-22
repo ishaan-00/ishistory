@@ -8,16 +8,21 @@ on:
   workflow_dispatch:
     inputs:
       file:
-        description: 'File to process'
+        description: 'File to process (repo-relative path)'
         required: true
         type: string
+      dry_run:
+        description: 'Dry run — generate and preview without posting'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: publish-pipeline
-  cancel-in-progress: false
+  cancel-in-progress: false   # never cancel a running publish mid-flight
 
 jobs:
-  # ── Step 1: Validate frontmatter ──────────────────────────────────────────
+  # ── Step 1: Validate frontmatter ────────────────────────────────────────────
   validate:
     name: Validate frontmatter
     runs-on: ubuntu-latest
@@ -34,7 +39,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0   # full history needed for cross-file duplicate checks
 
       - name: Detect changed files
         if: github.event_name == 'push'
@@ -59,18 +64,18 @@ jobs:
           GIT_EVENT:      ${{ github.event_name }}
         run: node .github/scripts/validate.mjs
 
-  # ── Step 2: Publish (only runs if validate passed) ────────────────────────
+  # ── Step 2: Publish (only runs if validate passed) ──────────────────────────
   pipeline:
     name: Distribute to social platforms
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     needs: validate
     if: |
       needs.validate.outputs.passed == 'true' &&
       (needs.validate.outputs.has_new_files == 'true' || github.event_name == 'workflow_dispatch')
     permissions:
-      contents: write   # commits status.json
-      models: read      # GitHub Models API for article generation
+      contents: write   # commits status.json and post-ids.json back to repo
+      models:   read    # GitHub Models API (gpt-4o-mini) for article generation
 
     steps:
       - name: Checkout
@@ -91,17 +96,24 @@ jobs:
           DISCORD_WEBHOOK_ARTICLES: ${{ secrets.DISCORD_WEBHOOK_ARTICLES }}
           NTFY_TOPIC:               ${{ secrets.NTFY_TOPIC }}
           INDEXNOW_KEY:             ${{ secrets.INDEXNOW_KEY }}
+          WORKER_URL:               ${{ secrets.WORKER_URL }}
+          CMS_API_KEY:              ${{ secrets.CMS_API_KEY }}
           GITHUB_TOKEN:             ${{ secrets.GITHUB_TOKEN }}
           GIT_SHA:                  ${{ github.sha }}
           GIT_REPO:                 ${{ github.repository }}
         run: |
           EXIT_CODE=0
+          DRY_RUN_FLAG=""
+          if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+            DRY_RUN_FLAG="--dry-run"
+            echo "ℹ Dry run mode — no posts will be made"
+          fi
 
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo "Processing: ${{ github.event.inputs.file }}"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            node .github/scripts/pipeline.mjs "${{ github.event.inputs.file }}" || EXIT_CODE=$?
+            node .github/scripts/pipeline.mjs "${{ github.event.inputs.file }}" $DRY_RUN_FLAG || EXIT_CODE=$?
           else
             IFS=',' read -r -a files <<< "${{ needs.validate.outputs.valid_new_files }}"
             for file in "${files[@]}"; do
@@ -109,7 +121,7 @@ jobs:
                 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                 echo "Processing: $file"
                 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                node .github/scripts/pipeline.mjs "$file" || EXIT_CODE=$?
+                node .github/scripts/pipeline.mjs "$file" $DRY_RUN_FLAG || EXIT_CODE=$?
               fi
             done
           fi
@@ -129,3 +141,6 @@ jobs:
             done
           fi
           echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+            echo "> ⚠️ **Dry run** — no posts were published" >> $GITHUB_STEP_SUMMARY
+          fi
