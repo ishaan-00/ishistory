@@ -4,6 +4,7 @@ import Cosmos from '../../components/Cosmos.astro';
 import Nav from '../../components/Nav.astro';
 import Footer from '../../components/Footer.astro';
 import { series as allSeries } from '../../data/series.js';
+import { safeJsonStringify } from '../../utils/json.js';
 
 export function getStaticPaths() {
   return Object.keys(allSeries).map(key => ({ params: { seriesKey: key } }));
@@ -41,7 +42,7 @@ const breadcrumbJsonLd = {
 ---
 <Base title={`${s.label} — ishistory`} description={s.longDescription ?? s.description}>
 <Fragment slot="head">
-  <script type="application/ld+json" set:html={JSON.stringify(breadcrumbJsonLd)}></script>
+  <script type="application/ld+json" set:html={safeJsonStringify(breadcrumbJsonLd)}></script>
 </Fragment>
 
 <Cosmos />
