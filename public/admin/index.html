@@ -34,13 +34,7 @@
     body { background: var(--bg); color: var(--text); font-family: var(--sans); }
 
     /* FAB */
-    #d-fab {
-      position: fixed; right: 10px; top: 50%; transform: translateY(-50%);
-      width: 44px; height: 44px; border-radius: 12px;
-      background: var(--surface); border: 1px solid var(--border2);
-      cursor: pointer; z-index: 99990; display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 4px 24px #00000088; transition: all .2s; user-select: none;
-    }
+    #d-fab { position: fixed; right: 10px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border2); cursor: pointer; z-index: 99990; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 24px #00000088; transition: all .2s; user-select: none; }
     #d-fab:hover { border-color: var(--amber); background: var(--card); }
     #d-fab-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); transition: background .4s, box-shadow .4s; }
     #d-fab-dot.green  { background: var(--green);  box-shadow: 0 0 8px #22c55e66; }
@@ -84,7 +78,6 @@
     .login-logo { font-family: var(--serif); font-size: 28px; color: var(--amber2); margin-bottom: 4px; }
     .login-sub  { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-bottom: 28px; text-transform: uppercase; letter-spacing: .1em; }
     .login-note { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 16px; line-height: 1.7; }
-    .login-note a { color: var(--amber2); text-decoration: none; }
 
     /* Cards */
     .d-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-bottom: 20px; }
@@ -145,7 +138,7 @@
     .series-badge.complete { background: #052010; color: var(--green); border: 1px solid #145228; }
     .d-prog { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 10px; }
     .d-prog-fill { height: 100%; border-radius: 2px; transition: width .6s ease; background: linear-gradient(90deg, var(--blue), var(--amber2)); }
-    .series-stats { font-family: var(--mono); font-size: 11px; color: var(--dim); display: flex; gap: 16px; flex-wrap: wrap; }
+    .series-stats { font-family: var(--mono); font-size: 11px; color: var(--dim); display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
     .series-stats .next { color: var(--green); }
     .series-stats .gap  { color: var(--yellow); }
 
@@ -181,6 +174,26 @@
     .spin { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border2); border-top-color: var(--amber2); animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    /* Search */
+    .search-wrap { margin-bottom: 14px; position: relative; }
+    .search-wrap .d-inp { padding-left: 32px; }
+    .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--dim); font-size: 12px; pointer-events: none; }
+
+    /* Update modal */
+    #update-modal { position: fixed; inset: 0; z-index: 99995; display: none; align-items: center; justify-content: center; background: #00000099; }
+    #update-modal.open { display: flex; }
+    .update-box { width: 480px; background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 28px; }
+    .update-plat-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .update-plat-row:last-of-type { border-bottom: none; }
+    .update-plat-row input[type=checkbox] { accent-color: var(--amber2); width: 14px; height: 14px; }
+    .update-plat-name { font-family: var(--mono); font-size: 12px; color: var(--text2); }
+    .update-plat-meta { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-left: auto; }
+    .update-note { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: var(--mono); font-size: 10px; color: var(--dim); line-height: 1.7; margin: 16px 0; }
+    .update-note strong { color: var(--text2); }
+
+    /* Hidden utility */
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
@@ -192,7 +205,7 @@
   <div class="login-box">
     <div class="login-logo">ishistory</div>
     <div class="login-sub">Command Centre</div>
-    <button class="d-btn pri" style="width:100%;padding:13px;font-size:13px;margin-bottom:12px" onclick="doOAuth()">
+    <button class="d-btn pri" id="btn-oauth" style="width:100%;padding:13px;font-size:13px;margin-bottom:12px">
       Sign in with GitHub
     </button>
     <div id="login-status" style="font-family:var(--mono);font-size:10px;color:var(--dim);text-align:center;min-height:16px"></div>
@@ -204,30 +217,32 @@
 </div>
 
 <!-- FAB -->
-<div id="d-fab" onclick="dToggle()"><div id="d-fab-dot"></div></div>
+<div id="d-fab" role="button" aria-label="Open CMS dashboard" tabindex="0">
+  <div id="d-fab-dot"></div>
+</div>
 
 <!-- Overlay -->
-<div id="d-overlay" onclick="dClose()"></div>
+<div id="d-overlay"></div>
 
 <!-- Panel -->
-<div id="d-panel">
+<div id="d-panel" role="dialog" aria-modal="true" aria-label="ishistory CMS dashboard">
   <div id="d-header">
     <div id="d-title">is<span>history</span></div>
     <div id="d-user" style="display:none"></div>
     <div id="d-updated" style="margin-left:auto"></div>
-    <button class="hdr-btn" onclick="doLogout()">Logout</button>
-    <button class="hdr-btn close-btn" onclick="dClose()">✕</button>
+    <button class="hdr-btn" id="btn-logout">Logout</button>
+    <button class="hdr-btn close-btn" id="btn-close">✕</button>
   </div>
-  <div id="d-tabs">
-    <button class="d-tab active" onclick="dTab('overview',this)">Overview</button>
-    <button class="d-tab" onclick="dTab('pipeline',this)">Pipeline</button>
-    <button class="d-tab" onclick="dTab('series',this)">Series</button>
-    <button class="d-tab" onclick="dTab('schedule',this)">Schedule</button>
-    <button class="d-tab" onclick="dTab('actions',this)">Actions</button>
+  <div id="d-tabs" role="tablist" aria-label="Dashboard sections">
+    <button class="d-tab active" role="tab" aria-selected="true"  aria-controls="view-overview"  id="tab-overview">Overview</button>
+    <button class="d-tab"        role="tab" aria-selected="false" aria-controls="view-pipeline"  id="tab-pipeline">Pipeline</button>
+    <button class="d-tab"        role="tab" aria-selected="false" aria-controls="view-series"    id="tab-series">Series</button>
+    <button class="d-tab"        role="tab" aria-selected="false" aria-controls="view-schedule"  id="tab-schedule">Schedule</button>
+    <button class="d-tab"        role="tab" aria-selected="false" aria-controls="view-actions"   id="tab-actions">Actions</button>
   </div>
   <div id="d-body">
 
-    <div id="view-overview" class="d-view active">
+    <div id="view-overview" class="d-view active" role="tabpanel" aria-labelledby="tab-overview">
       <div class="d-grid" id="ov-stats"></div>
       <div class="d-sec">Last Pipeline Run</div>
       <div id="ov-run"><div class="d-empty"><span class="spin"></span></div></div>
@@ -235,44 +250,57 @@
       <div id="ov-commits"><div class="d-empty"><span class="spin"></span></div></div>
     </div>
 
-    <div id="view-pipeline" class="d-view">
+    <div id="view-pipeline" class="d-view" role="tabpanel" aria-labelledby="tab-pipeline">
       <div class="btn-row">
-        <button class="d-btn pri" onclick="toggleTrigger()">▶ Run Pipeline</button>
-        <button class="d-btn" onclick="loadPipeline()">↺ Refresh</button>
+        <button class="d-btn pri" id="btn-run-pipeline">▶ Run Pipeline</button>
+        <button class="d-btn" id="btn-refresh-pipeline">↺ Refresh</button>
       </div>
-      <div class="d-form" id="trigger-form" style="display:none">
+      <div class="d-form hidden" id="trigger-form">
         <div class="d-form-title">Trigger Pipeline Manually</div>
         <div class="d-field">
-          <label class="d-lbl">File path</label>
+          <label class="d-lbl" for="trigger-file">File path</label>
           <input class="d-inp" id="trigger-file" placeholder="src/content/ai-history/episode-01.md" />
         </div>
         <div class="btn-row">
-          <button class="d-btn pri" onclick="doTrigger()">Trigger</button>
-          <button class="d-btn" onclick="document.getElementById('trigger-form').style.display='none'">Cancel</button>
+          <button class="d-btn pri" id="btn-trigger-confirm">Trigger</button>
+          <button class="d-btn" id="btn-trigger-cancel">Cancel</button>
         </div>
       </div>
       <div class="d-sec">Run History</div>
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input class="d-inp" id="pipe-search" placeholder="Search by filename, series, error…" />
+      </div>
       <div id="pipe-runs"><div class="d-empty"><span class="spin"></span></div></div>
     </div>
 
-    <div id="view-series" class="d-view">
+    <div id="view-series" class="d-view" role="tabpanel" aria-labelledby="tab-series">
       <div id="series-wrap"><div class="d-empty"><span class="spin"></span></div></div>
     </div>
 
-    <div id="view-schedule" class="d-view">
+    <div id="view-schedule" class="d-view" role="tabpanel" aria-labelledby="tab-schedule">
       <div class="d-form">
         <div class="d-form-title">Schedule a Post</div>
-        <div class="d-field"><label class="d-lbl">File</label><select class="d-sel" id="sched-file"><option>Loading…</option></select></div>
-        <div class="d-field"><label class="d-lbl">Publish Date &amp; Time (UTC)</label><input class="d-inp" type="datetime-local" id="sched-dt" /></div>
-        <div class="d-field"><label class="d-lbl">Label (optional)</label><input class="d-inp" type="text" id="sched-lbl" placeholder="AI History Episode 26" /></div>
-        <button class="d-btn pri" onclick="addSchedule()">Schedule Post</button>
+        <div class="d-field">
+          <label class="d-lbl" for="sched-file">File</label>
+          <select class="d-sel" id="sched-file"><option>Loading…</option></select>
+        </div>
+        <div class="d-field">
+          <label class="d-lbl" for="sched-dt">Publish Date &amp; Time (UTC)</label>
+          <input class="d-inp" type="datetime-local" id="sched-dt" />
+        </div>
+        <div class="d-field">
+          <label class="d-lbl" for="sched-lbl">Label (optional)</label>
+          <input class="d-inp" type="text" id="sched-lbl" placeholder="AI History Episode 26" />
+        </div>
+        <button class="d-btn pri" id="btn-add-schedule">Schedule Post</button>
       </div>
       <div class="d-sec">Scheduled Posts</div>
       <div id="sched-list"><div class="d-empty"><span class="spin"></span></div></div>
     </div>
 
-    <div id="view-actions" class="d-view">
-      <div class="btn-row"><button class="d-btn" onclick="loadActions()">↺ Refresh</button></div>
+    <div id="view-actions" class="d-view" role="tabpanel" aria-labelledby="tab-actions">
+      <div class="btn-row"><button class="d-btn" id="btn-refresh-actions">↺ Refresh</button></div>
       <div class="d-sec">Workflow Runs</div>
       <div id="act-list"><div class="d-empty"><span class="spin"></span></div></div>
     </div>
@@ -280,17 +308,50 @@
   </div>
 </div>
 
-<div id="d-toast"></div>
+<!-- Update modal -->
+<div id="update-modal" role="dialog" aria-modal="true" aria-label="Update published post">
+  <div class="update-box">
+    <div style="font-family:var(--serif);font-size:17px;color:var(--text3);margin-bottom:6px">Update Published Post</div>
+    <div id="update-file-label" style="font-family:var(--mono);font-size:10px;color:var(--amber3);margin-bottom:16px;word-break:break-all"></div>
+    <label class="update-plat-row" id="upd-devto-row">
+      <input type="checkbox" id="upd-devto" checked />
+      <span class="update-plat-name">Dev.to</span>
+      <span class="update-plat-meta" id="upd-devto-meta"></span>
+    </label>
+    <label class="update-plat-row" id="upd-hashnode-row">
+      <input type="checkbox" id="upd-hashnode" checked />
+      <span class="update-plat-name">Hashnode</span>
+      <span class="update-plat-meta" id="upd-hashnode-meta"></span>
+    </label>
+    <div class="update-note">
+      Re-generates AI content if stale, then pushes to selected platforms.
+      Discord and Ntfy will <strong>not</strong> be re-notified.
+      Change detection skips platforms where content is identical.
+    </div>
+    <div class="btn-row">
+      <button class="d-btn pri" id="upd-confirm-btn">Push Updates</button>
+      <button class="d-btn" id="upd-cancel-btn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="d-toast" role="status" aria-live="polite"></div>
 
 <script>
   const REPO     = 'ishaan-00/ishistory';
   const AUTH_URL = 'https://sveltia-cms-auth.aadityadarpan5.workers.dev';
   const GH_API   = AUTH_URL + '/api/github';
+  const AUTH_ORIGIN = new URL(AUTH_URL).origin;
 
   let isOpen = false, activeTab = 'overview', treeCache = null;
   let SESSION_LOGIN = null;
+  let _fabInterval  = null;
 
-  // ── XSS-safe escaping ────────────────────────────────────────────────────
+  // Status cache — avoids redundant fetches across tab switches
+  let _statusCache = null, _statusCacheTime = 0;
+  const STATUS_CACHE_TTL = 30_000;
+
+  // ── XSS-safe escaping ────────────────────────────────────────────────────────
   const _escEl = document.createElement('span');
   function esc(s) {
     _escEl.textContent = String(s == null ? '' : s);
@@ -298,14 +359,11 @@
   }
   function escAttr(s) {
     return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+      .replace(/&/g,'&amp;').replace(/"/g,'&quot;')
+      .replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  // ── UTF-8-safe base64 ────────────────────────────────────────────────────
+  // ── UTF-8-safe base64 ────────────────────────────────────────────────────────
   function utf8ToBase64(str) {
     const bytes = new TextEncoder().encode(str);
     let binary = '';
@@ -319,7 +377,7 @@
     return new TextDecoder().decode(bytes);
   }
 
-  // ── Loading guard — prevents duplicate concurrent API calls ───────────────
+  // ── Loading guard — prevents duplicate concurrent calls ────────────────────
   const _loading = {};
   async function guardedLoad(key, fn) {
     if (_loading[key]) return;
@@ -328,7 +386,7 @@
     finally { _loading[key] = false; }
   }
 
-  // ── Auth ──────────────────────────────────────────────────────────────────
+  // ── Auth ─────────────────────────────────────────────────────────────────────
   const SITE_ID = location.host || 'ishistory.pages.dev';
 
   function doOAuth() {
@@ -345,6 +403,8 @@
     if (!popup) { status.textContent = 'Popup blocked — please allow popups for this page'; return; }
 
     const onMsg = async (e) => {
+      // Security: only accept messages from our auth origin
+      if (e.origin !== AUTH_ORIGIN) return;
       if (typeof e.data !== 'string') return;
       if (!e.data.startsWith('authorization:github:success:')) return;
       window.removeEventListener('message', onMsg);
@@ -374,6 +434,7 @@
         setUser(data.login);
         document.getElementById('d-login').classList.remove('show');
         document.getElementById('login-status').textContent = '';
+        startFabRefresh();
         return true;
       }
     } catch(e) {
@@ -385,6 +446,8 @@
   async function doLogout() {
     try { await fetch(AUTH_URL + '/session/logout', { method: 'POST', credentials: 'include' }); } catch(_) {}
     SESSION_LOGIN = null;
+    stopFabRefresh();
+    _statusCache = null;
     document.getElementById('d-user').style.display = 'none';
     document.getElementById('d-login').classList.add('show');
     dClose();
@@ -393,6 +456,8 @@
   function handleSessionExpiry() {
     toast('Session expired — please log in again', 'err');
     SESSION_LOGIN = null;
+    stopFabRefresh();
+    _statusCache = null;
     document.getElementById('d-user').style.display = 'none';
     document.getElementById('d-login').classList.add('show');
     dClose();
@@ -400,11 +465,11 @@
 
   function setUser(login) {
     const el = document.getElementById('d-user');
-    el.textContent = '@' + esc(login);
+    el.textContent = '@' + login;
     el.style.display = 'block';
   }
 
-  // ── GitHub API — via Worker proxy ────────────────────────────────────────
+  // ── GitHub API — via Worker proxy ────────────────────────────────────────────
   async function gh(endpoint, method, body) {
     const res = await fetch(GH_API + endpoint, {
       method:      method || 'GET',
@@ -412,7 +477,7 @@
       headers:     { 'Content-Type': 'application/json' },
       body:        body ? JSON.stringify(body) : null,
     });
-    if (res.status === 401) { handleSessionExpiry(); throw new Error('Session expired — please log in again'); }
+    if (res.status === 401) { handleSessionExpiry(); throw new Error('Session expired'); }
     if (res.status === 204) return null;
     const d = await res.json();
     if (!res.ok) throw new Error(d.message || 'HTTP ' + res.status);
@@ -439,21 +504,39 @@
     });
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Worker API calls ──────────────────────────────────────────────────────────
+  async function workerApi(endpoint, method = 'GET', body = null) {
+    const res = await fetch(AUTH_URL + endpoint, {
+      method,
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : null,
+    });
+    if (res.status === 401) { handleSessionExpiry(); throw new Error('Unauthorized'); }
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(d.error || 'HTTP ' + res.status);
+    return d;
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────────
   function relTime(s) {
     if (!s) return '—';
     const d = Math.floor((Date.now() - new Date(s)) / 1000);
     if (isNaN(d)) return '—';
-    if (d < 5) return 'just now';
-    if (d < 60) return d + 's ago';
-    if (d < 3600) return Math.floor(d/60) + 'm ago';
+    if (d < 5)     return 'just now';
+    if (d < 60)    return d + 's ago';
+    if (d < 3600)  return Math.floor(d/60) + 'm ago';
     if (d < 86400) return Math.floor(d/3600) + 'h ago';
     return Math.floor(d/86400) + 'd ago';
   }
 
   function fmtDate(s) {
     if (!s) return '—';
-    return new Date(s).toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', timeZone:'UTC', timeZoneName:'short' });
+    return new Date(s).toLocaleString('en-GB', {
+      day:'2-digit', month:'short', year:'numeric',
+      hour:'2-digit', minute:'2-digit',
+      timeZone:'UTC', timeZoneName:'short'
+    });
   }
 
   function fn(p) { return p ? p.split('/').pop() : p; }
@@ -477,25 +560,30 @@
 
   function buildAIBadge(run) {
     if (run.ai_cached)    return '<span class="ai-badge cached">⚡ AI content cached</span>';
-    if (run.ai_generated) return '<span class="ai-badge generated">✦ AI generated (Mistral)</span>';
+    if (run.ai_generated) return '<span class="ai-badge generated">✦ AI generated (gpt-4o-mini)</span>';
     return '';
   }
 
-  function buildRunHTML(r) {
+  function buildRunHTML(r, postIds) {
     const errs = ['discord','devto','hashnode','ntfy','indexnow']
       .filter(p => r[p] && !r[p].ok && !r[p].skipped && r[p].err)
       .map(p => '<div class="run-err"><strong>' + esc(p) + ':</strong> ' + esc((r[p].err||'').slice(0,300)) + '</div>')
       .join('');
+
+    const hasIds = postIds && (postIds.devto_id || postIds.hashnode_id);
+    const updateBtn = hasIds
+      ? '<button class="d-btn upd-btn" style="font-size:10px;padding:4px 10px;margin-top:8px" data-update=\'' + escAttr(JSON.stringify({ file: r.file, postIds })) + '\'>↻ Update on platforms</button>'
+      : '';
+
     return '<div class="run">' +
       '<div class="run-top"><div class="run-file">' + esc(r.file) + '</div><div class="run-time">' + esc(relTime(r.ran_at)) + '</div></div>' +
       '<div class="run-commit">commit <span style="color:var(--amber3)">' + esc(r.commit) + '</span> · ' + esc(fmtDate(r.ran_at)) + '</div>' +
       '<div class="run-plats">' + buildPlatRow(r) + '</div>' +
-      buildAIBadge(r) +
-      errs +
+      buildAIBadge(r) + errs + updateBtn +
       '</div>';
   }
 
-  // ── Panel ─────────────────────────────────────────────────────────────────
+  // ── Panel ─────────────────────────────────────────────────────────────────────
   function dToggle() { isOpen ? dClose() : dOpen(); }
   function dOpen() {
     if (!SESSION_LOGIN) { document.getElementById('d-login').classList.add('show'); return; }
@@ -509,23 +597,26 @@
     document.getElementById('d-panel').classList.remove('open');
     document.getElementById('d-overlay').classList.remove('open');
   }
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && isOpen) dClose(); });
 
-  function dTab(name, btn) {
+  function dTab(name) {
     activeTab = name;
-    document.querySelectorAll('.d-tab').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
+    document.querySelectorAll('.d-tab').forEach(t => {
+      const active = t.id === 'tab-' + name;
+      t.classList.toggle('active', active);
+      t.setAttribute('aria-selected', String(active));
+    });
     document.querySelectorAll('.d-view').forEach(v => v.classList.remove('active'));
     document.getElementById('view-' + name).classList.add('active');
     ({ overview: loadOverview, pipeline: loadPipeline, series: loadSeries, schedule: loadSchedule, actions: loadActions })[name]?.();
   }
 
   function dRefresh() {
-    treeCache = null;
+    treeCache   = null;
+    _statusCache = null;
     ({ overview: loadOverview, pipeline: loadPipeline, series: loadSeries, schedule: loadSchedule, actions: loadActions })[activeTab]?.();
   }
 
-  // ── File tree ─────────────────────────────────────────────────────────────
+  // ── File tree ─────────────────────────────────────────────────────────────────
   async function getTree() {
     if (treeCache) return treeCache;
     const d = await gh('/repos/' + REPO + '/git/trees/main?recursive=1');
@@ -534,12 +625,24 @@
   }
 
   async function getStatus() {
+    if (_statusCache && Date.now() - _statusCacheTime < STATUS_CACHE_TTL) return _statusCache;
     const f = await ghFile('src/data/status.json').catch(() => null);
-    if (!f) return { runs: [] };
-    try { return JSON.parse(f.content); } catch(_) { return { runs: [] }; }
+    if (!f) { _statusCache = { runs: [] }; }
+    else {
+      try { _statusCache = JSON.parse(f.content); }
+      catch(_) { _statusCache = { runs: [] }; }
+    }
+    _statusCacheTime = Date.now();
+    return _statusCache;
   }
 
-  // ── Overview ──────────────────────────────────────────────────────────────
+  async function getSeriesMeta() {
+    const f = await ghFile('src/data/series-meta.json').catch(() => null);
+    if (!f) return {};
+    try { return JSON.parse(f.content); } catch(_) { return {}; }
+  }
+
+  // ── Overview ──────────────────────────────────────────────────────────────────
   async function loadOverview() {
     return guardedLoad('overview', async () => {
       const [status, tree, commits] = await Promise.all([
@@ -552,9 +655,9 @@
       const series = {};
       posts.forEach(f => { const s = f.path.split('/')[2]; if (s) series[s] = (series[s]||0)+1; });
 
-      const last  = status.runs?.[0];
-      const plats = last ? ['discord','devto','hashnode','ntfy','indexnow'].map(p=>last[p]).filter(r=>!r?.skipped) : [];
-      const allOk = plats.length > 0 && plats.every(r=>r?.ok);
+      const last    = status.runs?.[0];
+      const plats   = last ? ['discord','devto','hashnode','ntfy','indexnow'].map(p=>last[p]).filter(r=>!r?.skipped) : [];
+      const allOk   = plats.length > 0 && plats.every(r=>r?.ok);
       const anyFail = plats.some(r=>!r?.ok);
 
       document.getElementById('d-fab-dot').className = allOk ? 'green' : anyFail ? 'red' : 'amber';
@@ -572,7 +675,7 @@
         try { const el = document.getElementById('ov-sched'); if (el) el.textContent = f ? JSON.parse(f.content).length : 0; } catch(_){}
       }).catch(()=>{});
 
-      document.getElementById('ov-run').innerHTML = last ? buildRunHTML(last) : '<div class="d-empty">No pipeline runs yet</div>';
+      document.getElementById('ov-run').innerHTML = last ? buildRunHTML(last, null) : '<div class="d-empty">No pipeline runs yet</div>';
 
       document.getElementById('ov-commits').innerHTML = commits?.length
         ? '<div class="act-list">' + (commits||[]).map(c =>
@@ -586,38 +689,64 @@
     });
   }
 
-  // ── Pipeline ──────────────────────────────────────────────────────────────
+  // ── Pipeline ──────────────────────────────────────────────────────────────────
+  let _allRuns = [];
+
   async function loadPipeline() {
     return guardedLoad('pipeline', async () => {
       document.getElementById('pipe-runs').innerHTML = '<div class="d-empty"><span class="spin"></span></div>';
-      const s = await getStatus().catch(() => ({ runs: [] }));
-      document.getElementById('pipe-runs').innerHTML = s.runs?.length
-        ? '<div class="run-list">' + s.runs.map(buildRunHTML).join('') + '</div>'
-        : '<div class="d-empty">No pipeline runs recorded yet</div>';
+
+      const [s, postIdsFile] = await Promise.all([
+        getStatus().catch(() => ({ runs: [] })),
+        ghFile('src/data/post-ids.json').catch(() => null),
+      ]);
+
+      let postIds = {};
+      try { if (postIdsFile) postIds = JSON.parse(postIdsFile.content); } catch(_) {}
+
+      _allRuns = s.runs || [];
+      renderRunList(_allRuns, postIds);
     });
   }
 
+  function renderRunList(runs, postIds) {
+    const query = (document.getElementById('pipe-search')?.value || '').toLowerCase().trim();
+    const filtered = query
+      ? runs.filter(r =>
+          (r.file || '').toLowerCase().includes(query) ||
+          (r.commit || '').toLowerCase().includes(query) ||
+          ['discord','devto','hashnode','ntfy','indexnow'].some(p => (r[p]?.err || '').toLowerCase().includes(query))
+        )
+      : runs;
+
+    document.getElementById('pipe-runs').innerHTML = filtered.length
+      ? '<div class="run-list">' + filtered.map(r => buildRunHTML(r, postIds[r.file])).join('') + '</div>'
+      : '<div class="d-empty">' + (query ? 'No runs match "' + esc(query) + '"' : 'No pipeline runs recorded yet') + '</div>';
+  }
+
   function toggleTrigger() {
-    const f = document.getElementById('trigger-form');
-    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('trigger-form').classList.toggle('hidden');
   }
 
   async function doTrigger() {
     const file = document.getElementById('trigger-file').value.trim();
     if (!file) { toast('Enter a file path', 'err'); return; }
+    const btn = document.getElementById('btn-trigger-confirm');
+    btn.disabled = true;
     try {
       await gh('/repos/' + REPO + '/actions/workflows/on-publish.yml/dispatches', 'POST', { ref: 'main', inputs: { file } });
       toast('Pipeline triggered ✓', 'ok');
-      document.getElementById('trigger-form').style.display = 'none';
+      document.getElementById('trigger-form').classList.add('hidden');
       setTimeout(loadActions, 2000);
     } catch(e) { toast('Failed: ' + e.message, 'err'); }
+    finally { btn.disabled = false; }
   }
 
-  // ── Series ────────────────────────────────────────────────────────────────
+  // ── Series ─────────────────────────────────────────────────────────────────────
   async function loadSeries() {
     return guardedLoad('series', async () => {
       document.getElementById('series-wrap').innerHTML = '<div class="d-empty"><span class="spin"></span></div>';
-      const tree  = await getTree();
+      const [tree, seriesMeta] = await Promise.all([getTree(), getSeriesMeta()]);
       const posts = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md'));
       const ser   = {};
       posts.forEach(f => {
@@ -628,25 +757,57 @@
         if (fname.startsWith('profile')) ser[s].pr.push(num); else ser[s].ep.push(num);
       });
       if (!Object.keys(ser).length) { document.getElementById('series-wrap').innerHTML = '<div class="d-empty">No series</div>'; return; }
+
       const cards = Object.entries(ser).map(([name,d]) => {
-        const eps  = d.ep.filter(Boolean).sort((a,b)=>a-b);
-        const pros = d.pr.filter(Boolean).sort((a,b)=>a-b);
-        const gaps = []; for (let i=1;i<eps.length;i++) for (let g=eps[i-1]+1;g<eps[i];g++) gaps.push(g);
-        const next = eps.length ? Math.max(...eps)+1 : 1;
-        const pct  = Math.min(100, Math.round((eps.length%10||(eps.length>0?10:0))/10*100));
-        return '<div class="series"><div class="series-top"><div class="series-name">' + esc(name.replace(/-/g,' ')) + '</div><span class="series-badge active">active</span></div>' +
+        const eps    = d.ep.filter(Boolean).sort((a,b)=>a-b);
+        const pros   = d.pr.filter(Boolean).sort((a,b)=>a-b);
+        const gaps   = []; for (let i=1;i<eps.length;i++) for (let g=eps[i-1]+1;g<eps[i];g++) gaps.push(g);
+        const next   = eps.length ? Math.max(...eps)+1 : 1;
+        const meta   = seriesMeta[name] || {};
+        const isComplete = meta.status === 'complete';
+        const total  = meta.total_eps || (isComplete ? eps.length : null);
+        const pct    = total ? Math.min(100, Math.round(eps.length / total * 100)) : Math.min(100, Math.round((eps.length % 10 || (eps.length > 0 ? 10 : 0)) / 10 * 100));
+        const badgeCls = isComplete ? 'complete' : 'active';
+        const badgeTxt = isComplete ? 'complete' : 'active';
+
+        const completeBtn = isComplete
+          ? '<button class="d-btn series-reopen-btn" style="font-size:9px;padding:3px 8px" data-series="' + escAttr(name) + '">Reopen</button>'
+          : '<button class="d-btn series-complete-btn" style="font-size:9px;padding:3px 8px" data-series="' + escAttr(name) + '" data-eps="' + eps.length + '">Mark Complete</button>';
+
+        return '<div class="series">' +
+          '<div class="series-top"><div class="series-name">' + esc(name.replace(/-/g,' ')) + '</div>' +
+          '<span class="series-badge ' + badgeCls + '">' + badgeTxt + '</span></div>' +
           '<div class="d-prog"><div class="d-prog-fill" style="width:' + pct + '%"></div></div>' +
           '<div class="series-stats"><span>' + esc(eps.length) + ' ep</span>' +
           (pros.length ? '<span>' + esc(pros.length) + ' profiles</span>' : '') +
+          (total ? '<span>/ ' + total + ' total</span>' : '') +
           '<span class="next">next: #' + esc(next) + '</span>' +
           (gaps.length ? '<span class="gap">gaps: ' + esc(gaps.join(', ')) + '</span>' : '') +
-          '</div></div>';
+          completeBtn + '</div></div>';
       });
       document.getElementById('series-wrap').innerHTML = '<div class="series-list">' + cards.join('') + '</div>';
     });
   }
 
-  // ── Schedule ──────────────────────────────────────────────────────────────
+  async function markSeriesComplete(slug, totalEps) {
+    const f = await ghFile('src/data/series-meta.json').catch(() => null);
+    let meta = {}; try { if (f) meta = JSON.parse(f.content); } catch(_) {}
+    meta[slug] = { ...meta[slug], status: 'complete', total_eps: totalEps, completed_at: new Date().toISOString().slice(0,10) };
+    await ghWrite('src/data/series-meta.json', JSON.stringify(meta, null, 2), 'chore: mark ' + slug + ' complete [skip ci]', f?.sha);
+    toast(slug + ' marked complete ✓', 'ok');
+    await loadSeries();
+  }
+
+  async function reopenSeries(slug) {
+    const f = await ghFile('src/data/series-meta.json').catch(() => null);
+    let meta = {}; try { if (f) meta = JSON.parse(f.content); } catch(_) {}
+    meta[slug] = { ...meta[slug], status: 'active', completed_at: null };
+    await ghWrite('src/data/series-meta.json', JSON.stringify(meta, null, 2), 'chore: reopen series ' + slug + ' [skip ci]', f?.sha);
+    toast(slug + ' reopened ✓', 'ok');
+    await loadSeries();
+  }
+
+  // ── Schedule ──────────────────────────────────────────────────────────────────
   async function loadSchedule() {
     return guardedLoad('schedule', async () => {
       const tree  = await getTree();
@@ -670,12 +831,6 @@
     ).join('') + '</div>';
   }
 
-  // Event delegation for schedule remove buttons — avoids inline onclick with user data
-  document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.sched-remove');
-    if (btn && btn.dataset.id) removeSchedule(btn.dataset.id);
-  });
-
   async function addSchedule() {
     const file = document.getElementById('sched-file').value;
     const dt   = document.getElementById('sched-dt').value;
@@ -688,6 +843,11 @@
 
     const f = await ghFile('src/data/scheduled.json').catch(() => null);
     let items = []; try { if (f) items = JSON.parse(f.content); } catch(_){}
+
+    // Proximity check — warn if another post is scheduled within 24h
+    const near = items.find(i => Math.abs(new Date(i.publish_at) - publishDate) < 86400000);
+    if (near) toast('⚠ Another post is scheduled within 24 hours of this one', '');
+
     items.push({ id: 'sched-' + Date.now(), file, publish_at: publishDate.toISOString(), label: lbl||fn(file), added_at: new Date().toISOString() });
     await ghWrite('src/data/scheduled.json', JSON.stringify(items, null, 2), 'chore: schedule ' + fn(file) + ' [skip ci]', f?.sha);
     toast('Scheduled ✓', 'ok');
@@ -706,7 +866,7 @@
     await renderSched();
   }
 
-  // ── Actions ───────────────────────────────────────────────────────────────
+  // ── Actions ───────────────────────────────────────────────────────────────────
   async function loadActions() {
     return guardedLoad('actions', async () => {
       document.getElementById('act-list').innerHTML = '<div class="d-empty"><span class="spin"></span></div>';
@@ -714,7 +874,7 @@
       const runs = d?.workflow_runs || [];
       if (!runs.length) { document.getElementById('act-list').innerHTML = '<div class="d-empty">No workflow runs</div>'; return; }
       document.getElementById('act-list').innerHTML = '<div class="act-list">' + runs.map(r => {
-        const cls = escAttr(r.conclusion || r.status || 'queued');
+        const cls   = escAttr(r.conclusion || r.status || 'queued');
         const title = esc(r.name + ' — ' + ((r.display_title || r.head_commit?.message || '').split('\n')[0] || '').slice(0,60));
         return '<a class="act-run" href="' + escAttr(r.html_url) + '" target="_blank" rel="noopener">' +
           '<div class="act-name">' + title + '</div>' +
@@ -725,21 +885,130 @@
     });
   }
 
-  // ── Periodic FAB dot refresh (every 5 minutes) ───────────────────────────
-  setInterval(async () => {
-    if (!SESSION_LOGIN) return;
-    try {
-      const s = await getStatus();
-      const last = s.runs?.[0];
-      if (!last) return;
-      const plats = ['discord','devto','hashnode','ntfy','indexnow']
-        .map(p => last[p]).filter(r => !r?.skipped);
-      document.getElementById('d-fab-dot').className =
-        plats.length > 0 && plats.every(r => r?.ok) ? 'green' : 'red';
-    } catch (_) {}
-  }, 5 * 60 * 1000);
+  // ── Update modal ──────────────────────────────────────────────────────────────
+  let _updateTarget = null;
 
-  // ── Init ──────────────────────────────────────────────────────────────────
+  function showUpdatePanel(data) {
+    _updateTarget = data;
+    document.getElementById('update-file-label').textContent = data.file;
+
+    const devtoId   = data.postIds?.devto_id;
+    const hashId    = data.postIds?.hashnode_id;
+
+    document.getElementById('upd-devto-meta').textContent    = devtoId   ? 'ID: ' + devtoId    : '(never published)';
+    document.getElementById('upd-hashnode-meta').textContent  = hashId    ? 'ID: ' + hashId     : '(never published)';
+    document.getElementById('upd-devto').disabled             = !devtoId;
+    document.getElementById('upd-hashnode').disabled           = !hashId;
+    document.getElementById('upd-devto').checked              = !!devtoId;
+    document.getElementById('upd-hashnode').checked            = !!hashId;
+
+    document.getElementById('update-modal').classList.add('open');
+  }
+
+  function closeUpdateModal() {
+    document.getElementById('update-modal').classList.remove('open');
+    _updateTarget = null;
+  }
+
+  async function doUpdate() {
+    if (!_updateTarget) return;
+    const devto    = document.getElementById('upd-devto').checked    && !document.getElementById('upd-devto').disabled;
+    const hashnode = document.getElementById('upd-hashnode').checked  && !document.getElementById('upd-hashnode').disabled;
+    if (!devto && !hashnode) { toast('Select at least one platform', 'err'); return; }
+
+    const platforms = [devto && 'devto', hashnode && 'hashnode'].filter(Boolean).join(',');
+    const btn = document.getElementById('upd-confirm-btn');
+    btn.disabled = true; btn.textContent = 'Triggering…';
+
+    try {
+      await workerApi('/webhook/trigger-update', 'POST', { file: _updateTarget.file, platforms });
+      toast('Update triggered ✓ — check Actions tab', 'ok');
+      closeUpdateModal();
+      setTimeout(loadActions, 2000);
+    } catch (e) {
+      toast('Failed: ' + e.message, 'err');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Push Updates';
+    }
+  }
+
+  // ── FAB dot refresh ───────────────────────────────────────────────────────────
+  function startFabRefresh() {
+    stopFabRefresh();
+    _fabInterval = setInterval(async () => {
+      if (!SESSION_LOGIN) return;
+      try {
+        _statusCache = null; // force fresh fetch
+        const s = await getStatus();
+        const last = s.runs?.[0];
+        if (!last) return;
+        const plats = ['discord','devto','hashnode','ntfy','indexnow'].map(p=>last[p]).filter(r=>!r?.skipped);
+        document.getElementById('d-fab-dot').className =
+          plats.length > 0 && plats.every(r=>r?.ok) ? 'green' : 'red';
+      } catch (_) {}
+    }, 5 * 60 * 1000);
+  }
+
+  function stopFabRefresh() {
+    if (_fabInterval) { clearInterval(_fabInterval); _fabInterval = null; }
+  }
+
+  // ── Event wiring (no inline handlers) ────────────────────────────────────────
+  document.getElementById('btn-oauth').addEventListener('click', doOAuth);
+  document.getElementById('d-fab').addEventListener('click', dToggle);
+  document.getElementById('d-fab').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') dToggle(); });
+  document.getElementById('d-overlay').addEventListener('click', dClose);
+  document.getElementById('btn-logout').addEventListener('click', doLogout);
+  document.getElementById('btn-close').addEventListener('click', dClose);
+  document.getElementById('btn-run-pipeline').addEventListener('click', toggleTrigger);
+  document.getElementById('btn-refresh-pipeline').addEventListener('click', loadPipeline);
+  document.getElementById('btn-trigger-confirm').addEventListener('click', doTrigger);
+  document.getElementById('btn-trigger-cancel').addEventListener('click', () => document.getElementById('trigger-form').classList.add('hidden'));
+  document.getElementById('btn-refresh-actions').addEventListener('click', loadActions);
+  document.getElementById('btn-add-schedule').addEventListener('click', addSchedule);
+  document.getElementById('upd-confirm-btn').addEventListener('click', doUpdate);
+  document.getElementById('upd-cancel-btn').addEventListener('click', closeUpdateModal);
+
+  // Tab buttons
+  document.querySelectorAll('.d-tab').forEach(btn => {
+    btn.addEventListener('click', () => dTab(btn.id.replace('tab-', '')));
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (_updateTarget) { closeUpdateModal(); return; }
+      if (isOpen) dClose();
+    }
+    if (!isOpen || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    const tabMap = { '1':'overview','2':'pipeline','3':'series','4':'schedule','5':'actions' };
+    if (tabMap[e.key]) dTab(tabMap[e.key]);
+    if (e.key === 'r' || e.key === 'R') dRefresh();
+  });
+
+  // Pipeline search
+  document.getElementById('pipe-search').addEventListener('input', () => {
+    if (activeTab === 'pipeline') renderRunList(_allRuns, {});
+  });
+
+  // Event delegation for dynamic buttons
+  document.addEventListener('click', e => {
+    const removeBtn = e.target.closest('.sched-remove');
+    if (removeBtn?.dataset.id) removeSchedule(removeBtn.dataset.id);
+
+    const updBtn = e.target.closest('.upd-btn');
+    if (updBtn?.dataset.update) {
+      try { showUpdatePanel(JSON.parse(updBtn.dataset.update)); } catch(_) {}
+    }
+
+    const completeBtn = e.target.closest('.series-complete-btn');
+    if (completeBtn) markSeriesComplete(completeBtn.dataset.series, Number(completeBtn.dataset.eps));
+
+    const reopenBtn = e.target.closest('.series-reopen-btn');
+    if (reopenBtn) reopenSeries(reopenBtn.dataset.series);
+  });
+
+  // ── Init ──────────────────────────────────────────────────────────────────────
   async function dInit() {
     const ok = await verifySession();
     if (!ok) {
@@ -752,10 +1021,10 @@
       const plats = ['discord','devto','hashnode','ntfy','indexnow'].map(p=>last[p]).filter(r=>!r?.skipped);
       document.getElementById('d-fab-dot').className = plats.every(r=>r?.ok) ? 'green' : 'red';
     }).catch(()=>{});
+    startFabRefresh();
   }
 
   dInit();
 </script>
 </body>
 </html>
-
