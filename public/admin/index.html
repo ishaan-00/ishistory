@@ -483,7 +483,16 @@
     });
     if (res.status === 401) { handleSessionExpiry(); throw new Error('Session expired'); }
     if (res.status === 204) return null;
-    const d = await res.json();
+
+    const text = await res.text();
+    let d;
+    try {
+      d = JSON.parse(text);
+    } catch(e) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return text;
+    }
+
     if (!res.ok) throw new Error(d.message || 'HTTP ' + res.status);
     return d;
   }
@@ -624,7 +633,8 @@
   async function getTree() {
     if (treeCache) return treeCache;
     const d = await gh('/repos/' + REPO + '/git/trees/main?recursive=1');
-    treeCache = (d?.tree || []).filter(f => f.type === 'blob');
+    if (!d || !d.tree) throw new Error("Failed to load repo tree from GitHub.");
+    treeCache = d.tree.filter(f => f.type === 'blob');
     return treeCache;
   }
 
@@ -649,11 +659,19 @@
   // ── Overview ──────────────────────────────────────────────────────────────────
   async function loadOverview() {
     return guardedLoad('overview', async () => {
-      const [status, tree, commits] = await Promise.all([
-        getStatus(),
-        getTree(),
-        gh('/repos/' + REPO + '/commits?per_page=5').catch(() => []),
-      ]);
+      let status, tree, commits;
+      try {
+        [status, tree, commits] = await Promise.all([
+          getStatus(),
+          getTree(),
+          gh('/repos/' + REPO + '/commits?per_page=5').catch(() => []),
+        ]);
+      } catch (err) {
+        console.error('loadOverview failed:', err);
+        document.getElementById('ov-run').innerHTML = '<div class="d-empty" style="color:var(--red)">Failed to load data. Is the repo name correct?</div>';
+        document.getElementById('ov-commits').innerHTML = '<div class="d-empty">Failed to load data.</div>';
+        return;
+      }
 
       const posts  = tree.filter(f => f.path.startsWith('src/content/') && f.path.endsWith('.md'));
       const series = {};
